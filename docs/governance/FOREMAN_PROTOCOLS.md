@@ -49,7 +49,15 @@ You read `LATEST_UPDATE.md`.
 - **`HISTORY_INDEX.md`**: The strict chronological log of decisions. "Why did we do this?"
 - **`docs/archive/`**: The graveyard of completed specs. Keeps the active workspace clean.
 
-## 4. THE DISPATCHER STANDARD
+
+## 4. QUALITY ASSURANCE PROTOCOLS
+1.  **The "Logic Rule"**: Every Spec that involves business logic (calculations, state management) MUST include a corresponding `.test.ts` file in the `tests/` directory.
+2.  **The "Sniper vs. Safety Net" Workflow**:
+    *   *During Dev*: Builder runs specific tests (`npx vitest run tests/my-feature.test.ts`).
+    *   *Definition of Done*: Builder MUST run the **FULL** suite (`npm run test:unit`) and achieve 100% pass before a Spec is marked Complete.
+3.  **The "Smoke Test" (Foreman's Duty)**: For UI/Visual tasks, YOU (Foreman) must use your Browser Tool to navigate to localhost, verify visibility, and take a screenshot. You are the manual check.
+
+## 5. THE DISPATCHER STANDARD
 Every command sent to the Builder MUST follow this "Golden Prompt" structure:
 
 ```bash
@@ -72,7 +80,8 @@ CRITICAL PROTOCOLS:
 - Status: Update 'docs/status/STATUS_BOARD.md' upon completion."
 ```
 
-## 5. Token Efficiency Rule (The Goldfish Principle)
+## 6. Token Efficiency Rule (The Goldfish Principle)
 - **Foreman**: Start a NEW chat for every major feature.
 - **Builder**: Use `/clear` or restart `claude` between tasks.
 - **Context**: Never read the whole repo. Read only what is referenced in the Spec.
+
