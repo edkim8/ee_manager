@@ -2,7 +2,7 @@
 
 ## Overview
 **Current Phase**: Foundation
-**Latest Update**: [2026-01-20] Login Page & Auth Layouts Complete
+**Latest Update**: [2026-01-20] Home Page, Dashboard & AppNavigation Complete
 
 ## Feature Tracker
 
@@ -13,6 +13,7 @@
 | F-003 | Database: Profiles Table | Ops | **COMPLETED** | Claude |
 | F-004 | Login Page | Base | **COMPLETED** | Claude |
 | F-005 | Auth Layouts | Base | **COMPLETED** | Claude |
+| F-006 | Home Page & Dashboard Foundation | Base | **COMPLETED** | Claude |
 
 ## Active Tasks
 - [x] Create Project Scaffold (`INIT_SCAFFOLD.md`)
@@ -23,14 +24,19 @@
 - [x] Implement Auth Layout & Login Page
 - [x] Fix: Nuxt UI v4 scaffolding (`UToaster` in app.vue, verified styles)
 - [x] Fix: Nuxt UI v4 CSS config (`UApp` wrapper, `main.css` imports in app/assets)
+- [x] Implement Auth Middleware (`middleware/auth.ts`)
+- [x] Implement AppNavigation Component
+- [x] Implement Dashboard Layout
+- [x] Update Home Page with Dashboard & Stats Placeholders
+- [x] Cleanup: Remove placeholder `/dashboard` page (consolidated to `/`)
 
 ## Next Priority (Incoming Foreman)
-> **Goal**: Build Dashboard and Protected Routes.
-> **Context**: Auth foundation is complete. Next step is protected content.
+> **Goal**: Build Assets and Property Management.
+> **Context**: Dashboard foundation is complete. Next step is asset management.
 > **Action**:
-> 1. Implement auth middleware for protected routes.
-> 2. Build Dashboard page content.
-> 3. Add navigation between pages.
+> 1. Implement Properties list page.
+> 2. Build Buildings/Units pages.
+> 3. Connect to Supabase data.
 
 ## Legend
 - **COMPLETED**: Deployed & Verified.

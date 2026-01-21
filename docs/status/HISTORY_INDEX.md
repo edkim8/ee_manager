@@ -8,4 +8,5 @@ This file tracks key architectural decisions and completed milestones. Read this
 | H-002 | Database | Implemented `profiles` table with RLS and Auto-Triggers. | - |
 | H-003 | UI Strategy | Pivot to "Nuxt UI First" + JIT Components. Abandoned custom Atoms. | [ATOM_SPEC](../archive/01_UI_KIT_ATOMS_OBSOLETE.md) |
 | H-004 | Architecture | Adopted Nuxt UI v4 Standard: `<UApp>` wrapper required, `@nuxt/ui` + `tailwindcss` imported in CSS. | [F-004_LOGIN](../archive/F-004_LOGIN_COMPLETE.md) |
+| H-005 | Dashboard | Implemented `dashboard` layout + `auth` middleware. Ported `AppNavigation` to use direct Supabase composables (removed Pinia dependency). Fixed root route conflict by deleting `app/pages/index.vue`. | [F-006_HOME_PAGE](../archive/F-006_HOME_PAGE_COMPLETE.md) |
 | - | - | - | - |
