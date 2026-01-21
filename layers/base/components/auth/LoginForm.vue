@@ -34,7 +34,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     return
   }
 
-  await navigateTo('/dashboard')
+  await navigateTo('/')
 }
 </script>
 

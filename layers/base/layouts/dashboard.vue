@@ -1,0 +1,22 @@
+<script setup lang="ts">
+</script>
+
+<template>
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <AppNavigation />
+
+    <main>
+      <UContainer class="py-6">
+        <slot />
+      </UContainer>
+    </main>
+
+    <footer class="border-t border-gray-200 dark:border-gray-800 py-4 mt-auto">
+      <UContainer>
+        <p class="text-center text-sm text-gray-500 dark:text-gray-400">
+          EE Manager
+        </p>
+      </UContainer>
+    </footer>
+  </div>
+</template>
