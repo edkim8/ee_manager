@@ -2,7 +2,7 @@
 
 ## Overview
 **Current Phase**: Foundation
-**Latest Update**: [2026-01-20] Home Page, Dashboard & AppNavigation Complete
+**Latest Update**: [2026-01-20] Testing Infrastructure Complete
 
 ## Feature Tracker
 
@@ -14,6 +14,7 @@
 | F-004 | Login Page | Base | **COMPLETED** | Claude |
 | F-005 | Auth Layouts | Base | **COMPLETED** | Claude |
 | F-006 | Home Page & Dashboard Foundation | Base | **COMPLETED** | Claude |
+| F-007 | Testing Infrastructure (Vitest + Playwright) | Base | **COMPLETED** | Claude |
 
 ## Active Tasks
 - [x] Create Project Scaffold (`INIT_SCAFFOLD.md`)
@@ -29,6 +30,7 @@
 - [x] Implement Dashboard Layout
 - [x] Update Home Page with Dashboard & Stats Placeholders
 - [x] Cleanup: Remove placeholder `/dashboard` page (consolidated to `/`)
+- [x] Install & Configure Testing Infrastructure (Vitest, Playwright, @vue/test-utils)
 
 ## Next Priority (Incoming Foreman)
 > **Goal**: Build Assets and Property Management.
