@@ -16,6 +16,7 @@
 | F-006 | Home Page & Dashboard Foundation | Base | **COMPLETED** | Claude |
 | F-007 | Testing Infrastructure (Vitest + Playwright) | Base | **COMPLETED** | Claude |
 | F-008 | Property Access Control | Base | **COMPLETED** | Claude |
+| F-009 | Admin User Management | Admin | **COMPLETED** | Claude |
 
 ## Active Tasks
 - [x] Create Project Scaffold (`INIT_SCAFFOLD.md`)
@@ -31,14 +32,14 @@
 - [x] Install & Configure Testing Infrastructure (Vitest, Playwright)
 - [x] Implement Property Constants (`properties.ts`)
 - [x] Implement User Property Access Table (`user_property_access`)
+- [x] Implement Admin Layer & User Management (F-009)
 
 ## Next Priority (Incoming Foreman)
 > **Goal**: Build Assets and Property Management.
-> **Context**: Foundation, Auth, Testing, and Access Control are COMPLETE.
+> **Context**: Admin Layer is active.
 > **Action**:
-> 1. Start Feature F-009: Properties List Page.
-> 2. Implement Parser for Property CSVs (if needed).
-> 3. Connect UI to Supabase Data.
+> 1. Start Feature F-010: Properties List Page.
+> 2. Connect UI to Supabase Data.
 
 ## Legend
 - **COMPLETED**: Deployed & Verified.

@@ -1,6 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  extends: ['./layers/base', './layers/ops'],
+  extends: ['./layers/base', './layers/ops', './layers/admin'],
 
   modules: ['@nuxtjs/supabase'],
 
