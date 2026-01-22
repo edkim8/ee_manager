@@ -10,4 +10,5 @@ This file tracks key architectural decisions and completed milestones. Read this
 | H-004 | Architecture | Adopted Nuxt UI v4 Standard: `<UApp>` wrapper required, `@nuxt/ui` + `tailwindcss` imported in CSS. | [F-004_LOGIN](../archive/F-004_LOGIN_COMPLETE.md) |
 | H-005 | Dashboard | Implemented `dashboard` layout + `auth` middleware. Ported `AppNavigation`. Fixed root route conflict. | [F-006_HOME_PAGE](../archive/F-006_HOME_PAGE_COMPLETE.md) |
 | H-006 | QA | Instituted "Zero-Trust" Protocol. Installed Vitest + Playwright. Required Spec-based unit tests for all logic. | [F-007_TESTING](../archive/F-007_TESTING_INFRA_COMPLETE.md) |
+| H-007 | Database | Added `user_property_access` MTM table with strict RLS. Established Constants for Property Codes. | [F-008_ACCESS](../archive/F-008_PROPERTY_ACCESS_COMPLETE.md) |
 | - | - | - | - |

@@ -1,3 +1,3 @@
 # Latest Update
 
-*Ready for next session.*
+*Ready for next task.*
