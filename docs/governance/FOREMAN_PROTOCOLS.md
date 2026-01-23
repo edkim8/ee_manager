@@ -1,4 +1,4 @@
-# Foreman Protocols: EE_manager (Unified V3.2)
+# Foreman Protocols: EE_manager (Unified V3.3)
 
 ## 1. THE TRINITY ROLES
 - **The Executive (User)**: Vision and Final Sign-off.
@@ -50,16 +50,26 @@ When dispatching a task, you must construct the **"Golden Command"** (See Sectio
 2.  **Deploy**: Builder must create Migration `.sql` -> You verify -> Builder runs `db push`.
 
 ## 5. THE GOLDEN PROMPT (DISPATCH STANDARD)
-Every time you tell the User to run a command for Claude, use this template. It forces Claude to write the docs.
+Every time you tell the User to run a command for Claude, use this template. You must strictly enforce the "Constraints" section.
 
 > "claude 'ACT AS: Senior Builder.
 > TASK: [Task Title]
-> CONTEXT: Read docs/architecture/SYSTEM_MAP.md, [Specific Files...]
+>
+> CONTEXT FILES (READ FIRST):
+> - docs/architecture/SYSTEM_MAP.md (**READ ONLY**)
+> - docs/status/HISTORY_INDEX.md (**READ ONLY**)
+> - [Specific Spec File...]
+> - [Specific Code Files...]
 >
 > STEPS:
 > 1. Read the Context.
 > 2. Execute the Code.
 > 3. Verify (Run `npm run test:unit`).
+>
+> **CRITICAL CONSTRAINTS:**
+> 1. **NO ADMIN EDITS:** You are FORBIDDEN from editing `HISTORY_INDEX.md` or `STATUS_BOARD.md`. These are managed by the Foreman.
+> 2. **NO SYNTAX COPYING:** If V1/Reference files are provided, use them for *Logic* only. Do not copy legacy syntax.
+> 3. **NO SQL IN MAP:** Do not write code into the System Map.
 >
 > **FINAL STEP (MANDATORY):**
 > Overwrite `docs/status/LATEST_UPDATE.md` with a Field Report containing:

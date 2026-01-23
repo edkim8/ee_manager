@@ -2,7 +2,7 @@
 
 ## Overview
 **Current Phase**: Foundation
-**Latest Update**: [2026-01-21] Property Access & Constants Implemented
+**Latest Update**: [2026-01-22] Table Engine System Complete (F-010)
 
 ## Feature Tracker
 
@@ -17,6 +17,9 @@
 | F-007 | Testing Infrastructure (Vitest + Playwright) | Base | **COMPLETED** | Claude |
 | F-008 | Property Access Control | Base | **COMPLETED** | Claude |
 | F-009 | Admin User Management | Admin | **COMPLETED** | Claude |
+| F-010 | Table Engine System | Table | **COMPLETED** | Claude |
+
+> **F-010 Note:** Stable Core Layer - Open for Extension. See `layers/table/AI_USAGE_GUIDE.md`.
 
 ## Active Tasks
 - [x] Create Project Scaffold (`INIT_SCAFFOLD.md`)
@@ -33,13 +36,15 @@
 - [x] Implement Property Constants (`properties.ts`)
 - [x] Implement User Property Access Table (`user_property_access`)
 - [x] Implement Admin Layer & User Management (F-009)
+- [x] Implement Table Engine System (F-010) - Core Layer
 
 ## Next Priority (Incoming Foreman)
-> **Goal**: Build Assets and Property Management.
-> **Context**: Admin Layer is active.
+> **Goal**: Build Properties Management with Table Engine.
+> **Context**: Table Engine (`layers/table`) is now a stable core layer.
 > **Action**:
-> 1. Start Feature F-010: Properties List Page.
+> 1. Start Feature F-011: Properties List Page using `GenericDataTable`.
 > 2. Connect UI to Supabase Data.
+> 3. Use Table Engine cell components for formatting.
 
 ## Legend
 - **COMPLETED**: Deployed & Verified.
