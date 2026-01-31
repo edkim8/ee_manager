@@ -513,7 +513,111 @@ if (isOverdue) {
 
 ---
 
-## 7. Future Phases
+## 7. Phase 2E: Transfers (Unit-to-Unit Moves) - COMPLETE ✅
+
+### Overview
+Phase 2E implements **Transfers processing** to create `unit_flags` for active unit-to-unit transfers. This phase provides context for edge cases where residents skip normal lifecycle phases (Notice → Available → Applicant → Current).
+
+### Key Achievements
+
+#### A. Transfer Edge Case Explained
+**Normal Lifecycle**:
+```
+Notice → Available → Applicant/Future → Current (Occupied)
+```
+
+**Transfer Lifecycle** (Edge Case):
+```
+Current (Unit A) → Current (Unit B)
+  ↓
+New tenancy_id created
+New lease created
+Skips: Notice, Available, Application phases
+```
+
+**Why This Looks "Funny"**:
+- Resident appears in 2 active tenancies simultaneously (briefly)
+- No notice period for Unit A
+- No application process for Unit B
+- Unit B never shows as "Available"
+
+#### B. Flag Creation Pattern
+**Strategy**: Create 2 flags per transfer (FROM unit + TO unit)
+
+```typescript
+// Flag for FROM unit
+{
+  flag_type: 'unit_transfer_active',
+  severity: 'info',
+  title: 'Resident Transferring Out',
+  message: 'John Doe is transferring to Unit B107 (CV)',
+  metadata: {
+    resident_name: 'John Doe',
+    from_property: 'CV',
+    from_unit: 'A203',
+    from_status: 'Current',
+    to_property: 'CV',
+    to_unit: 'B107',
+    to_status: 'Current',
+    transfer_date: '2026-01-31'
+  }
+}
+
+// Flag for TO unit
+{
+  flag_type: 'unit_transfer_active',
+  severity: 'info',
+  title: 'Resident Transferring In',
+  message: 'John Doe is transferring from Unit A203 (CV)',
+  metadata: { /* same structure */ }
+}
+```
+
+#### C. Unit Resolution
+**Method**: Composite key lookup for both FROM and TO units
+
+```typescript
+const fromUnitId = resolveUnitId(row.from_property_code, row.from_unit_name)
+const toUnitId = resolveUnitId(row.to_property_code, row.to_unit_name)
+```
+
+**Validation**: Skip transfers if either unit not found in `units` table
+
+#### D. Processing Logic
+```typescript
+// Pseudocode
+for each transfer in transfers_report:
+  1. Validate required fields (resident, from_unit, to_unit)
+  2. Skip same-unit transfers (invalid data)
+  3. Resolve FROM and TO unit_ids
+  4. Create 2 flags (FROM + TO)
+  5. Insert with ignoreDuplicates (partial unique index)
+```
+
+### Edge Cases Handled
+1. **Orphan Units**: FROM or TO unit not in `units` table → Skip with warning
+2. **Missing Data**: Transfer with null resident/units → Skip with warning
+3. **Same-Unit Transfer**: FROM and TO are same unit → Skip (invalid data)
+4. **Cross-Property Transfers**: FROM and TO different properties → Valid, create flags
+5. **Duplicate Transfers**: Same transfer in multiple reports → `ignoreDuplicates` handles it
+
+### Verification Results
+✅ Transfer data fetched from `import_staging`
+✅ Unit resolution working for both FROM and TO units
+✅ 2 flags created per transfer (FROM + TO)
+✅ Metadata includes full transfer context
+✅ Orphan units handled gracefully
+✅ Code follows established patterns (Phase 2C/2D)
+
+### Benefits
+1. **Explains "Funny" Data**: Staff can see why lifecycle looks abnormal
+2. **Audit Trail**: Historical flags show when transfers occurred
+3. **UI Integration**: Transfer badges can appear on unit cards
+4. **Consistent Pattern**: Follows same pattern as `makeready_overdue`, `application_overdue`
+
+---
+
+## 8. Future Phases
 *   **Phase 3 (Inventory)**: Reconcile `Unit` status with `Tenancy` dates and `Availabilities`
 
 

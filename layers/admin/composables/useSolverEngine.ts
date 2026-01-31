@@ -1127,6 +1127,125 @@ export const useSolverEngine = () => {
                 statusMessage.value = `Applications Synced: ${totalApplicationsSaved} saved, ${totalAvailabilitiesUpdated} availabilities updated, ${totalApplicationFlags} overdue flags.`
             }
 
+            // --- STEP 2E: TRANSFERS (Unit-to-Unit Moves) ---
+            statusMessage.value = 'Fetching Transfers Data...'
+            const { data: transferReports, error: transferFetchError } = await supabase
+                .from('import_staging')
+                .select('id, raw_data, property_code')
+                .eq('batch_id', batchId)
+                .eq('report_type', 'transfers')
+            
+            if (transferFetchError) throw transferFetchError
+
+            if (transferReports && transferReports.length > 0) {
+                statusMessage.value = `Processing Transfers for ${transferReports.length} properties...`
+                let totalTransferFlags = 0
+
+                for (const report of transferReports) {
+                    const pCode = report.property_code
+                    const rows = report.raw_data as unknown as any[] // TransfersRow[]
+                    
+                    if (rows.length === 0) continue
+                    
+                    const flagsToCreate: any[] = []
+                    
+                    for (const row of rows) {
+                        // Skip if missing critical data
+                        if (!row.resident || !row.from_unit_name || !row.to_unit_name) {
+                            console.warn(`[Solver] Transfer missing data: ${JSON.stringify(row)}`)
+                            continue
+                        }
+                        
+                        // Skip same-unit transfers (invalid data)
+                        if (row.from_property_code === row.to_property_code && 
+                            row.from_unit_name === row.to_unit_name) {
+                            console.warn(`[Solver] Same-unit transfer skipped: ${row.from_unit_name}`)
+                            continue
+                        }
+                        
+                        // Resolve unit IDs
+                        const fromUnitId = resolveUnitId(row.from_property_code, row.from_unit_name)
+                        const toUnitId = resolveUnitId(row.to_property_code, row.to_unit_name)
+                        
+                        // Skip if units not found
+                        if (!fromUnitId) {
+                            console.warn(`[Solver] Transfer FROM unit not found: ${row.from_unit_name} (${row.from_property_code})`)
+                            continue
+                        }
+                        if (!toUnitId) {
+                            console.warn(`[Solver] Transfer TO unit not found: ${row.to_unit_name} (${row.to_property_code})`)
+                            continue
+                        }
+                        
+                        const transferDate = new Date().toISOString().split('T')[0]
+                        
+                        // Create flag for FROM unit
+                        flagsToCreate.push({
+                            unit_id: fromUnitId,
+                            property_code: row.from_property_code,
+                            flag_type: 'unit_transfer_active',
+                            severity: 'info',
+                            title: 'Resident Transferring Out',
+                            message: `${row.resident} is transferring to ${row.to_unit_name} (${row.to_property_code})`,
+                            metadata: {
+                                resident_name: row.resident,
+                                from_property: row.from_property_code,
+                                from_unit: row.from_unit_name,
+                                from_status: row.from_status,
+                                to_property: row.to_property_code,
+                                to_unit: row.to_unit_name,
+                                to_status: row.to_status,
+                                transfer_date: transferDate
+                            }
+                        })
+                        
+                        // Create flag for TO unit
+                        flagsToCreate.push({
+                            unit_id: toUnitId,
+                            property_code: row.to_property_code,
+                            flag_type: 'unit_transfer_active',
+                            severity: 'info',
+                            title: 'Resident Transferring In',
+                            message: `${row.resident} is transferring from ${row.from_unit_name} (${row.from_property_code})`,
+                            metadata: {
+                                resident_name: row.resident,
+                                from_property: row.from_property_code,
+                                from_unit: row.from_unit_name,
+                                from_status: row.from_status,
+                                to_property: row.to_property_code,
+                                to_unit: row.to_unit_name,
+                                to_status: row.to_status,
+                                transfer_date: transferDate
+                            }
+                        })
+                    }
+                    
+                    // Insert flags in batches
+                    if (flagsToCreate.length > 0) {
+                        for (let i = 0; i < flagsToCreate.length; i += 1000) {
+                            const chunk = flagsToCreate.slice(i, i + 1000)
+                            const { error } = await supabase
+                                .from('unit_flags')
+                                .insert(chunk, { ignoreDuplicates: true })
+                            
+                            if (error) {
+                                // Suppress duplicate errors (23505)
+                                if (error.code !== '23505') {
+                                    console.error(`[Solver] Transfer Flag Error ${pCode}:`, error)
+                                }
+                            } else {
+                                totalTransferFlags += chunk.length
+                            }
+                        }
+                    }
+                    
+                    console.log(`[Solver] ${pCode}: ${flagsToCreate.length} transfer flags created`)
+                }
+
+                statusMessage.value = `Transfers Synced: ${totalTransferFlags} flags created.`
+                console.log(`[Solver] Phase 2E Complete: ${totalTransferFlags} transfer flags created`)
+            }
+
             statusMessage.value = `Completed: ${totalUpsertedTenancies} Tenancies, ${totalUpsertedResidents} Residents, ${totalUpsertedLeases} Leases, ${totalUpsertedAvailabilities || 0} Availabilities.`
         } catch (e: any) {
             statusMessage.value = `Error: ${e.message}`

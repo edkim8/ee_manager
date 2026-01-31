@@ -87,6 +87,28 @@ WHERE resolved_at IS NULL;
 **Created By**: Solver Engine (Step 2D: Applications)  
 **Resolved When**: Screening result added to application
 
+### 3. `unit_transfer_active`
+**Purpose**: Track active unit-to-unit transfers (explains Current → Current lifecycle edge cases)  
+**Severity**: `info`  
+**Metadata**:
+```json
+{
+  "resident_name": "John Doe",
+  "from_property": "CV",
+  "from_unit": "A203",
+  "from_status": "Current",
+  "to_property": "CV",
+  "to_unit": "B107",
+  "to_status": "Current",
+  "transfer_date": "2026-01-31"
+}
+```
+
+**Created By**: Solver Engine (Step 2E: Transfers)  
+**Resolved When**: Transfer completes (old tenancy → Past, new tenancy → Current)
+
+**Note**: 2 flags created per transfer (one for FROM unit, one for TO unit)
+
 ---
 
 ## Usage Patterns
