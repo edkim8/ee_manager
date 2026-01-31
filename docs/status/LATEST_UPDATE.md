@@ -1,148 +1,136 @@
-# Handover Report: Solver Engine (Phase 2D - Applications)
+# Schema Sync Status Update
 
-**Status**: COMPLETE - READY FOR PHASE 3 (INVENTORY)
 **Date**: 2026-01-31
+**Task**: Supabase Schema Sync and Type Verification
+**Status**: COMPLETE
 
-## Executive Summary
-Completed **Phase 2D: Applications** of the Solver Engine. Successfully implemented application processing with unit resolution, availability updates, application data saving, and overdue flag creation. Fixed 5 critical bugs and improved schema design by removing redundant columns.
+---
 
-## Key Deliverables
+## Summary
 
-### 1. Database Schema Improvements
-**Migration**: `20260131000002_add_screening_result_to_applications.sql`
+Successfully synced TypeScript types with live Supabase database and resolved 406 errors on availabilities table queries.
 
-**Columns Added**:
-- ✅ `screening_result` (TEXT, nullable) - Actual screening result from Yardi
-
-**Columns Removed** (Redundant):
-- ❌ `status` - Can be derived from `screening_result`
-- ❌ `is_overdue` - Now tracked via `unit_flags` system
-
-**Indexes Created**:
-- ✅ Unique index on `(property_code, unit_id, applicant_name, application_date)` for upsert
-- ✅ Partial index on `(application_date, screening_result) WHERE screening_result IS NULL` for overdue queries
-
-### 2. Application Processing Logic
-**Function**: `processApplications()` in `useSolverEngine.ts`
-
-**Features**:
-- Unit resolution via `property_code` + `unit_name` → `unit_id`
-- Availability lookup and update with `leasing_agent`
-- Application upsert (idempotent)
-- Overdue detection (>7 days without screening result)
-- Flag creation with severity escalation (warning: 8-14 days, error: 14+ days)
-
-### 3. Overdue Flag System
-**Flag Type**: `application_overdue`
-
-**Metadata Structure**:
-```json
-{
-  "application_date": "2026-01-15",
-  "days_overdue": 16,
-  "applicant_name": "John Doe",
-  "unit_name": "C107",
-  "agent": "Jane Smith"
-}
+### Verification Result
+```
+Query: GET /rest/v1/availabilities?status=in.(Applied,Leased)
+Before: 406 Not Acceptable
+After:  200 OK
 ```
 
-## Issues Resolved
+---
 
-### Issue 1: Parser Rejecting NULL Values
-**Error**: Parser marked `screening_result` as required, rejecting pending applications  
-**Impact**: 1 out of 4 applications was silently dropped (Felicia Dedman)  
-**Fix**: Changed to `required: false` in parser config  
-**Result**: All 4 applications now save correctly
+## Investigation Summary
 
-### Issue 2: Field Name Mismatches
-**Error**: Parser used `applicant` and `leasing_agent`, but Solver expected `applicant_name` and `agent`  
-**Impact**: NULL constraint violations, no applications saved  
-**Fix**: Updated Solver code to use correct parser field names  
-**Result**: Applications save successfully
+### Original Issue
+- 406 errors on `availabilities` table queries: `GET /rest/v1/availabilities?status=in.(Applied,Leased)`
 
-### Issue 3: Redundant Schema Columns
-**Error**: `status` and `is_overdue` columns were redundant  
-**Impact**: Schema bloat, confusing data model  
-**Fix**: Removed columns from database and code  
-**Result**: Cleaner schema, status can be derived in queries
+### Root Cause Analysis
+The 406 error was caused by schema synchronization issues between:
+1. TypeScript types (`types/supabase.ts`)
+2. Live Supabase database
+3. Local migration files
 
-### Issue 4: Invalid Column Reference
-**Error**: Code referenced `is_active` column removed from `availabilities` table  
-**Impact**: 406 Not Acceptable errors on availability queries  
-**Fix**: Removed `.is('is_active', true)` filter  
-**Result**: Queries work correctly (after browser cache clear)
+The `availabilities.status` column is correctly defined as `TEXT` (not ENUM). The primary issues were:
+- Outdated ENUM definitions in TypeScript types
+- Missing views in the database
+- Inconsistent view naming conventions
+- Nullable `is_active` column that should have a default
 
-### Issue 5: Duplicate Flag Errors
-**Error**: `ignoreDuplicates: true` didn't prevent 409 Conflict console errors  
-**Impact**: Noisy console logs  
-**Fix**: Added error code check to suppress duplicate errors (23505)  
-**Result**: Clean console output
+---
 
-## Verification Results
-✅ 4/4 applications saved successfully across 2 properties (SB, OB)  
-✅ NULL screening results correctly handled (pending applications)  
-✅ Unique constraint prevents duplicates on re-run  
-✅ Partial index optimizes overdue queries  
-✅ No overdue flags created (all applications <7 days old in test data)
+## Schema Comparison Results
 
-## Files Modified
-*   `/supabase/migrations/20260131000002_add_screening_result_to_applications.sql` (new)
-*   `/layers/admin/composables/useSolverEngine.ts` (modified)
-*   `/layers/parsing/composables/parsers/useParseApplications.ts` (modified)
-*   `/layers/parsing/docs/SOLVER_LOGIC_EXPLAINED.md` (updated with Phase 2D)
-*   `/docs/architecture/UNIT_FLAGS_GUIDE.md` (added `application_overdue` flag)
+### 1. `availability_status` ENUM - FIXED
+| Source | Values |
+|--------|--------|
+| **Before** (types/supabase.ts) | `"available" \| "leased"` (lowercase, 2 values) |
+| **After** (Live DB & types) | `"Available" \| "Leased" \| "Applied" \| "Occupied"` (PascalCase, 4 values) |
 
-## Architecture Decisions
+### 2. `applications` table - FIXED
+| Column | Before | After |
+|--------|--------|-------|
+| `status` | Present | Removed (intentionally removed from DB) |
+| `is_overdue` | Present | Removed (intentionally removed from DB) |
+| `screening_result` | Missing | Added |
 
-### 1. No status Column
-**Rationale**: Status can be derived from `screening_result`:
-```sql
-CASE 
-  WHEN screening_result IS NULL THEN 'Pending'
-  WHEN screening_result = 'Approved' THEN 'Approved'
-  WHEN screening_result = 'Denied' THEN 'Denied'
-  ELSE 'Screened'
-END as status
+### 3. Views - FIXED
+| View | Before | After |
+|------|--------|-------|
+| `view_availabilities_metrics` | In types only | Now in both DB and types |
+| `leases_view` | In DB only | Renamed to `view_leases` (consistent `view_` prefix) |
+| `view_leases` | Missing | Added to both DB and types |
+
+### 4. `availabilities.is_active` - FIXED
+| Aspect | Before | After |
+|--------|--------|-------|
+| Nullability | `boolean \| null` | `boolean` (NOT NULL) |
+| Default | None | `DEFAULT true` |
+
+---
+
+## Changes Made
+
+### Files Modified
+
+1. **types/supabase.ts**
+   - Fixed `availability_status` ENUM: `"available" | "leased"` → `"Available" | "Leased" | "Applied" | "Occupied"`
+   - Updated `applications` table: removed `status`, `is_overdue`; added `screening_result`
+   - Added `view_leases` to Views section
+   - Fixed duplicate closing brace syntax error (line 462-463)
+
+### Files Created
+
+2. **supabase/migrations/20260131000003_schema_sync_views_and_constraints.sql**
+   - Renames `leases_view` → `view_leases` (consistent naming)
+   - Creates/updates `view_availabilities_metrics`
+   - Fixes `availabilities.is_active`: `SET DEFAULT true`, `SET NOT NULL`
+
+3. **docs/status/LATEST_UPDATE.md**
+   - This documentation file
+
+---
+
+## Migration History
+
+All migrations are now in sync between local and remote:
+
+| Migration | Description | Status |
+|-----------|-------------|--------|
+| 20260120054010 | Create profiles table | Applied |
+| 20260120060000 | User property access | Applied |
+| 20260128000000 | Solver schema | Applied |
+| 20260130000000 | Alter availabilities UUID PK | Applied |
+| 20260131000000 | Create unit flags | Applied |
+| 20260131000002 | Add screening result to applications | Applied |
+| 20260131000003 | Schema sync views and constraints | Applied |
+
+---
+
+## Files Changed Summary
+
+```
+Modified:
+  types/supabase.ts
+
+Created:
+  supabase/migrations/20260131000003_schema_sync_views_and_constraints.sql
+  docs/status/LATEST_UPDATE.md
 ```
 
-### 2. No is_overdue Column
-**Rationale**: Use `unit_flags` system for overdue tracking
+---
 
-**Benefits**:
-- Rich metadata (applicant name, agent, days overdue)
-- Historical tracking (when flag created/resolved)
-- Severity escalation (warning → error)
-- Consistent with MakeReady overdue pattern
+## Verification Commands
 
-### 3. Nullable screening_result
-**Rationale**: Pending applications don't have results yet
+```bash
+# Check migration status
+npx supabase migration list
 
-**Benefits**:
-- Honest representation of data
-- Enables overdue detection (`WHERE screening_result IS NULL`)
-- Partial index optimization
+# Regenerate types from live DB (to verify sync)
+npx supabase gen types typescript --linked
 
-## Key Learning
-**Nullable fields in source data should be marked as `required: false` in parser configs** to avoid silently dropping records. This was the root cause of missing 1 out of 4 applications in initial testing.
-
-## Next Steps
-
-### Phase 3: Inventory Reconciliation
-Reconcile Unit status with Tenancy dates and implement full Availabilities metrics.
-
-### Future Enhancements
-1.  Notification system for new overdue flags
-2.  Bulk flag resolution (workaround for Supabase limitations)
-3.  Application status history tracking
-4.  Leasing agent dashboard
-
-## Solver Agent Performance Summary
-**Total Phases Completed**: 4 (Phase 1, 2, 2A, 2C, 2D)  
-**Total Bugs Fixed**: 15+ across all phases  
-**Documentation Created**: 4 completion reports, comprehensive troubleshooting guides  
-**Infrastructure Built**: `unit_flags` system (extensible for all modules)  
-**Test Coverage**: 100% across all phases
-
-**Status**: Solver agent has successfully completed all assigned phases. Ready to terminate and start fresh for Phase 3.
-
-**Signed Off**: Foreman (Antigravity)
+# Test the previously failing query
+curl -s 'https://yeuzutjkxapfltvjcejz.supabase.co/rest/v1/availabilities?status=in.(Applied,Leased)' \
+  --header 'apikey: <YOUR_KEY>' \
+  --header 'Authorization: Bearer <YOUR_KEY>'
+# Expected: 200 OK
+```
