@@ -1,0 +1,701 @@
+yardi_alert_id,apt_code,unit,description,resident_name,created_at,unit_id,match,active
+1,OB,S114,No Lease Charges,Alfonso Arreola,2025-03-22 18:47:41.296093+00,235,false,false
+2,SB,2159,Deposit Accounting Past Due,Patricia Garza,2025-03-22 18:47:41.675888+00,1113,false,false
+3,OB,S084,Deposit Accounting Past Due,Teresa Pacheco,2025-03-22 18:47:42.05225+00,206,false,false
+4,OB,S178,Deposit Accounting Past Due,Isabella Valenzuela,2025-03-22 18:47:42.438591+00,299,false,false
+5,OB,S185,Deposit Accounting Past Due,Saray Susunaga,2025-03-22 18:47:42.840527+00,306,false,false
+6,RS,2127,Applicant Past MoveIn,Timothy Rattan-Cobham,2025-03-22 18:47:43.286955+00,654,false,false
+7,SB,3071,Move In Past Due,Elizabeth Rangel,2025-03-22 19:13:33.021752+00,1141,false,false
+8,CV,C117,Move In Past Due,Yuko Inoue,2025-03-22 19:13:33.416641+00,17,false,false
+9,SB,1125,Move In Past Due,Ryan Bradford,2025-03-22 19:13:33.800522+00,919,false,false
+10,SB,3106,Deposit Accounting Past Due,Ely Cazares,2025-03-22 19:13:34.792415+00,1160,false,false
+11,RS,1015,Applicant Past MoveIn,myrin Clark,2025-03-22 19:13:36.07224+00,447,false,false
+13,RS,2076,Move In Past Due,Brian Oltmanns,2025-04-03 18:22:01.959953+00,605,false,false
+14,RS,2078,Move Out Past Due,Brian Oltmanns,2025-04-03 18:22:01.959953+00,607,false,false
+15,RS,2098,Move Out Past Due,Garrett Handy,2025-04-03 18:22:01.959953+00,626,false,false
+16,RS,3013,Deposit Accounting Past Due,Jimmy Buckingham,2025-04-03 18:22:01.959953+00,681,false,false
+17,RS,3098,Move Out Past Due,Tanisha Fanney,2025-04-03 18:22:01.959953+00,762,false,false
+18,SB,1139,Move Out Past Due,James Jenkins,2025-04-03 18:22:01.959953+00,933,false,false
+19,OB,S149,Move Out Past Due,Maria Isabel Sanchez Rosales,2025-04-03 18:22:01.959953+00,270,false,false
+20,OB,S186,Move Out Past Due,Edamaria Salazar Rivera,2025-04-03 18:22:01.959953+00,307,false,false
+21,SB,2120,Deposit Accounting Past Due,Jesus Bajo,2025-04-03 18:22:01.959953+00,1074,false,false
+22,SB,3045,Deposit Accounting Past Due,Gwendolyn Brown,2025-04-03 18:22:01.959953+00,1119,false,false
+23,RS,2020,Applicant Past MoveIn,Marcus Irvin,2025-04-03 18:22:01.959953+00,552,false,false
+24,RS,2054,Applicant Past MoveIn,Lone Marie,2025-04-03 18:22:01.959953+00,584,false,false
+25,RS,2056,Applicant Past MoveIn,J Burk,2025-04-03 18:22:01.959953+00,586,false,false
+26,RS,2071,Applicant Past MoveIn,"* IPI Strategic Enterprises, LLC",2025-04-03 18:22:01.959953+00,600,false,false
+27,RS,2125,Applicant Past MoveIn,Ana Chancon Valdez,2025-04-03 18:22:01.959953+00,652,false,false
+28,RS,3017,Applicant Past MoveIn,"* IPI Strategic Enterprises, LLC",2025-04-03 18:22:01.959953+00,685,false,false
+29,OB,S042,Applicant Past MoveIn,Larry Carr,2025-04-03 18:22:01.959953+00,164,false,false
+30,RS,2076,Move In Past Due,Brian Oltmanns,2025-04-03 18:26:44.656975+00,605,false,false
+31,RS,2078,Move Out Past Due,Brian Oltmanns,2025-04-03 18:26:44.656975+00,607,false,false
+32,RS,2098,Move Out Past Due,Garrett Handy,2025-04-03 18:26:44.656975+00,626,false,false
+33,RS,3013,Move Out Past Due,Jimmy Buckingham,2025-04-03 18:26:44.656975+00,681,false,false
+34,RS,3098,Move Out Past Due,Tanisha Fanney,2025-04-03 18:26:44.656975+00,762,false,false
+35,SB,1139,Move Out Past Due,James Jenkins,2025-04-03 18:26:44.656975+00,933,false,false
+36,OB,S149,Move Out Past Due,Maria Isabel Sanchez Rosales,2025-04-03 18:26:44.656975+00,270,false,false
+38,SB,2120,Deposit Accounting Past Due,Jesus Bajo,2025-04-03 18:26:44.656975+00,1074,false,false
+39,SB,3045,Deposit Accounting Past Due,Gwendolyn Brown,2025-04-03 18:26:44.656975+00,1119,false,false
+40,RS,2020,Applicant Past MoveIn,Marcus Irvin,2025-04-03 18:26:44.656975+00,552,false,false
+41,RS,2054,Applicant Past MoveIn,Lone Marie,2025-04-03 18:26:44.656975+00,584,false,false
+42,RS,2056,Applicant Past MoveIn,J Burk,2025-04-03 18:26:44.656975+00,586,false,false
+43,RS,2071,Applicant Past MoveIn,"* IPI Strategic Enterprises, LLC",2025-04-03 18:26:44.656975+00,600,false,false
+44,RS,2125,Applicant Past MoveIn,Ana Chancon Valdez,2025-04-03 18:26:44.656975+00,652,false,false
+45,RS,3017,Applicant Past MoveIn,"* IPI Strategic Enterprises, LLC",2025-04-03 18:26:44.656975+00,685,false,false
+47,RS,2076,Move In Past Due,Brian Oltmanns,2025-04-03 18:27:38.246103+00,605,false,false
+48,RS,2078,Move Out Past Due,Brian Oltmanns,2025-04-03 18:27:38.246103+00,607,false,false
+49,RS,2098,Move Out Past Due,Garrett Handy,2025-04-03 18:27:38.246103+00,626,false,false
+50,RS,3013,Move Out Past Due,Jimmy Buckingham,2025-04-03 18:27:38.246103+00,681,false,false
+51,RS,3098,Move Out Past Due,Tanisha Fanney,2025-04-03 18:27:38.246103+00,762,false,false
+52,SB,1139,Move Out Past Due,James Jenkins,2025-04-03 18:27:38.246103+00,933,false,false
+53,SB,2120,Deposit Accounting Past Due,Jesus Bajo,2025-04-03 18:27:38.246103+00,1074,false,false
+54,SB,3045,Deposit Accounting Past Due,Gwendolyn Brown,2025-04-03 18:27:38.246103+00,1119,false,false
+55,RS,2125,Applicant Past MoveIn,Ana Chancon Valdez,2025-04-03 18:27:38.246103+00,652,false,false
+56,OB,S183,Move In Past Due,Carlos Urrea,2025-04-07 13:07:05.341153+00,304,false,false
+57,SB,1124,Move In Past Due,Chyna Gray,2025-04-07 13:07:05.341153+00,918,false,false
+58,OB,S042,Move In Past Due,Larry Carr,2025-04-07 13:07:05.341153+00,164,false,false
+59,RS,1141,Move Out Past Due,Stephan Winkel,2025-04-07 13:07:05.341153+00,532,false,false
+60,RS,3001,Move Out Past Due,Christian Hubaker,2025-04-07 13:07:05.341153+00,669,false,false
+61,SB,2079,Deposit Accounting Past Due,Stephanie Wiczynski,2025-04-07 13:07:05.341153+00,1033,false,false
+62,SB,2080,Move Out Past Due,Ivan Jr Furlong,2025-04-07 13:07:05.341153+00,1034,false,false
+63,RS,2098,Deposit Accounting Past Due,Garrett Handy,2025-04-07 13:07:05.341153+00,626,false,false
+64,SB,1139,Deposit Accounting Past Due,James Jenkins,2025-04-07 13:07:05.341153+00,933,false,false
+65,SB,2146,Deposit Accounting Past Due,Charity Zell,2025-04-07 13:07:05.341153+00,1100,false,false
+66,OB,S149,Deposit Accounting Past Due,Maria Isabel Sanchez Rosales,2025-04-07 13:07:05.341153+00,270,false,false
+67,OB,S186,Deposit Accounting Past Due,Edamaria Salazar Rivera,2025-04-07 13:07:05.341153+00,307,false,false
+68,RS,2125,Applicant Past MoveIn,Ana Chancon Valdez,2025-04-07 13:07:05.341153+00,652,false,false
+69,SB,2159,Applicant Past MoveIn,Mason Kortsen,2025-04-07 13:07:05.341153+00,1113,false,false
+70,OB,S183,Move In Past Due,Carlos Urrea,2025-04-07 14:07:19.116726+00,304,false,false
+71,SB,1124,Move In Past Due,Chyna Gray,2025-04-07 14:07:19.116726+00,918,false,false
+73,RS,1141,Move Out Past Due,Stephan Winkel,2025-04-07 14:07:19.116726+00,532,false,false
+74,RS,3001,Move Out Past Due,Christian Hubaker,2025-04-07 14:07:19.116726+00,669,false,false
+75,SB,2079,Deposit Accounting Past Due,Stephanie Wiczynski,2025-04-07 14:07:19.116726+00,1033,false,false
+76,SB,2080,Move Out Past Due,Ivan Jr Furlong,2025-04-07 14:07:19.116726+00,1034,false,false
+77,RS,2098,Deposit Accounting Past Due,Garrett Handy,2025-04-07 14:07:19.116726+00,626,false,false
+78,SB,1139,Deposit Accounting Past Due,James Jenkins,2025-04-07 14:07:19.116726+00,933,false,false
+79,SB,2146,Deposit Accounting Past Due,Charity Zell,2025-04-07 14:07:19.116726+00,1100,false,false
+80,OB,S149,Deposit Accounting Past Due,Maria Isabel Sanchez Rosales,2025-04-07 14:07:19.116726+00,270,false,false
+82,RS,2125,Applicant Past MoveIn,Ana Chancon Valdez,2025-04-07 14:07:19.116726+00,652,false,false
+83,SB,2159,Move In Past Due,Mason Kortsen,2025-04-07 14:07:19.116726+00,1113,false,false
+84,SB,2122,Move In Past Due,Angelica Mitchum,2025-04-07 14:08:40.481326+00,1076,false,false
+85,SB,2014,Move Out Past Due,Kyle Tinnin,2025-04-07 14:08:40.481326+00,968,false,false
+86,CV,C214,Applicant Past MoveIn,Chris Lazarus,2025-04-09 18:35:04.154028+00,43,false,false
+87,CV,C209,Move Out Past Due,Connie Switzer,2025-04-10 13:49:31.990172+00,38,false,false
+88,RS,3014,Move Out Past Due,Andrienne Israel,2025-04-10 13:49:31.990172+00,682,false,false
+89,SB,1079,Deposit Accounting Past Due,Jason Sprunger,2025-04-10 13:49:31.990172+00,873,false,false
+90,CV,C108,Applicant Past MoveIn,Lauren Torres,2025-04-10 13:49:31.990172+00,8,false,false
+91,CV,C214,Move In Past Due,Chris Lazarus,2025-04-12 20:10:56.921967+00,43,false,false
+93,SB,2046,Move In Past Due,Cody Bruguier,2025-04-12 20:21:42.940472+00,1000,false,false
+94,CV,C228,Move In Past Due,ERAY YILDIRIM,2025-04-12 20:21:42.940472+00,57,false,false
+95,SB,1151,Move In Past Due,Lucilyn Shiban,2025-04-12 20:21:42.940472+00,945,false,false
+96,CV,C108,Move In Past Due,Lauren Torres,2025-04-12 20:21:42.940472+00,8,false,false
+97,RS,3046,Move Out Past Due,Dametrius Johnson,2025-04-12 20:21:42.940472+00,712,false,false
+98,WO,464-D,Move Out Past Due,Hermenegildo Ambrosio,2025-04-12 20:21:42.940472+00,405,false,false
+99,OB,S174,Move In Past Due,Nicolas A. Hernandez,2025-04-14 17:17:43.954311+00,295,false,false
+100,OB,S062,Move Out Past Due,Roberto Rubio,2025-04-14 17:17:43.954311+00,184,false,false
+101,CV,C209,Deposit Accounting Past Due,Connie Switzer,2025-04-14 17:17:43.954311+00,38,false,false
+102,RS,2020,Applicant Past MoveIn,Marcus Irvin,2025-04-14 17:17:43.954311+00,552,false,false
+103,SB,3133,Applicant Past MoveIn,Izaiah Villalobos,2025-04-14 17:17:43.954311+00,1177,false,false
+104,RS,3064,Move Out Past Due,Rick Gilbert II,2025-04-16 14:28:11.715484+00,730,false,false
+105,SB,1007,Move Out Past Due,Giovani Bravo Hernandez,2025-04-16 14:28:11.715484+00,801,false,false
+106,OB,S136,Move In Past Due,Mario Regil,2025-04-16 14:29:54.949201+00,257,false,false
+107,RS,3014,Move Out Past Due,Andrienne Israel,2025-04-16 14:29:54.949201+00,682,false,false
+108,RS,3128,Deposit Accounting Past Due,Miguel Souza,2025-04-16 14:29:54.949201+00,791,false,false
+109,OB,S172,Move In Past Due,Alejandro Placencia,2025-04-18 18:08:49.675709+00,293,false,false
+110,OB,S062,Deposit Accounting Past Due,Roberto Rubio,2025-04-18 18:08:49.675709+00,184,false,false
+111,SB,1079,Move In Past Due,Larryn Morgan,2025-04-19 14:27:00.831722+00,873,false,false
+112,SB,2057,Move In Past Due,Shanice williams,2025-04-19 14:27:00.831722+00,1011,false,false
+113,OB,S048,Move In Past Due,Maritza Martin Gonzalez,2025-04-20 14:45:36.794248+00,170,false,false
+114,SB,1057,Move Out Past Due,Deanna Baca,2025-04-20 14:45:36.794248+00,851,false,false
+115,RS,3014,Deposit Accounting Past Due,Andrienne Israel,2025-04-20 14:45:36.794248+00,682,false,false
+116,CV,C229,Move Out Past Due,Ronald Johnson,2025-04-21 13:11:16.881726+00,58,false,false
+117,CV,C406,Deposit Accounting Past Due,Ryan Montell,2025-04-24 04:35:57.665689+00,97,false,false
+118,RS,3001,Deposit Accounting Past Due,Christian Hubaker,2025-04-24 04:36:18.929595+00,669,false,false
+119,RS,3034,Deposit Accounting Past Due,Anabel Rodriguez,2025-04-24 04:36:18.929595+00,701,false,false
+120,SB,1057,Deposit Accounting Past Due,Deanna Baca,2025-04-27 21:19:35.506632+00,851,false,false
+121,CV,C204,Applicant Past MoveIn,Rosa Rivera,2025-04-27 21:19:35.506632+00,33,false,false
+122,CV,C408,Applicant Past MoveIn,Travon Graham,2025-04-27 21:20:40.616567+00,99,false,false
+123,CV,C408,Applicant Past MoveIn,Travon Graham,2025-04-27 21:21:32.632235+00,99,false,false
+124,CV,C408,Applicant Past MoveIn,Travon Graham,2025-04-27 21:21:47.043702+00,99,false,false
+125,RS,3017,Applicant Past MoveIn,Deiby Delgado Ramirez,2025-04-27 21:21:47.043702+00,685,false,false
+126,SB,3109,Move Out Past Due,Alora Martin,2025-04-29 12:25:27.402049+00,1163,false,false
+127,RS,1006,Move Out Past Due,Jaren Smith,2025-04-29 14:58:12.182958+00,442,false,false
+128,SB,3109,Deposit Accounting Past Due,Alora Martin,2025-04-29 14:58:12.182958+00,1163,false,false
+129,OB,S099,Move In Past Due,Connor Wiltfong,2025-04-30 18:33:20.938266+00,220,false,false
+130,RS,3120,Move Out Past Due,Isiah Hill,2025-04-30 18:33:20.938266+00,783,false,false
+131,CV,C418,Move Out Past Due,Robert Kallas,2025-05-01 14:48:59.250729+00,109,false,false
+132,RS,1082,Move Out Past Due,Tian Smith,2025-05-01 14:48:59.250729+00,493,false,false
+133,RS,3098,Move Out Past Due,Tanisha Fanney,2025-05-01 14:48:59.250729+00,762,false,false
+134,SB,2049,Move Out Past Due,Amy Dewan,2025-05-01 14:48:59.250729+00,1003,false,false
+135,OB,S043,Move Out Past Due,Aidan Wrazen,2025-05-01 14:48:59.250729+00,165,false,false
+136,OB,S093,Move Out Past Due,Julia Samaniego,2025-05-01 14:48:59.250729+00,215,false,false
+137,OB,S206,Move Out Past Due,Rafael sosa Gomez,2025-05-01 14:48:59.250729+00,327,false,false
+138,SB,1057,Move In Past Due,Amy Dewan,2025-05-06 00:00:01.836297+00,851,false,false
+139,OB,S109,Move In Past Due,Rafael sosa Gomez,2025-05-06 00:00:01.836297+00,230,false,false
+140,RS,3050,Move Out Past Due,Michael Mendoza,2025-05-06 00:00:01.836297+00,716,false,false
+141,RS,1006,Deposit Accounting Past Due,Jaren Smith,2025-05-06 00:00:39.736991+00,442,false,false
+142,RS,3120,Deposit Accounting Past Due,Isiah Hill,2025-05-06 00:00:39.736991+00,783,false,false
+143,SB,3072,Deposit Accounting Past Due,Jarin Oliver,2025-05-06 00:00:39.736991+00,1142,false,false
+144,RS,2056,Applicant Past MoveIn,Brendon Manning,2025-05-06 00:00:39.736991+00,586,false,false
+145,RS,2062,Applicant Past MoveIn,Henry Becerra,2025-05-06 00:00:39.736991+00,592,false,false
+146,SB,2015,Move In Past Due,Walther Obando,2025-05-06 00:01:06.494265+00,969,false,false
+147,RS,3002,Move Out Past Due,Trinity Thomas,2025-05-06 00:01:06.494265+00,670,false,false
+148,SB,1049,Move Out Past Due,Charles Boos,2025-05-06 00:01:06.494265+00,843,false,false
+149,OB,S123,Move Out Past Due,Dayana Saucedo,2025-05-06 00:01:06.494265+00,244,false,false
+150,SB,2139,Deposit Accounting Past Due,James Zuganelis,2025-05-06 00:01:06.494265+00,1093,false,false
+151,RS,3116,Applicant Past MoveIn,Daniel Rubalcava,2025-05-06 00:01:06.494265+00,779,false,false
+152,CV,C418,Deposit Accounting Past Due,Robert Kallas,2025-05-06 00:01:39.041332+00,109,false,false
+153,SB,2049,Deposit Accounting Past Due,Amy Dewan,2025-05-06 00:01:39.041332+00,1003,false,false
+154,OB,S043,Deposit Accounting Past Due,Aidan Wrazen,2025-05-06 00:01:39.041332+00,165,false,false
+155,OB,S206,Deposit Accounting Past Due,Rafael sosa Gomez,2025-05-06 00:01:39.041332+00,327,false,false
+156,SB,1014,Deposit Accounting Past Due,Clarissa Sanchez,2025-05-07 12:53:25.107545+00,808,false,false
+157,SB,2146,Applicant Past MoveIn,Benjamin Pareja,2025-05-07 12:53:25.107545+00,1100,false,false
+158,CV,C209,Move In Past Due,Daniel Magana,2025-05-07 13:23:15.937028+00,38,false,false
+159,SB,2079,Move In Past Due,Benjamin Pareja,2025-05-07 13:23:15.937028+00,1033,false,false
+160,CV,C414,Deposit Accounting Past Due,Dolores Gilliam,2025-05-07 13:23:15.937028+00,105,false,false
+161,RS,3122,Move Out Past Due,Miracl Hickman,2025-05-08 14:23:54.117042+00,785,false,false
+162,SB,2050,Move Out Past Due,Elizabeth Hunt,2025-05-08 14:23:54.117042+00,1004,false,false
+163,SB,1049,Deposit Accounting Past Due,Charles Boos,2025-05-08 14:23:54.117042+00,843,false,false
+164,OB,S123,Deposit Accounting Past Due,Dayana Saucedo,2025-05-08 14:23:54.117042+00,244,false,false
+165,SB,2061,Move In Past Due,Karen Alvarez,2025-05-10 12:48:48.839138+00,1015,false,false
+166,CV,C408,Move In Past Due,Celeste Garcia,2025-05-10 12:48:48.839138+00,99,false,false
+167,SB,2049,Move In Past Due,Benjamin Pareja,2025-05-10 12:48:48.839138+00,1003,false,false
+168,SB,2079,Move Out Past Due,Benjamin Pareja,2025-05-10 12:48:48.839138+00,1033,false,false
+169,RS,2078,Applicant Past MoveIn,Genesis Moctezuma Salgado,2025-05-10 12:48:48.839138+00,607,false,false
+170,SB,2080,Move In Past Due,Chase Fletcher,2025-05-12 04:24:33.460441+00,1034,false,false
+171,RS,3034,Move In Past Due,Mingtao Li,2025-05-12 04:24:33.460441+00,701,false,false
+172,CV,C421,Deposit Accounting Past Due,Gaius Ehihon,2025-05-12 04:24:33.460441+00,112,false,false
+173,RS,1060,Deposit Accounting Past Due,Diana Solano Ramos,2025-05-12 04:24:33.460441+00,478,false,false
+174,CV,C229,Move Out Past Due,Ronald Johnson,2025-05-12 13:09:19.99493+00,58,false,false
+175,RS,3122,Deposit Accounting Past Due,Miracl Hickman,2025-05-12 13:09:19.99493+00,785,false,false
+176,SB,2050,Deposit Accounting Past Due,Elizabeth Hunt,2025-05-12 13:09:19.99493+00,1004,false,false
+177,SB,2079,Deposit Accounting Past Due,Benjamin Pareja,2025-05-13 15:13:25.905496+00,1033,false,false
+178,SB,3075,Move Out Past Due,Tiffeney Cannon,2025-05-16 18:43:57.009196+00,1143,false,false
+179,RS,3098,Move Out Past Due,Tanisha Fanney,2025-05-16 18:44:32.185679+00,762,false,false
+180,SB,3075,Move Out Past Due,Tiffeney Cannon,2025-05-16 18:44:32.185679+00,1143,false,false
+181,CV,C229,Deposit Accounting Past Due,Ronald Johnson,2025-05-16 18:44:32.185679+00,58,false,false
+182,RS,1082,Move In Past Due,Tanisha Fanney,2025-05-17 14:21:09.934931+00,493,false,false
+183,RS,2029,Move In Past Due,Christopher Baker,2025-05-17 14:21:09.934931+00,560,false,false
+184,RS,2025,Move Out Past Due,Christopher Baker,2025-05-17 14:21:09.934931+00,556,false,false
+185,OB,S002,Move Out Past Due,Fatima Gonzalez,2025-05-17 14:21:09.934931+00,124,false,false
+186,RS,1006,Applicant Past MoveIn,Arin Yellowhair,2025-05-17 14:21:09.934931+00,442,false,false
+187,RS,3092,Applicant Past MoveIn,Noelle Himmes,2025-05-17 14:21:09.934931+00,756,false,false
+188,CV,C204,Move In Past Due,Rosa Rivera,2025-05-19 13:08:02.440836+00,33,false,false
+189,RS,1141,Move In Past Due,Daniela Dwan,2025-05-19 13:08:02.440836+00,532,false,false
+190,CV,C418,Move In Past Due,Aedric Frechelle,2025-05-19 13:08:02.440836+00,109,false,false
+191,RS,2098,Applicant Past MoveIn,Gabrielllie Albright,2025-05-19 13:08:02.440836+00,626,false,false
+192,SB,2069,Move Out Past Due,Najibullah Saleh Zada,2025-05-19 13:19:57.687154+00,1023,false,false
+193,SB,3041,Move Out Past Due,Emily Carver,2025-05-19 13:19:57.687154+00,1115,false,false
+194,OB,S077,Move Out Past Due,Cameron Smith,2025-05-19 13:19:57.687154+00,199,false,false
+195,SB,3075,Deposit Accounting Past Due,Tiffeney Cannon,2025-05-19 13:19:57.687154+00,1143,false,false
+196,CV,C427,Move In Past Due,Keyshawn Brown,2025-05-20 15:04:16.56431+00,118,false,false
+197,CV,C429,Deposit Accounting Past Due,Desiree Ferris-Francis,2025-05-20 15:04:16.56431+00,120,false,false
+198,RS,2025,Deposit Accounting Past Due,Christopher Baker,2025-05-21 15:10:18.926406+00,556,false,false
+199,SB,2071,Deposit Accounting Past Due,Cassandra Alva,2025-05-21 15:10:18.926406+00,1025,false,false
+200,RS,2040,Move Out Past Due,Trent Moorman,2025-05-22 14:24:37.801324+00,571,false,false
+201,SB,1046,Move Out Past Due,Mackenzie Fields,2025-05-22 14:24:37.801324+00,840,false,false
+202,SB,2050,Applicant Past MoveIn,Zackary inman,2025-05-22 14:24:37.801324+00,1004,false,false
+203,SB,1049,Move In Past Due,Madison Morrow,2025-05-24 19:15:03.587317+00,843,false,false
+204,SB,2125,Move Out Past Due,Miriam Lespron,2025-05-24 19:15:03.587317+00,1079,false,false
+205,WO,466-H,Move Out Past Due,Wesley Mccracken,2025-05-24 19:15:03.587317+00,417,false,false
+206,CV,C307,Move In Past Due,Kevin Rasmussen,2025-05-25 14:09:12.209427+00,67,false,false
+207,RS,3108,Move Out Past Due,Alvaro Diaz,2025-05-25 14:09:12.209427+00,772,false,false
+208,OB,S002,Move Out Past Due,Fatima Gonzalez,2025-05-25 14:09:12.209427+00,124,false,false
+209,OB,S077,Move Out Past Due,Cameron Smith,2025-05-25 14:09:12.209427+00,199,false,false
+210,SB,3106,Applicant Past MoveIn,Naima Sheikh,2025-05-25 14:09:12.209427+00,1160,false,false
+211,SB,1046,Deposit Accounting Past Due,Mackenzie Fields,2025-05-26 23:49:50.923357+00,840,false,false
+212,SB,2076,Deposit Accounting Past Due,Naza Ziad,2025-05-27 17:35:53.435954+00,1030,false,false
+213,SB,2125,Deposit Accounting Past Due,Miriam Lespron,2025-05-28 17:58:45.570244+00,1079,false,false
+214,OB,S002,Deposit Accounting Past Due,Fatima Gonzalez,2025-05-28 17:58:45.570244+00,124,false,false
+215,CV,C406,Move In Past Due,Travon Graham,2025-05-29 13:16:21.064007+00,97,false,false
+216,CV,C319,Move In Past Due,John Pyefinch,2025-05-29 13:16:21.064007+00,79,false,false
+217,RS,2058,Move In Past Due,Lucresha Hinton,2025-05-30 14:44:07.488484+00,588,false,false
+218,SB,2018,Deposit Accounting Past Due,Joel Statton,2025-05-30 14:44:07.488484+00,972,false,false
+219,CV,C308,Move Out Past Due,Chase Graf,2025-05-31 13:09:58.308417+00,68,false,false
+220,RS,2039,Move Out Past Due,Erica Limstrom,2025-05-31 13:09:58.308417+00,570,false,false
+221,RS,2040,Move Out Past Due,Trent Moorman,2025-05-31 13:09:58.308417+00,571,false,false
+222,OB,S058,Move Out Past Due,Melissa Rodriguez,2025-05-31 13:09:58.308417+00,180,false,false
+223,CV,C106,Move Out Past Due,DeQuan McFadden,2025-06-02 12:28:48.999002+00,6,false,false
+224,CV,C126,Move Out Past Due,Ronald Woods,2025-06-02 12:28:48.999002+00,24,false,false
+225,RS,1013,Move Out Past Due,Sunmex LLC,2025-06-02 12:28:48.999002+00,446,false,false
+226,RS,1017,Move Out Past Due,Margaret Dessauer,2025-06-02 12:28:48.999002+00,449,false,false
+227,SB,1108,Move Out Past Due,Eriberto Anguiano,2025-06-02 12:28:48.999002+00,902,false,false
+228,OB,S025,Move Out Past Due,Norma Gaspar,2025-06-02 12:28:48.999002+00,147,false,false
+229,OB,S064,Move Out Past Due,Dalila Rivera,2025-06-02 12:28:48.999002+00,186,false,false
+230,OB,S074,Move Out Past Due,Walburga Krayem,2025-06-02 12:28:48.999002+00,196,false,false
+231,OB,S093,Move Out Past Due,Julia Samaniego,2025-06-02 12:28:48.999002+00,215,false,false
+232,OB,S127,Move Out Past Due,Josue Olivares,2025-06-02 12:28:48.999002+00,248,false,false
+233,OB,S139,Move Out Past Due,Gilberta Villanueva de Figueroa,2025-06-02 12:28:48.999002+00,260,false,false
+234,RS,1067,Applicant Past MoveIn,Allysia Howerton,2025-06-02 12:28:48.999002+00,483,false,false
+235,OB,S062,Move In Past Due,Melissa Rodriguez,2025-06-02 12:59:03.951818+00,184,false,false
+236,OB,S107,Move In Past Due,Jordan Nealy,2025-06-02 12:59:03.951818+00,228,false,false
+237,OB,S178,Move In Past Due,Arturo Zavalza,2025-06-02 12:59:03.951818+00,299,false,false
+238,OB,S123,Move In Past Due,Miguel Contreras,2025-06-02 12:59:03.951818+00,244,false,false
+239,RS,2025,Move In Past Due,Krystina LeNear,2025-06-02 12:59:03.951818+00,556,false,false
+240,RS,2009,Move In Past Due,Trent Moorman,2025-06-02 12:59:03.951818+00,541,false,false
+241,OB,S084,Move In Past Due,Gilberta Villanueva de Figueroa,2025-06-02 12:59:03.951818+00,206,false,false
+242,OB,S186,Move In Past Due,Leilani Flores,2025-06-02 12:59:03.951818+00,307,false,false
+243,RS,3027,Move Out Past Due,Krystina LeNear,2025-06-02 12:59:03.951818+00,694,false,false
+244,SB,1134,Move Out Past Due,Anthony Spina,2025-06-02 12:59:03.951818+00,928,false,false
+245,SB,3090,Move Out Past Due,Daniel Herrera,2025-06-02 12:59:03.951818+00,1148,false,false
+246,SB,3072,Applicant Past MoveIn,Willie Blair,2025-06-02 12:59:03.951818+00,1142,false,false
+247,CV,C308,Deposit Accounting Past Due,Chase Graf,2025-06-04 12:51:56.651552+00,68,false,false
+248,RS,2039,Deposit Accounting Past Due,Erica Limstrom,2025-06-04 12:51:56.651552+00,570,false,false
+249,CV,C126,Deposit Accounting Past Due,Ronald Woods,2025-06-05 14:19:00.214169+00,24,false,false
+250,RS,2040,Deposit Accounting Past Due,Trent Moorman,2025-06-05 14:19:00.214169+00,571,false,false
+251,SB,1108,Deposit Accounting Past Due,Eriberto Anguiano,2025-06-05 14:19:00.214169+00,902,false,false
+252,SB,2077,Deposit Accounting Past Due,Gilmore Garza,2025-06-05 14:19:00.214169+00,1031,false,false
+253,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-05 14:19:00.214169+00,180,false,false
+254,OB,S064,Deposit Accounting Past Due,Dalila Rivera,2025-06-05 14:19:00.214169+00,186,false,false
+255,OB,S074,Deposit Accounting Past Due,Walburga Krayem,2025-06-05 14:19:00.214169+00,196,false,false
+256,OB,S077,Deposit Accounting Past Due,Cameron Smith,2025-06-05 14:19:00.214169+00,199,false,false
+257,OB,S093,Deposit Accounting Past Due,Julia Samaniego,2025-06-05 14:19:00.214169+00,215,false,false
+258,OB,S127,Deposit Accounting Past Due,Josue Olivares,2025-06-05 14:19:00.214169+00,248,false,false
+259,OB,S139,Deposit Accounting Past Due,Gilberta Villanueva de Figueroa,2025-06-05 14:19:00.214169+00,260,false,false
+260,SB,1134,Deposit Accounting Past Due,Anthony Spina,2025-06-06 13:43:45.916234+00,928,false,false
+261,RS,1031,Move In Past Due,Tehya Kimura,2025-06-08 01:03:17.644731+00,459,false,false
+262,RS,3014,Applicant Past MoveIn,Jenna Oddo,2025-06-08 01:03:17.644731+00,682,false,false
+263,RS,2104,Move Out Past Due,Lauren Medina,2025-06-09 06:37:55.909623+00,632,false,false
+264,RS,1017,Move In Past Due,Paul Gonzales,2025-06-10 12:24:08.628517+00,449,false,false
+265,SB,1044,Move Out Past Due,Ryan Boeh,2025-06-10 12:24:08.628517+00,838,false,false
+266,SB,1041,Deposit Accounting Past Due,Jorge Mendoza,2025-06-10 12:24:08.628517+00,835,false,false
+267,SB,1050,Deposit Accounting Past Due,Luke Hernandez,2025-06-10 12:24:08.628517+00,844,false,false
+268,OB,S025,Deposit Accounting Past Due,Norma Gaspar,2025-06-10 12:24:08.628517+00,147,false,false
+269,SB,2050,Move In Past Due,Zackary inman,2025-06-12 07:54:33.56731+00,1004,false,false
+270,SB,2160,Deposit Accounting Past Due,Denzel Norvell,2025-06-12 07:54:33.56731+00,1114,false,false
+271,RS,1067,Move In Past Due,Allysia Howerton,2025-06-12 14:50:52.274129+00,483,false,false
+272,RS,2104,Deposit Accounting Past Due,Lauren Medina,2025-06-12 14:50:52.274129+00,632,false,false
+273,CV,C320,Move Out Past Due,Anthony Michael,2025-06-13 10:58:42.547294+00,80,false,false
+274,CV,C414,Move In Past Due,Anthony Michael,2025-06-14 14:16:54.863811+00,105,false,false
+275,CV,C308,Move In Past Due,Anthony Nevarez,2025-06-14 14:16:54.863811+00,68,false,false
+276,RS,2049,Move Out Past Due,Paul Davis,2025-06-14 14:16:54.863811+00,579,false,false
+277,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-14 14:16:54.863811+00,180,false,false
+278,OB,S058,Applicant Past MoveIn,ReTisha Carr,2025-06-14 14:16:54.863811+00,180,false,false
+279,SB,2029,Move Out Past Due,Micah Salazar,2025-06-15 15:50:37.565857+00,983,false,false
+280,OB,S058,Applicant Past MoveIn,ReTisha Carr,2025-06-15 15:50:37.565857+00,180,false,false
+281,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-16 21:42:52.001215+00,180,false,false
+282,RS,2032,Move Out Past Due,Brandon Jones,2025-06-18 06:36:46.368877+00,563,false,false
+283,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-18 06:36:46.368877+00,180,false,false
+284,RS,2039,Move In Past Due,Jamie Ford,2025-06-18 14:05:49.824273+00,570,false,false
+285,OB,S043,Move In Past Due,David Guerrero Palacios,2025-06-18 14:05:49.824273+00,165,false,false
+286,RS,3025,Move Out Past Due,Jamie Ford,2025-06-18 14:05:49.824273+00,692,false,false
+287,OB,S182,Move Out Past Due,David Guerrero Palacios,2025-06-18 14:05:49.824273+00,303,false,false
+288,CV,C320,Deposit Accounting Past Due,Anthony Michael,2025-06-18 14:05:49.824273+00,80,false,false
+289,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-18 14:05:49.824273+00,180,false,false
+290,SB,2029,Deposit Accounting Past Due,Micah Salazar,2025-06-19 14:30:53.159238+00,983,false,false
+291,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-19 14:30:53.159238+00,180,false,false
+292,RS,2061,Move In Past Due,Sai Pavan Teja Sripati,2025-06-21 13:30:19.329747+00,591,false,false
+293,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-21 13:30:19.329747+00,180,false,false
+294,SB,1092,Move Out Past Due,Grace Strachan,2025-06-22 13:13:20.57965+00,886,false,false
+295,SB,1051,Deposit Accounting Past Due,Benjamin Waldock,2025-06-22 13:13:20.57965+00,845,false,false
+296,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-22 13:13:20.57965+00,180,false,false
+297,RS,3025,Deposit Accounting Past Due,Jamie Ford,2025-06-22 13:13:59.925056+00,692,false,false
+298,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-22 13:13:59.925056+00,180,false,false
+299,SB,2083,Move Out Past Due,Marina Alexander,2025-06-23 14:00:33.024782+00,1037,false,false
+300,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-23 14:00:33.024782+00,180,false,false
+301,SB,3093,Move Out Past Due,Novaley Arceo,2025-06-24 11:29:06.081628+00,1151,false,false
+302,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-24 11:29:06.081628+00,180,false,false
+303,OB,S058,Deposit Accounting Past Due,Melissa Rodriguez,2025-06-25 12:16:57.807609+00,180,false,false
+304,CV,C229,Applicant Past MoveIn,Adrian Urvina,2025-06-26 14:01:48.00021+00,58,false,false
+305,RS,3050,Applicant Past MoveIn,Devin Nunn,2025-06-27 12:44:30.492938+00,716,false,false
+306,SB,3093,Deposit Accounting Past Due,Novaley Arceo,2025-06-28 12:54:08.402807+00,1151,false,false
+307,OB,S043,Move In Past Due,David Guerrero Palacios,2025-06-30 00:58:46.100057+00,165,false,false
+308,RS,2051,Move Out Past Due,Elena Olivo,2025-06-30 00:58:46.100057+00,581,false,false
+309,SB,2073,Deposit Accounting Past Due,Mohamad Mukhles,2025-06-30 00:58:46.100057+00,1027,false,false
+310,SB,1041,Applicant Past MoveIn,Colby Smith,2025-06-30 00:58:46.100057+00,835,false,false
+311,CV,C404,Move Out Past Due,Yanet Armentero,2025-06-30 13:49:06.916905+00,95,false,false
+312,SB,2130,Move Out Past Due,Juan Delgado,2025-06-30 13:49:06.916905+00,1084,false,false
+313,SB,2033,Deposit Accounting Past Due,Megan ONeil,2025-06-30 13:49:06.916905+00,987,false,false
+314,SB,1013,Move Out Past Due,Jaden Teller,2025-07-01 12:42:21.213963+00,807,false,false
+315,OB,S132,Move Out Past Due,Victor Morfin,2025-07-01 12:42:21.213963+00,253,false,false
+316,OB,S025,Move In Past Due,Jesus Garcia,2025-07-03 13:49:30.912811+00,147,false,false
+317,SB,2125,Move In Past Due,Jaden Teller,2025-07-03 13:49:30.912811+00,1079,false,false
+318,OB,S127,Move In Past Due,Karla Zumaya,2025-07-03 13:49:30.912811+00,248,false,false
+319,CV,C406,Move In Past Due,Naakoshi Imhotep,2025-07-03 13:49:30.912811+00,97,false,false
+320,SB,1152,Deposit Accounting Past Due,Devan Lanter,2025-07-03 13:49:30.912811+00,946,false,false
+321,SB,1086,Deposit Accounting Past Due,Angel Sandoval,2025-07-03 13:49:58.831562+00,880,false,false
+322,SB,2130,Deposit Accounting Past Due,Juan Delgado,2025-07-05 14:21:01.614205+00,1084,false,false
+323,RS,3112,Move Out Past Due,Jake Paulson,2025-07-05 14:25:48.877071+00,775,false,false
+324,SB,1013,Deposit Accounting Past Due,Jaden Teller,2025-07-05 14:25:48.877071+00,807,false,false
+325,SB,1050,Move In Past Due,Jaime Jarquin davila,2025-07-06 13:56:22.976586+00,844,false,false
+326,SB,3090,Move In Past Due,Adam Hoover,2025-07-06 13:56:22.976586+00,1148,false,false
+327,RS,3010,Move Out Past Due,Yuxin Yao,2025-07-06 13:56:22.976586+00,678,true,false
+328,CV,C404,Deposit Accounting Past Due,Yanet Armentero,2025-07-07 14:10:52.908736+00,95,true,false
+329,RS,3001,Move In Past Due,Fernando De La Torre,2025-07-08 16:54:45.183873+00,669,false,false
+330,SB,1019,Move Out Past Due,Steven Tomlin,2025-07-08 16:54:45.183873+00,813,false,false
+331,SB,1086,Move In Past Due,Steven Tomlin,2025-07-09 14:29:58.661191+00,880,true,false
+332,RS,3112,Deposit Accounting Past Due,Jake Paulson,2025-07-09 14:29:58.661191+00,775,true,false
+333,CV,C315,Applicant Past MoveIn,Isabella Tassone,2025-07-11 13:46:23.752884+00,75,true,false
+334,RS,2097,Applicant Past MoveIn,Abigail Anderson,2025-07-11 13:46:23.752884+00,625,true,false
+335,RS,3010,Deposit Accounting Past Due,Yuxin Yao,2025-07-13 03:05:53.169985+00,678,true,false
+336,SB,1019,Deposit Accounting Past Due,Steven Tomlin,2025-07-13 03:05:53.233292+00,813,true,false
+337,OB,S002,Move In Past Due,Hector Aguilar,2025-07-13 13:57:40.85678+00,124,true,false
+338,SB,3075,Move In Past Due,Jasmine Rodriguez,2025-07-13 13:57:41.000083+00,1143,true,false
+339,RS,2114,Move Out Past Due,Robert Rockwell,2025-07-13 13:57:41.12411+00,641,true,false
+340,SB,1108,Move In Past Due,Adrian Sierra,2025-07-14 13:51:09.607307+00,902,true,false
+341,SB,3062,Move Out Past Due,Ryan Dougherty,2025-07-14 13:51:09.707238+00,1132,true,false
+342,RS,2049,Move In Past Due,Aleeyah Martinez,2025-07-15 14:21:06.911189+00,579,true,false
+343,RS,1048,No Lease Charges,debbie vance,2025-07-16 14:45:45.875623+00,470,true,false
+344,SB,1134,Move In Past Due,Alea Balda,2025-07-17 13:58:17.628354+00,928,true,false
+345,CV,C315,Move In Past Due,Isabella Tassone,2025-07-17 13:58:17.725378+00,75,true,false
+346,SB,1051,Move In Past Due,Kimberly Garnica,2025-07-17 13:58:17.77004+00,845,true,false
+347,RS,1051,Move Out Past Due,Kevin Ngwobela,2025-07-17 13:58:17.829164+00,473,true,false
+348,RS,2114,Deposit Accounting Past Due,Robert,2025-07-17 13:58:17.910046+00,641,true,false
+349,OB,S202,Deposit Accounting Past Due,Jesus Garcia,2025-07-17 13:58:17.996385+00,323,true,false
+350,RS,2032,Move In Past Due,Jeanchrison Jolivert,2025-07-18 13:40:45.074924+00,563,true,false
+351,CV,C217,Move Out Past Due,Tara Jones,2025-07-18 13:40:45.200465+00,46,true,false
+352,OB,S040,Move Out Past Due,Kimberly Ontiveros Gomez,2025-07-19 21:10:17.317937+00,162,true,false
+353,OB,S068,Move Out Past Due,Arturo Duron,2025-07-19 21:10:17.441165+00,190,true,false
+354,RS,1109,Deposit Accounting Past Due,Kori Holbrook,2025-07-19 21:10:17.565885+00,512,true,false
+355,CV,C220,Move Out Past Due,Abraham Flores Valencia,2025-07-21 13:20:25.271727+00,49,true,false
+356,SB,1060,Move Out Past Due,Corey Mitchell,2025-07-21 13:20:25.512751+00,854,true,false
+357,RS,1051,Deposit Accounting Past Due,Kevin Ngwobela,2025-07-21 13:20:25.594391+00,473,true,false
+358,SB,2123,Deposit Accounting Past Due,Lisa Barnstorf,2025-07-22 13:30:32.693099+00,1077,true,false
+359,OB,S093,Move In Past Due,Martha Rodriguez,2025-07-24 15:04:09.016284+00,215,true,false
+360,CV,C429,Move In Past Due,Dymonne Rhodes,2025-07-24 15:11:08.876663+00,120,true,false
+361,RS,1040,Move Out Past Due,Martin Garcia,2025-07-26 14:30:09.098259+00,465,true,false
+362,SB,2086,Move Out Past Due,Rosina Addow,2025-07-26 14:30:09.201687+00,1040,true,false
+363,SB,1152,Applicant Past MoveIn,John Finocchio,2025-07-26 14:30:09.26071+00,946,true,false
+364,SB,2073,Applicant Past MoveIn,Jennifer Burnett,2025-07-26 14:30:09.334568+00,1027,true,false
+365,SB,1013,Move In Past Due,Joshua Jurgenson,2025-07-27 13:41:50.081298+00,807,true,false
+366,RS,3042,Applicant Past MoveIn,Bryan Nguyen,2025-07-27 13:41:50.162494+00,709,true,false
+367,SB,2083,Applicant Past MoveIn,Anthony Vargas,2025-07-27 13:41:50.273752+00,1037,true,false
+368,RS,2005,Move Out Past Due,McKenzie Bais,2025-07-28 14:40:08.094834+00,537,true,false
+369,RS,3122,Applicant Past MoveIn,Kennedy Gonzalez,2025-07-28 14:40:08.406066+00,785,true,false
+370,SB,2086,Deposit Accounting Past Due,Rosina Addow,2025-07-30 14:47:32.149785+00,1040,true,false
+371,CV,C220,Move In Past Due,Matthew Brennan,2025-07-31 14:22:36.696881+00,49,true,false
+372,RS,1095,Move Out Past Due,Kevin Wang,2025-08-01 14:32:09.22188+00,503,true,false
+373,RS,1131,Move Out Past Due,Maria Ezelda Mendoza,2025-08-01 14:32:09.388822+00,527,true,false
+374,SB,2106,Move Out Past Due,Tatum Graham,2025-08-01 14:32:09.623277+00,1060,true,false
+375,OB,S040,Move Out Past Due,Kimberly Ontiveros Gomez,2025-08-01 14:32:09.887943+00,162,true,false
+376,OB,S052,Move Out Past Due,Maria Olga Escalera,2025-08-01 14:32:10.147793+00,174,true,false
+377,OB,S105,Move Out Past Due,George Humpherys,2025-08-01 14:32:10.262384+00,226,true,false
+378,OB,S121,Move Out Past Due,Maria Machi,2025-08-01 14:32:10.50967+00,242,true,false
+379,WO,462-C,Move Out Past Due,Santana Rodriguez,2025-08-01 14:32:10.764745+00,396,true,false
+380,RS,1103,Move In Past Due,Kevin Wang,2025-08-03 22:10:10.554752+00,507,true,false
+381,OB,S149,Move In Past Due,Ray Brito,2025-08-03 22:10:10.598252+00,270,true,false
+382,CV,C217,Move In Past Due,Freddy Ventura,2025-08-03 22:10:10.637552+00,46,true,false
+383,SB,1117,Move Out Past Due,Madeline Horn,2025-08-03 22:10:10.738847+00,911,true,false
+384,RS,3050,Move In Past Due,Kevin Kastner,2025-08-03 22:10:10.760568+00,716,true,false
+385,SB,3149,Deposit Accounting Past Due,Erik Plew,2025-08-03 22:10:10.848868+00,1183,true,false
+386,RS,3008,Applicant Past MoveIn,Angela Fuentes Lopez,2025-08-03 22:10:10.971246+00,676,true,false
+387,RS,3042,Applicant Past MoveIn,Bryan Nguyen,2025-08-03 22:10:11.148308+00,709,true,false
+388,RS,3039,Move Out Past Due,Ty Phillips,2025-08-04 15:07:38.344613+00,706,true,false
+389,CV,C123,Deposit Accounting Past Due,Jordan Bonilla,2025-08-05 15:13:08.343554+00,22,true,false
+390,CV,C416,Deposit Accounting Past Due,Gael Taylor,2025-08-05 15:13:08.345816+00,107,true,false
+391,SB,2106,Deposit Accounting Past Due,Tatum Graham,2025-08-05 15:13:08.492475+00,1060,true,false
+392,RS,1131,Deposit Accounting Past Due,Maria Ezelda Mendoza,2025-08-05 15:13:08.51879+00,527,true,false
+393,WO,462-C,Deposit Accounting Past Due,Santana Rodriguez,2025-08-05 15:13:08.777446+00,396,true,false
+394,RS,1040,Move Out Past Due,Martin Garcia,2025-08-06 14:50:33.914848+00,465,true,false
+395,OB,S040,Deposit Accounting Past Due,Kimberly Ontiveros Gomez,2025-08-06 14:50:34.212419+00,162,true,false
+396,RS,2005,Move In Past Due,Martin Garcia Jr,2025-08-07 14:16:41.905938+00,537,true,false
+397,RS,1095,Deposit Accounting Past Due,Kevin Wang,2025-08-07 14:16:42.051724+00,503,true,false
+398,SB,1117,Deposit Accounting Past Due,Madeline Horn,2025-08-07 14:16:42.115575+00,911,true,false
+399,RS,2027,Applicant Past MoveIn,Alexus Jackson,2025-08-07 14:16:42.398855+00,558,true,false
+400,OB,S052,Deposit Accounting Past Due,Maria Olga Escalera,2025-08-07 14:16:42.42467+00,174,true,false
+401,SB,1116,Move Out Past Due,Theresa Jackson,2025-08-08 14:10:27.949332+00,910,true,false
+402,RS,3039,Deposit Accounting Past Due,Ty Phillips,2025-08-08 14:10:28.098406+00,706,true,false
+403,OB,S058,Move In Past Due,Nubia Sotelo,2025-08-10 16:20:22.739051+00,180,true,false
+404,OB,S139,Move In Past Due,Ramon Reyes Vasquez,2025-08-10 16:20:22.864373+00,260,true,false
+405,OB,S182,Move In Past Due,Francisco Najar,2025-08-10 16:20:22.876383+00,303,true,false
+406,CV,C126,Move In Past Due,Kristina Samuels,2025-08-10 16:20:22.971158+00,24,true,false
+407,RS,1040,Deposit Accounting Past Due,Martin Garcia,2025-08-10 16:20:23.082765+00,465,true,false
+408,SB,1133,Deposit Accounting Past Due,Besente Gastelo,2025-08-10 16:20:23.195384+00,927,true,false
+409,OB,S095,Deposit Accounting Past Due,Esmeralda Preciado,2025-08-10 16:20:23.320592+00,217,true,false
+410,OB,S068,Applicant Past MoveIn,Laycha Medina Rivera,2025-08-10 16:20:23.637606+00,190,true,false
+411,SB,2016,Move Out Past Due,Karen Derry,2025-08-11 13:52:12.126588+00,970,true,false
+412,SB,1116,Deposit Accounting Past Due,Theresa Jackson,2025-08-12 15:16:42.206608+00,910,true,false
+413,RS,3122,Move In Past Due,Kennedy Gonzalez,2025-08-13 14:55:26.718497+00,785,true,false
+414,SB,3062,Move Out Past Due,Ryan Dougherty,2025-08-13 14:55:26.907921+00,1132,true,false
+415,OB,S027,Deposit Accounting Past Due,Ramon Reyes Vasquez,2025-08-13 14:55:27.033498+00,149,true,false
+416,SB,2016,Deposit Accounting Past Due,Karen Derry,2025-08-15 11:04:06.901871+00,970,true,false
+417,RS,3002,Applicant Past MoveIn,Roberto Gonzalez,2025-08-15 11:04:07.00429+00,670,true,false
+418,SB,2123,Applicant Past MoveIn,Colby Nez,2025-08-15 11:04:07.120934+00,1077,true,false
+419,SB,2083,Move In Past Due,Javier Alfredo Gomez Cetina,2025-08-17 18:46:52.974923+00,1037,true,false
+420,CV,C416,Move In Past Due,Coralys Rodriguez Barrera,2025-08-17 18:46:53.21735+00,107,true,false
+421,SB,3054,Move Out Past Due,Elesheia Bell,2025-08-17 18:46:53.32814+00,1126,true,false
+422,CV,C403,Move Out Past Due,Kristina Samuels,2025-08-19 13:54:06.306345+00,94,true,false
+423,SB,2055,Deposit Accounting Past Due,Shaelie McGrath,2025-08-19 13:54:06.425801+00,1009,true,false
+424,SB,3054,Deposit Accounting Past Due,Elesheia Bell,2025-08-20 14:02:45.636133+00,1126,true,false
+425,CV,C404,Move In Past Due,Miguel Mendoza,2025-08-21 13:58:27.358733+00,95,true,false
+426,OB,S068,Applicant Past MoveIn,Yolanda Corona Alfaro,2025-08-22 14:53:29.783595+00,190,true,false
+427,OB,S121,Move In Past Due,Maria De Jesus Peraza,2025-08-23 13:59:27.306567+00,242,true,false
+428,SB,1029,Move Out Past Due,Bryant Fitzgerald,2025-08-23 13:59:27.426773+00,823,true,false
+429,OB,S068,Move In Past Due,Yolanda Corona Alfaro,2025-08-23 13:59:27.436897+00,190,true,false
+430,SB,1106,Move Out Past Due,Joseph Lopez,2025-08-23 13:59:27.59746+00,900,true,false
+431,SB,2088,Move Out Past Due,Luis Goncalves,2025-08-23 13:59:27.626111+00,1042,true,false
+432,SB,3121,Move Out Past Due,Dylan Mcdowell,2025-08-23 13:59:27.733065+00,1167,true,false
+433,OB,S031,Move Out Past Due,Maria De Jesus Peraza,2025-08-23 13:59:27.825342+00,153,true,false
+434,RS,3039,Move In Past Due,Kim Palmer,2025-08-24 17:38:23.901821+00,706,true,false
+435,CV,C325,Move Out Past Due,KaNijah Jackson,2025-08-25 14:29:53.908261+00,85,true,false
+436,OB,S197,Move Out Past Due,Manuel Rivera,2025-08-25 14:29:54.067022+00,318,true,false
+437,RS,3120,Move In Past Due,Christian Volkenant,2025-08-26 13:46:14.894919+00,783,true,false
+438,CV,C216,Move Out Past Due,Ashrit Tayade,2025-08-27 15:05:24.96622+00,45,true,false
+439,OB,S197,Move Out Past Due,Manuel Rivera,2025-08-27 15:05:25.102641+00,318,true,false
+440,SB,1029,Deposit Accounting Past Due,Bryant Fitzgerald,2025-08-27 15:05:25.107155+00,823,true,false
+441,SB,2088,Deposit Accounting Past Due,Luis Goncalves,2025-08-27 15:05:25.313484+00,1042,true,false
+442,SB,1106,Deposit Accounting Past Due,Joseph Lopez,2025-08-27 15:05:25.334479+00,900,true,false
+443,SB,3121,Deposit Accounting Past Due,Dylan Mcdowell,2025-08-27 15:05:25.423423+00,1167,true,false
+444,SB,2026,Deposit Accounting Past Due,Kelton Gross,2025-08-28 14:14:25.296668+00,980,true,false
+445,CV,C321,Deposit Accounting Past Due,Leann Lopez,2025-08-29 14:15:27.63469+00,81,true,false
+446,SB,1030,Applicant Past MoveIn,Grant Ciccarello,2025-08-29 14:15:27.729091+00,824,true,false
+447,SB,2128,Deposit Accounting Past Due,Dharminder Kala,2025-08-29 14:15:27.760898+00,1082,true,false
+448,CV,C310,Move Out Past Due,Dori Harris,2025-08-30 14:10:49.245085+00,70,true,false
+449,OB,S114,No Lease Charges,Alfonso Arreola,2025-08-30 14:10:49.336793+00,235,true,false
+450,CV,C209,Move In Past Due,Dori Harris,2025-08-31 14:56:52.398799+00,38,true,false
+451,CV,C201,Move Out Past Due,Jeffrey Rosales,2025-09-01 13:45:46.207239+00,30,true,false
+452,CV,C415,Move Out Past Due,Joshua Cortez,2025-09-01 13:45:46.305234+00,106,true,false
+453,SB,1064,Move Out Past Due,Gladys Monje,2025-09-01 13:45:46.398199+00,858,true,false
+454,OB,S005,Move Out Past Due,Enrique Caracosa,2025-09-01 13:45:46.417475+00,127,true,false
+455,OB,S031,Move Out Past Due,Maria De Jesus Peraza,2025-09-01 13:45:46.493401+00,153,true,false
+456,OB,S080,Move Out Past Due,Karen Quintero,2025-09-01 13:45:46.620119+00,202,true,false
+457,OB,S105,Move Out Past Due,George Humpherys,2025-09-01 13:45:46.692783+00,226,true,false
+458,WO,462-E,Move Out Past Due,Madison Thomas,2025-09-01 13:45:46.772716+00,398,true,false
+459,SB,3096,Deposit Accounting Past Due,Taralyn Sanchez,2025-09-01 13:45:46.909562+00,1154,true,false
+460,OB,S121,Move In Past Due,Maria De Jesus Peraza,2025-09-02 14:28:55.185698+00,242,true,false
+461,OB,S068,Move In Past Due,George Humpherys,2025-09-02 14:28:55.275322+00,190,true,false
+462,SB,1117,Move In Past Due,Christian Laughlin,2025-09-03 14:37:35.034032+00,911,true,false
+463,CV,C216,Deposit Accounting Past Due,Ashrit Tayade,2025-09-03 14:37:35.103525+00,45,true,false
+464,CV,C310,Deposit Accounting Past Due,Dori Harris,2025-09-03 14:37:35.28191+00,70,true,false
+465,RS,2064,Move Out Past Due,Maria Santillan Cisneros,2025-09-04 14:26:08.006021+00,594,true,false
+466,OB,S005,Deposit Accounting Past Due,Enrique Caracosa,2025-09-05 14:10:28.42078+00,127,true,false
+467,OB,S031,Deposit Accounting Past Due,Maria De Jesus Peraza,2025-09-05 14:10:28.538923+00,153,true,false
+468,OB,S080,Deposit Accounting Past Due,Karen Quintero,2025-09-05 14:10:28.587692+00,202,true,false
+469,OB,S105,Deposit Accounting Past Due,George Humpherys,2025-09-05 14:10:28.71217+00,226,true,false
+470,SB,1133,Move In Past Due,Justin John,2025-09-07 14:18:56.915775+00,927,true,false
+471,SB,2038,Move Out Past Due,Justin John,2025-09-07 14:18:57.06581+00,992,true,false
+472,OB,S163,Move Out Past Due,Freddy Guzman,2025-09-07 14:18:57.075685+00,284,true,false
+473,OB,S008,Move Out Past Due,Paloma Chairez Neri,2025-09-07 14:18:57.101549+00,130,true,false
+474,OB,S200,Move Out Past Due,Emma Landeros,2025-09-07 14:18:57.155019+00,321,true,false
+475,RS,2064,Deposit Accounting Past Due,Maria Santillan Cisneros,2025-09-08 13:44:05.381216+00,594,true,false
+476,SB,2038,Deposit Accounting Past Due,Justin John,2025-09-10 13:49:00.989232+00,992,true,false
+477,SB,2137,Deposit Accounting Past Due,Rex Fletcher,2025-09-10 13:49:01.103836+00,1091,true,false
+478,OB,S008,Deposit Accounting Past Due,Paloma Chairez Neri,2025-09-11 15:10:38.307814+00,130,true,false
+479,OB,S200,Deposit Accounting Past Due,Emma Landeros,2025-09-11 15:10:38.350535+00,321,true,false
+480,OB,S163,Deposit Accounting Past Due,Freddy Guzman,2025-09-11 15:10:38.406731+00,284,true,false
+481,CV,C307,Move Out Past Due,Kevin Rasmussen,2025-09-12 14:05:52.517932+00,67,true,false
+482,CV,C415,Move In Past Due,Kevin Rasmussen,2025-09-13 14:27:02.230952+00,106,true,false
+483,CV,C124,Move Out Past Due,Marissa Elmblad,2025-09-13 14:27:02.480311+00,23,true,false
+484,SB,1093,Move Out Past Due,Jesse Mendez,2025-09-14 14:24:00.361659+00,887,true,false
+485,CV,C114,Move Out Past Due,Jaime Sanguino,2025-09-15 14:05:04.76308+00,14,true,false
+486,SB,1106,Applicant Past MoveIn,Virginia Villa,2025-09-15 14:05:04.832117+00,900,true,false
+487,RS,2050,Move Out Past Due,Ashley Atiga,2025-09-15 14:05:04.85195+00,580,true,false
+488,SB,2086,Move In Past Due,Dustin Bowles,2025-09-16 13:15:27.607503+00,1040,true,false
+489,SB,1029,Move In Past Due,Ashley Fedun,2025-09-16 13:15:27.730776+00,823,true,false
+490,SB,1093,Deposit Accounting Past Due,Jesse Mendez,2025-09-18 13:41:56.356467+00,887,true,false
+491,RS,1133,Deposit Accounting Past Due,Samuel Santos,2025-09-18 13:41:56.410954+00,528,true,false
+492,OB,S005,Move In Past Due,Vanessa Hernandez,2025-09-20 06:06:40.905836+00,127,true,false
+493,OB,S043,Move Out Past Due,David Guerrero Palacios,2025-09-20 06:06:40.953027+00,165,true,false
+494,SB,3054,Move In Past Due,Braedon Harris,2025-09-20 19:18:35.269573+00,1126,true,false
+495,CV,C127,Move In Past Due,Jackson White,2025-09-20 19:18:35.384511+00,25,true,false
+496,CV,C110,Applicant Past MoveIn,Laurentt Daniels,2025-09-20 19:18:35.468343+00,10,true,false
+497,CV,C311,Move Out Past Due,Krishna Upadhyay,2025-09-22 06:51:30.427462+00,71,true,false
+498,SB,2026,Applicant Past MoveIn,Nate Goforth,2025-09-22 06:51:30.46808+00,980,true,false
+499,SB,2026,Move In Past Due,Nate Goforth,2025-09-22 14:21:56.764396+00,980,true,false
+500,SB,1037,Move Out Past Due,Shanell Tsosie,2025-09-23 12:50:19.371225+00,831,true,false
+501,OB,S043,Deposit Accounting Past Due,David Guerrero Palacios,2025-09-23 12:50:19.636417+00,165,true,false
+502,CV,C110,Applicant Past MoveIn,Laurentt Daniels,2025-09-23 12:50:19.722763+00,10,true,false
+503,CV,C123,Applicant Past MoveIn,John Rodriguez,2025-09-23 12:50:20.124804+00,22,true,false
+504,RS,1095,Applicant Past MoveIn,Teresa Henderson,2025-09-24 15:02:06.451433+00,503,true,false
+505,CV,C311,Move Out Past Due,Krishna Upadhyay,2025-09-26 13:44:04.085999+00,71,true,false
+506,CV,C120,Move Out Past Due,Chyna Reeves,2025-09-26 13:44:04.113739+00,19,true,false
+507,CV,C311,Deposit Accounting Past Due,Krishna Upadhyay,2025-09-27 10:19:00.169464+00,71,true,false
+508,SB,2128,Move In Past Due,Pamela Leon,2025-09-28 23:12:07.087257+00,1082,true,false
+509,SB,1093,Move In Past Due,Mason Spitzer,2025-09-28 23:12:07.149225+00,887,true,false
+510,SB,3062,Move In Past Due,Marissa Hunter,2025-09-28 23:12:07.208499+00,1132,true,false
+511,OB,S060,Move Out Past Due,Laura Maravilla,2025-09-29 15:00:07.40425+00,182,true,false
+512,SB,3128,Move Out Past Due,Jedana Mason,2025-09-29 15:00:07.443581+00,1174,true,false
+513,RS,1109,Move In Past Due,Tyler Barrett,2025-09-30 13:10:16.433408+00,512,true,false
+514,RS,3106,Move Out Past Due,Charisma Dean,2025-09-30 13:10:16.51213+00,770,true,false
+515,SB,2059,Move In Past Due,Richard Brown,2025-10-01 13:41:47.010373+00,1013,true,true
+516,SB,1119,Move Out Past Due,Stephanie Meintzer,2025-10-01 13:41:47.090631+00,913,true,false
+517,OB,S091,Move Out Past Due,Ivan G. Flores,2025-10-01 13:41:47.181009+00,213,true,false
+518,OB,S055,Move Out Past Due,Rene Octavio Santillan,2025-10-01 13:41:47.187152+00,177,true,false
+519,CV,C403,Applicant Past MoveIn,Melissa Hausner,2025-10-01 13:41:47.264882+00,94,true,false
+520,RS,3009,Applicant Past MoveIn,Natalia Andrade,2025-10-01 13:41:47.351737+00,677,true,false
+521,OB,S080,Move In Past Due,Ivan G. Flores,2025-10-02 13:21:44.676831+00,202,true,true
+522,OB,S202,Move In Past Due,Willy JR Berdeja,2025-10-02 13:21:44.766036+00,323,true,false
+523,SB,2055,Move In Past Due,Danielle Gressly,2025-10-02 13:21:44.854704+00,1009,true,false
+524,WO,452-E,Move Out Past Due,Celeste Espinoza,2025-10-02 13:21:44.934015+00,358,true,false
+525,SB,1032,Move In Past Due,Devyn Gibson,2025-10-03 16:16:18.824339+00,826,true,false
+526,SB,2023,Move Out Past Due,Jeniffer Albiter,2025-10-03 16:16:18.938294+00,977,true,false
+527,SB,3128,Deposit Accounting Past Due,Jedana Mason,2025-10-03 16:16:18.997653+00,1174,true,false
+528,OB,S060,Deposit Accounting Past Due,Laura Maravilla,2025-10-03 16:16:19.095446+00,182,true,false
+529,RS,3008,Move In Past Due,Beverly Manyturquoise,2025-10-06 01:18:42.358503+00,676,true,false
+530,SB,1001,Deposit Accounting Past Due,Dominique Lautiero,2025-10-06 01:18:42.363852+00,795,true,true
+531,SB,1148,Deposit Accounting Past Due,Noelle Pitman,2025-10-06 01:18:42.450283+00,942,true,true
+532,SB,1119,Deposit Accounting Past Due,Stephanie Meintzer,2025-10-06 01:18:42.45443+00,913,true,true
+533,SB,2110,Deposit Accounting Past Due,Oscar Mireles,2025-10-06 01:18:42.534974+00,1064,true,true
+534,OB,S055,Deposit Accounting Past Due,Rene Octavio Santillan,2025-10-06 01:18:42.617572+00,177,true,false
+535,OB,S091,Deposit Accounting Past Due,Ivan G. Flores,2025-10-06 01:18:42.716165+00,213,true,false
+536,OB,S008,Move In Past Due,Cesar Gabriel Alvarez Perez,2025-10-06 14:33:30.604863+00,130,true,true
+537,SB,3112,Move Out Past Due,Andrew Mathias,2025-10-06 14:33:30.743288+00,1166,true,true
+538,SB,2023,Deposit Accounting Past Due,Jeniffer Albiter,2025-10-07 13:20:36.123874+00,977,true,true
+539,WO,452-E,Deposit Accounting Past Due,Celeste Espinoza,2025-10-07 13:20:36.1924+00,358,true,false
+540,OB,S152,Deposit Accounting Past Due,Cesar Gabriel Alvarez Perez,2025-10-09 10:04:06.270044+00,273,true,false
+541,CV,C325,Move In Past Due,Jeremy Hall,2025-10-10 13:55:33.190304+00,85,true,false
+542,CV,C429,Move Out Past Due,Dymonne Rhodes,2025-10-10 13:55:33.277841+00,120,true,false
+543,CV,C310,Move In Past Due,Dymonne Rhodes,2025-10-11 09:17:35.010034+00,70,true,false
+544,SB,1064,Move In Past Due,Ravi Kiran Gulipalli,2025-10-11 09:17:35.16014+00,858,true,false
+545,CV,C118,Move Out Past Due,Andres Daniels,2025-10-11 09:17:35.290238+00,18,true,false
+546,SB,3112,Deposit Accounting Past Due,Andrew Mathias,2025-10-11 09:17:35.432326+00,1166,true,false
+547,SB,1001,Move In Past Due,Kevin Jenkins,2025-10-12 09:49:10.414476+00,795,true,false
+548,SB,1060,Move In Past Due,Mazie Noring,2025-10-12 09:49:10.510405+00,854,true,false
+549,CV,C321,Move In Past Due,Andres Daniels,2025-10-12 09:49:10.604361+00,81,true,false
+550,SB,3108,Move Out Past Due,Danielle Gressly,2025-10-13 08:58:55.382474+00,1162,true,false
+551,SB,2095,Deposit Accounting Past Due,Micaela Nitzel,2025-10-13 08:58:55.485193+00,1049,true,false
+552,CV,C118,Deposit Accounting Past Due,Andres Daniels,2025-10-15 10:54:38.304147+00,18,true,false
+553,CV,C429,Deposit Accounting Past Due,Dymonne Rhodes,2025-10-15 10:54:38.535814+00,120,true,false
+554,OB,S105,Applicant Past MoveIn,Jonathan Hernandez,2025-10-16 08:56:45.14849+00,226,true,false
+555,SB,3108,Deposit Accounting Past Due,Danielle Gressly,2025-10-17 09:43:34.822017+00,1162,true,false
+556,SB,3122,Deposit Accounting Past Due,Kevin Jenkins,2025-10-18 13:13:46.387652+00,1168,true,false
+557,CV,C201,Move In Past Due,Jayden Rodriguez,2025-10-19 09:51:05.64507+00,30,true,false
+558,CV,C411,Deposit Accounting Past Due,Michael Rodriguez,2025-10-19 09:51:05.81773+00,102,true,false
+559,CV,C422,Deposit Accounting Past Due,Andreas Moore,2025-10-19 09:51:05.92396+00,113,true,false
+560,SB,3091,Move Out Past Due,Annette Pearcy,2025-10-21 11:39:23.280703+00,1149,true,false
+561,OB,S142,Deposit Accounting Past Due,Ruben Fuentes Gonzalez,2025-10-21 11:39:23.451675+00,263,true,false
+562,SB,3128,Move In Past Due,Ashley Gaston,2025-10-22 11:52:29.949904+00,1174,true,false
+563,SB,1105,Deposit Accounting Past Due,Tom Carroll,2025-10-23 14:00:55.877574+00,899,true,false
+564,SB,1148,Move In Past Due,Thomas Brillard,2025-10-26 12:54:56.779283+00,942,true,false
+565,RS,2035,Move In Past Due,Emily Brissenden,2025-10-26 12:54:56.919023+00,566,true,false
+566,RS,2073,Move In Past Due,Angel Dominguez,2025-10-26 12:54:57.06487+00,602,true,false
+567,SB,3096,Move In Past Due,Paula Rodriguez,2025-10-26 12:54:57.212588+00,1154,true,false
+568,CV,C307,Move In Past Due,Corie Mitchell,2025-10-26 12:54:57.390151+00,67,true,false
+569,SB,1144,Move Out Past Due,Teresa Nuckolls,2025-10-26 12:54:57.524103+00,938,true,false
+570,SB,2077,Move Out Past Due,Arvind Raviswaran,2025-10-26 12:54:57.703231+00,1031,true,false
+571,RS,3039,Applicant Past MoveIn,Alexandria Mitchell,2025-10-26 12:54:57.858938+00,706,true,false
+572,SB,3108,Move In Past Due,Vincent Bernardo,2025-10-27 09:30:51.212485+00,1162,true,false
+573,SB,2023,Move In Past Due,Jaimee Kaminski,2025-10-27 09:30:51.32489+00,977,true,false
+574,RS,3094,Deposit Accounting Past Due,Jessica Williams,2025-10-29 11:28:53.594512+00,758,true,false
+575,RS,1095,Applicant Past MoveIn,Sabrina Nguyen,2025-10-29 11:28:53.734783+00,503,true,false
+576,SB,1144,Deposit Accounting Past Due,Teresa Nuckolls,2025-10-30 11:48:47.689435+00,938,true,false
+577,SB,2077,Deposit Accounting Past Due,Arvind Raviswaran,2025-10-30 11:48:47.813659+00,1031,true,false
+578,OB,S191,Move Out Past Due,German Mendoza,2025-11-01 10:05:16.318784+00,312,true,false
+579,RS,1087,Move Out Past Due,Nelson Thomas,2025-11-01 10:05:16.343286+00,497,true,false
+580,OB,S105,Move In Past Due,Jonathan Hernandez,2025-11-02 12:15:27.807422+00,226,true,false
+581,CV,C305,Move In Past Due,Denzel Johnson,2025-11-02 12:15:28.027929+00,65,true,false
+582,RS,2028,Deposit Accounting Past Due,Angel Dominguez,2025-11-02 12:15:28.133759+00,559,true,false
+583,RS,1069,Deposit Accounting Past Due,Dominique Crawley,2025-11-04 16:13:46.580245+00,484,true,false
+584,CV,C424,Deposit Accounting Past Due,Angelica Galvan-Vieyra,2025-11-05 16:50:34.350761+00,115,true,false
+585,CV,C418,Deposit Accounting Past Due,Aedric Frechelle,2025-11-05 16:50:34.363508+00,109,true,false
+586,OB,S173,Deposit Accounting Past Due,Ashley Rodriguez,2025-11-05 16:50:34.572844+00,294,true,false
+587,OB,S129,Deposit Accounting Past Due,Luis Enrique Wright,2025-11-05 16:50:34.621436+00,250,true,false
+588,OB,S191,Deposit Accounting Past Due,German Mendoza,2025-11-05 16:50:34.665784+00,312,true,false
+589,OB,S207,Deposit Accounting Past Due,xzavier collmer,2025-11-05 16:50:34.775014+00,328,true,false
+590,OB,S142,Move In Past Due,Hugo Galindo Contreras,2025-11-08 08:36:21.760593+00,263,true,false
+591,SB,1119,Move In Past Due,Barbara Celaya,2025-11-09 17:22:03.584248+00,913,true,false
+592,SB,1063,Move Out Past Due,Barbara Celaya,2025-11-09 17:22:03.765896+00,857,true,false
+593,CV,C131,Move Out Past Due,Brian Guy,2025-11-11 14:57:01.656513+00,29,true,false
+594,OB,S106,Move Out Past Due,Miguel Lopez,2025-11-11 14:57:01.706309+00,227,true,false
+595,SB,2095,Applicant Past MoveIn,Nathen laudermilk,2025-11-11 14:57:01.726535+00,1049,true,false
+596,SB,1063,Deposit Accounting Past Due,Barbara Celaya,2025-11-12 15:03:04.320039+00,857,true,false
+597,OB,S038,Move Out Past Due,Jorge Romero,2025-11-13 08:28:57.203945+00,160,true,false
+598,OB,S152,Applicant Past MoveIn,Mauricio Haro,2025-11-14 15:55:16.970419+00,273,true,false
+599,SB,3091,Move In Past Due,Darryl Benson,2025-11-15 15:38:49.656149+00,1149,true,false
+600,SB,2017,Move Out Past Due,Jarod Locke,2025-11-15 15:38:49.720129+00,971,true,false
+601,CV,C131,Deposit Accounting Past Due,Brian Guy,2025-11-15 15:38:49.771758+00,29,true,false
+602,SB,1042,Deposit Accounting Past Due,Richard Butta,2025-11-15 15:38:49.876201+00,836,true,false
+603,CV,C411,Applicant Past MoveIn,Bosco Ra,2025-11-15 15:38:49.96735+00,102,true,false
+604,CV,C418,Applicant Past MoveIn,Edward Andino Sierra,2025-11-15 15:38:50.049261+00,109,true,false
+605,OB,S031,Applicant Past MoveIn,Erika Morales,2025-11-15 15:38:50.255093+00,153,true,false
+606,SB,2077,Move In Past Due,Dana Michaels,2025-11-16 15:45:10.692177+00,1031,true,false
+607,RS,1133,Applicant Past MoveIn,Jennifer Felix,2025-11-16 15:45:10.773279+00,528,true,false
+608,OB,S038,Deposit Accounting Past Due,Jorge Romero,2025-11-17 14:08:21.447989+00,160,true,false
+609,CV,C423,Move Out Past Due,Ana Landaverde,2025-11-17 14:08:21.46345+00,114,true,false
+610,RS,3096,Deposit Accounting Past Due,Hailemariam Andargie,2025-11-18 15:28:29.117113+00,760,true,false
+611,SB,2017,Deposit Accounting Past Due,Jarod Locke,2025-11-19 15:59:28.36667+00,971,true,false
+612,CV,C120,Applicant Past MoveIn,Malachi Menear,2025-11-20 15:44:34.427692+00,19,true,false
+613,SB,2095,Move In Past Due,Nathen laudermilk,2025-11-21 13:42:13.733184+00,1049,true,false
+614,CV,C422,Move In Past Due,Maximilian Meisterlin,2025-11-22 16:08:18.96775+00,113,true,false
+615,CV,C124,Move In Past Due,Keyonte Caine,2025-11-22 16:08:19.068835+00,23,true,false
+616,CV,C120,Move In Past Due,Malachi Menear,2025-11-22 16:08:19.163397+00,19,true,false
+617,SB,1045,Deposit Accounting Past Due,Chinnayya Raja Vemuri,2025-11-28 06:57:57.045472+00,839,true,false
+618,CV,C426,Move Out Past Due,Deshon Newton,2025-12-01 15:59:25.645417+00,117,true,false
+619,OB,S050,Move Out Past Due,Irma Gomez,2025-12-01 15:59:25.799373+00,172,true,false
+620,SB,2059,Move Out Past Due,Richard Brown,2025-12-01 15:59:25.813343+00,1013,true,false
+621,SB,1034,Move Out Past Due,Saige Sherratt,2025-12-01 15:59:25.819244+00,828,true,false
+622,OB,S153,Move Out Past Due,Evangelina Ferrante,2025-12-01 15:59:25.953773+00,274,true,false
+623,OB,S106,Move Out Past Due,Miguel Lopez,2025-12-01 15:59:26.001683+00,227,true,false
+624,OB,S095,Move In Past Due,Miguel Lopez,2025-12-02 15:29:27.29344+00,217,true,false
+625,SB,1063,Move In Past Due,Saige Sherratt,2025-12-02 15:29:27.386596+00,857,true,false
+626,RS,3052,Deposit Accounting Past Due,Hector Nuno,2025-12-03 15:32:16.712397+00,718,true,false
+627,SB,2047,Move Out Past Due,Abby Huot,2025-12-06 15:04:42.28741+00,1001,true,false
+628,SB,2059,Deposit Accounting Past Due,Richard Brown,2025-12-06 15:04:42.369708+00,1013,true,false
+629,SB,1034,Deposit Accounting Past Due,Saige Sherratt,2025-12-06 15:04:42.378402+00,828,true,false
+630,SB,2048,Move Out Past Due,Ethan Kahler,2025-12-06 15:13:28.606681+00,1002,true,false
+631,SB,2119,Move In Past Due,Asa White,2025-12-07 15:21:06.098371+00,1073,true,false
+632,SB,1045,Move In Past Due,Ethan Kahler,2025-12-07 15:21:06.17746+00,839,true,false
+633,SB,2117,Move Out Past Due,Chris Walsh,2025-12-07 15:21:06.252712+00,1071,true,false
+634,CV,C118,Move In Past Due,CARLOS ESPINOZA,2025-12-07 15:21:06.263235+00,18,true,false
+635,SB,1042,Applicant Past MoveIn,Bryan Moore,2025-12-07 15:21:06.352322+00,836,true,false
+636,SB,1042,Move In Past Due,Bryan Moore,2025-12-09 15:17:26.760536+00,836,true,false
+637,CV,C429,Applicant Past MoveIn,Seth Cournoyer,2025-12-09 15:17:26.814508+00,120,true,false
+638,SB,1105,Move In Past Due,Kaleigh Roeder,2025-12-11 16:37:37.12339+00,899,true,false
+639,SB,2117,Deposit Accounting Past Due,Chris Walsh,2025-12-11 16:37:37.170665+00,1071,true,false
+640,CV,C429,Applicant Past MoveIn,Seth Cournoyer,2025-12-12 14:49:34.846833+00,120,true,false
+641,OB,S180,Move Out Past Due,Jaime Mandujano,2025-12-13 16:21:08.83108+00,301,true,false
+642,RS,1069,Move In Past Due,Jaclin Turner,2025-12-14 14:30:00.013612+00,484,true,false
+643,CV,C304,Move Out Past Due,Brendan McSorley,2025-12-15 17:12:04.870854+00,64,true,false
+644,SB,1141,Move Out Past Due,Lauren Kiser,2025-12-15 17:12:04.884785+00,935,true,false
+645,CV,C309,Move In Past Due,Brendan McSorley,2025-12-16 16:07:12.546801+00,69,true,false
+646,CV,C315,Applicant Past MoveIn,Zach Rodgers,2025-12-16 16:07:12.674371+00,75,true,false
+647,CV,C315,Move In Past Due,Zach Rodgers,2025-12-18 16:09:09.928368+00,75,true,false
+648,OB,S180,Deposit Accounting Past Due,Jaime Mandujano,2025-12-18 16:09:10.006756+00,301,true,false
+649,OB,S166,Move Out Past Due,Michael Quemado,2025-12-19 15:20:28.811133+00,287,true,false
+650,SB,1141,Deposit Accounting Past Due,Lauren Kiser,2025-12-19 15:20:28.937705+00,935,true,false
+651,RS,3010,Move In Past Due,Ulysses Shockley,2025-12-20 16:55:35.559619+00,678,true,false
+652,CV,C407,Move Out Past Due,Louie Monsanto,2025-12-20 16:55:35.661257+00,98,true,false
+653,SB,2102,Move Out Past Due,Tyler Pikula,2025-12-23 15:19:24.433852+00,1056,true,false
+654,OB,S166,Deposit Accounting Past Due,Michael Quemado,2025-12-23 15:19:24.5612+00,287,true,false
+655,SB,2060,Move In Past Due,Anabelly Gomez,2025-12-24 16:44:15.804413+00,1014,true,false
+656,SB,3078,Deposit Accounting Past Due,Eduardo Gonzalez,2025-12-24 16:44:15.843815+00,1146,true,false
+657,SB,2102,Deposit Accounting Past Due,Tyler Pikula,2025-12-27 22:53:38.094666+00,1056,true,false
+658,CV,C416,Move Out Past Due,Coralys Rodriguez Barrera,2025-12-27 22:53:38.103847+00,107,true,false
+659,RS,2038,Move In Past Due,Christian Bergman,2025-12-28 14:29:28.946319+00,569,true,false
+660,RS,1055,Move Out Past Due,Ashley Chavez Felix,2025-12-28 14:29:29.043006+00,475,true,false
+661,CV,C416,Move Out Past Due,Coralys Rodriguez Barrera,2025-12-30 14:38:24.388866+00,107,true,false
+662,SB,1141,Move In Past Due,Stacie Kirchner,2025-12-31 14:53:44.59582+00,935,true,false
+663,OB,S155,No Lease Charges,Alicia Barajas,2025-12-31 14:53:44.737187+00,276,true,false
+664,SB,2117,Move In Past Due,Christine Walker,2026-01-02 05:48:17.478338+00,1071,true,false
+665,SB,2048,Move In Past Due,Leon Yazzie,2026-01-02 05:48:17.513459+00,1002,true,false
+666,CV,C210,Deposit Accounting Past Due,Deomesio Wyatt,2026-01-02 05:48:17.59407+00,39,true,false
+667,OB,S067,Move Out Past Due,Michael Gonzalez,2026-01-02 05:48:17.616651+00,189,true,false
+668,OB,S200,Move In Past Due,Michael Gonzalez,2026-01-02 14:56:01.848493+00,321,true,false
+669,OB,S152,Move In Past Due,Angelica Anaya,2026-01-02 14:56:01.927341+00,273,true,false
+670,OB,S163,Move In Past Due,Carlos Ibarra-Corona,2026-01-02 14:56:01.955746+00,284,true,false
+671,OB,S079,Move Out Past Due,Angelica Anaya,2026-01-02 14:56:02.01032+00,201,true,false
+672,CV,C208,Move In Past Due,Declan Clayton,2026-01-05 15:29:00.930035+00,37,true,false
+673,SB,2045,Move Out Past Due,Ahren Drebing,2026-01-05 15:29:01.05909+00,999,true,false
+674,OB,S067,Deposit Accounting Past Due,Michael Gonzalez,2026-01-05 15:29:01.10614+00,189,true,false
+675,SB,1151,Move Out Past Due,Lucilyn Shiban,2026-01-06 15:09:06.560393+00,945,true,false
+676,OB,S079,Deposit Accounting Past Due,Angelica Anaya,2026-01-06 15:09:06.657617+00,201,true,false
+677,SB,3111,Move Out Past Due,Raenny Rogers,2026-01-09 16:39:11.466835+00,1165,true,false
+678,OB,S131,Move Out Past Due,Genaro Rivera,2026-01-09 16:39:11.556534+00,252,true,false
+679,SB,2045,Deposit Accounting Past Due,Ahren Drebing,2026-01-09 16:39:11.595168+00,999,true,false
+680,SB,1151,Deposit Accounting Past Due,Lucilyn Shiban,2026-01-09 16:39:11.675787+00,945,true,false
+681,OB,S211,Move In Past Due,Genaro Rivera,2026-01-10 15:55:54.149624+00,332,true,false
+682,CV,C107,Applicant Past MoveIn,Michael Matherne,2026-01-10 15:55:54.243508+00,7,true,false
+683,SB,2102,Move In Past Due,Dana Michaels,2026-01-11 23:38:54.597885+00,1056,true,false
+684,SB,3078,Move In Past Due,Belial Miramontes,2026-01-11 23:38:54.69676+00,1146,true,false
+685,SB,2058,Move Out Past Due,Dana Michaels,2026-01-11 23:38:54.827454+00,1012,true,false
+686,RS,1135,Deposit Accounting Past Due,Tina Marijanovic,2026-01-12 15:24:03.788201+00,529,true,false
+687,RS,3056,Move Out Past Due,Daronn maul,2026-01-12 15:24:03.848161+00,722,true,false
+688,SB,3053,Move Out Past Due,Nathan Smith,2026-01-13 15:42:48.136383+00,1125,true,false
+689,OB,S131,Deposit Accounting Past Due,Genaro Rivera,2026-01-13 15:42:48.2414+00,252,true,false
+690,SB,2059,Applicant Past MoveIn,Wylie Bateson,2026-01-13 15:42:48.320471+00,1013,true,false
+691,OB,S101,Move Out Past Due,Erin Hurless,2026-01-16 14:19:50.6492+00,222,true,false
+692,OB,S199,Move Out Past Due,Kevin Buck,2026-01-16 14:19:50.712955+00,320,true,false
+693,SB,1151,Applicant Past MoveIn,Kyle Whitlock,2026-01-16 14:19:50.769161+00,945,true,false
+694,SB,2045,Move In Past Due,Aaron Gaona Acevedo,2026-01-17 17:15:04.322057+00,999,true,false
+695,SB,2130,Move Out Past Due,Roseann Dodd,2026-01-19 04:41:30.866375+00,1084,true,false
+696,OB,S072,Move In Past Due,Kevin Buck,2026-01-19 04:41:31.038738+00,194,true,false
+697,SB,3111,Move In Past Due,Morgan Beardsley,2026-01-20 16:38:08.202935+00,1165,true,false
+698,RS,2093,Move Out Past Due,Jessica Hernandez,2026-01-20 16:38:08.328936+00,621,true,false
+699,RS,1062,Move Out Past Due,Brandon Torres,2026-01-20 16:38:08.374302+00,480,true,false
+700,RS,2135,Move Out Past Due,Benjamin Rodriguez,2026-01-20 16:38:08.419241+00,661,true,false
+701,OB,S101,Deposit Accounting Past Due,Erin Hurless,2026-01-20 16:38:08.530443+00,222,true,false
+702,OB,S199,Deposit Accounting Past Due,Kevin Buck,2026-01-20 16:38:08.614766+00,320,true,false
+703,SB,1032,Deposit Accounting Past Due,Devyn Gibson,2026-01-21 16:07:03.690579+00,826,true,false
+704,SB,2130,Deposit Accounting Past Due,Roseann Dodd,2026-01-22 16:16:11.001107+00,1084,true,false
+705,SB,1073,Move Out Past Due,Kyle Fleming,2026-01-25 16:43:51.249776+00,867,true,true
+706,OB,S081,Deposit Accounting Past Due,Maria Diddon,2026-01-25 16:43:51.304943+00,203,true,true

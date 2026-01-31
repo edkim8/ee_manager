@@ -163,6 +163,51 @@ const navigationItems = computed(() => {
     ],
   })
 
+  // Add Admin menu
+  items.push({
+    label: 'Admin',
+    icon: 'i-heroicons-cog-6-tooth',
+    to: '/admin/upload',
+    children: [
+      {
+        label: 'Solver Engine',
+        icon: 'i-heroicons-cpu-chip',
+        to: '/admin/solver',
+      },
+      {
+        label: 'Solver Inspector',
+        icon: 'i-heroicons-beaker',
+        to: '/admin/solver/inspector',
+      },
+      {
+        label: 'Solver Inspector',
+        icon: 'i-heroicons-beaker',
+        to: '/admin/solver/inspector',
+      },
+      {
+        label: 'Legacy Import',
+        icon: 'i-heroicons-arrow-up-tray',
+        to: '/admin/upload',
+      },
+      {
+        label: 'Playground',
+        icon: 'i-heroicons-beaker',
+        children: [
+          {
+            label: 'Parser Engine',
+            icon: 'i-heroicons-document-text',
+            to: '/admin/upload',
+          },
+          {
+             label: 'Unit Lookup Generator',
+             icon: 'i-heroicons-code-bracket',
+             to: '/admin/generators/unit-lookup',
+          }
+        ]
+      }
+    ],
+  })
+
   return [items]
 })
 </script>
