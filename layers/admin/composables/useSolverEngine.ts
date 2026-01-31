@@ -1046,7 +1046,7 @@ export const useSolverEngine = () => {
                                 .from('availabilities')
                                 .select('id')
                                 .eq('unit_id', unitId)
-                                .in('status', ['Applicant', 'Future'])
+                                .in('status', ['Applied', 'Leased'])  // Fixed: Use availability_status ENUM values
                                 .single()
 
                             if (availability) {
@@ -1239,7 +1239,10 @@ export const useSolverEngine = () => {
                         }
                     }
                     
-                    console.log(`[Solver] ${pCode}: ${flagsToCreate.length} transfer flags created`)
+                    // Log per-property results
+                    if (flagsToCreate.length > 0) {
+                        console.log(`[Solver] ${pCode}: ${flagsToCreate.length} transfer flags created`)
+                    }
                 }
 
                 statusMessage.value = `Transfers Synced: ${totalTransferFlags} flags created.`
