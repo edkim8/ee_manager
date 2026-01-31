@@ -460,7 +460,6 @@ export type Database = {
         }
         Relationships: []
       }
-      }
       import_staging: {
         Row: {
           id: string
@@ -719,8 +718,7 @@ export type Database = {
           applicant_name: string
           agent: string | null
           application_date: string
-          status: string
-          is_overdue: boolean
+          screening_result: string | null
           created_at: string
           updated_at: string
         }
@@ -731,8 +729,7 @@ export type Database = {
           applicant_name: string
           agent?: string | null
           application_date: string
-          status: string
-          is_overdue?: boolean
+          screening_result?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -743,8 +740,7 @@ export type Database = {
           applicant_name?: string
           agent?: string | null
           application_date?: string
-          status?: string
-          is_overdue?: boolean
+          screening_result?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -777,6 +773,31 @@ export type Database = {
           vacant_days: number | null
         }
       }
+      view_leases: {
+        Row: {
+          id: string | null
+          tenancy_id: string | null
+          property_code: string | null
+          resident: string | null
+          number_household: number | null
+          unit_name: string | null
+          move_in_date: string | null
+          start_date: string | null
+          end_date: string | null
+          rent_amount: number | null
+          deposit_amount: number | null
+          lease_status: Database["public"]["Enums"]["lease_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leases_tenancy_id_fkey"
+            columns: ["tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "tenancies"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Functions: {
       [_ in never]: never
@@ -785,7 +806,7 @@ export type Database = {
       leasing_sync_status: "Success" | "Failed" | "Partial"
       ops_sync_status: "Success" | "Failed" | "Partial"
       occupancy_status: "vacant" | "occupied"
-      availability_status: "available" | "leased"
+      availability_status: "Available" | "Leased" | "Applied" | "Occupied"
       usage_type: "residential" | "model" | "employee" | "down"
 
       tenancy_status: "Current" | "Notice" | "Future" | "Applicant" | "Eviction" | "Past" | "Denied" | "Canceled"
