@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   extends: ['./layers/base', './layers/ops', './layers/admin', './layers/table', './layers/parsing'],
 
-  modules: ['@nuxtjs/supabase'],
+  modules: ['@nuxtjs/supabase', '@nuxt/image'],
 
   devtools: { enabled: true },
 

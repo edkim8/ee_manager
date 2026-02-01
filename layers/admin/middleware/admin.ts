@@ -1,6 +1,7 @@
 export default defineNuxtRouteMiddleware(async (to, from) => {
   const user = useSupabaseUser()
   const supabase = useSupabaseClient()
+  const { navigateTo } = await import('#imports')
 
   // First check if user is authenticated
   if (!user.value) {

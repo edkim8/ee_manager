@@ -13,8 +13,9 @@
 | F-003 | Database: Profiles Table | Ops | **COMPLETED** | Claude |
 | F-010 | Table Engine System | Table | **COMPLETED** | Claude |
 | F-011 | Parsing Engine | Parsing | **COMPLETED** | Antigravity/Claude |
-| F-012 | Properties List Page | Properties | *In Progress* | Antigravity |
+| F-012 | Assets List & Detail Pages | Assets | **COMPLETED** | Antigravity |
 | F-013 | Solver Engine (Complex Data) | Parsing | **COMPLETED** | Antigravity/Claude |
+| F-014 | Office Integrated Layers | Office | **COMPLETED** | Antigravity |
 
 > **F-010 Note:** Stable Core Layer - Open for Extension. See `layers/table/AI_USAGE_GUIDE.md`.
 > **F-011 Note:** Parser Playground with Export feature. See `layers/parsing/docs/PARSER_PLAYGROUND.md`.

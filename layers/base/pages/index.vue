@@ -68,6 +68,18 @@ const user = useSupabaseUser()
           </div>
         </div>
       </UCard>
+
+      <UCard>
+        <div class="flex items-center gap-4">
+          <div class="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
+            <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Users</p>
+            <p class="text-2xl font-semibold text-gray-900 dark:text-white">--</p>
+          </div>
+        </div>
+      </UCard>
     </div>
 
     <!-- Quick Actions Placeholder -->
@@ -81,6 +93,9 @@ const user = useSupabaseUser()
         </UButton>
         <UButton to="/office/residents" variant="soft" icon="i-heroicons-users">
           View Residents
+        </UButton>
+        <UButton to="/admin/users" variant="soft" icon="i-heroicons-user-group">
+          Manage Users
         </UButton>
         <UButton to="/user/profile" variant="soft" icon="i-heroicons-user-circle">
           My Profile

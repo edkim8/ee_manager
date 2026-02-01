@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useSupabaseClient, useToast, useHead } from '#imports'
 import { PROPERTY_LIST, getPropertyName } from '../../../base/constants/properties'
 import type { AdminUser, UserPropertyAccess } from '../../types/admin'
 
 definePageMeta({
-  middleware: 'admin',
   layout: 'dashboard'
 })
 
@@ -17,25 +18,15 @@ const toast = useToast()
 // Tab state
 const activeTab = ref(0)
 const tabItems = [
-  { label: 'User List', icon: 'i-heroicons-users' },
-  { label: 'Create User', icon: 'i-heroicons-user-plus' },
-  { label: 'Edit User', icon: 'i-heroicons-pencil-square' }
+  { id: 0, label: 'User List', icon: 'i-heroicons-users' },
+  { id: 1, label: 'Create User', icon: 'i-heroicons-user-plus' },
+  { id: 2, label: 'Edit User', icon: 'i-heroicons-pencil-square' }
 ]
 
 // Users list state
 const users = ref<AdminUser[]>([])
 const loading = ref(false)
 const selectedUserId = ref<string | null>(null)
-
-// Table columns
-const columns = [
-  { key: 'email', label: 'Email' },
-  { key: 'name', label: 'Name' },
-  { key: 'is_super_admin', label: 'Admin' },
-  { key: 'is_active', label: 'Status' },
-  { key: 'properties', label: 'Properties' },
-  { key: 'actions', label: 'Actions' }
-]
 
 // Fetch all users with their property access
 async function fetchUsers() {
@@ -114,103 +105,147 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4 max-w-6xl mx-auto space-y-6">
+  <div class="p-6 max-w-7xl mx-auto space-y-8">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold">User Management</h1>
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">User Management</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Manage system access and property permissions</p>
+      </div>
       <UButton
         v-if="activeTab === 0"
         icon="i-heroicons-arrow-path"
+        color="neutral"
         variant="ghost"
         @click="fetchUsers"
         :loading="loading"
       />
     </div>
 
-    <!-- Tab Navigation -->
-    <UTabs v-model="activeTab" :items="tabItems" class="w-full">
-      <template #item="{ item, index }">
-        <div class="flex items-center gap-2">
-          <UIcon :name="item.icon" class="w-4 h-4" />
-          <span>{{ item.label }}</span>
-        </div>
-      </template>
-    </UTabs>
+    <!-- Custom Tab Bar -->
+    <div class="flex border-b border-gray-200 dark:border-gray-800">
+      <button
+        v-for="tab in tabItems"
+        :key="tab.id"
+        class="flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2"
+        :class="[
+          activeTab === tab.id
+            ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+            : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+        ]"
+        @click="activeTab = tab.id"
+      >
+        <UIcon :name="tab.icon" class="w-5 h-5" />
+        {{ tab.label }}
+      </button>
+    </div>
 
     <!-- Tab Content -->
-    <div class="mt-6">
+    <div class="mt-8 transition-all duration-300">
       <!-- User List -->
-      <div v-show="activeTab === 0">
-        <UCard>
-          <UTable :columns="columns" :rows="tableRows" :loading="loading">
-            <template #is_super_admin-cell="{ row }">
-              <UBadge v-if="row.is_super_admin" color="primary" variant="solid">
-                Admin
-              </UBadge>
-              <span v-else class="text-muted">-</span>
-            </template>
-
-            <template #is_active-cell="{ row }">
-              <UBadge
-                :color="row.is_active !== false ? 'success' : 'error'"
-                variant="subtle"
-              >
-                {{ row.is_active !== false ? 'Active' : 'Inactive' }}
-              </UBadge>
-            </template>
-
-            <template #properties-cell="{ row }">
-              <div class="flex flex-wrap gap-1">
-                <UBadge
-                  v-for="access in row.properties.slice(0, 3)"
-                  :key="access.id"
-                  color="neutral"
-                  variant="outline"
-                  size="xs"
+      <div v-if="activeTab === 0" class="space-y-4">
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                  <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Email</th>
+                  <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Name</th>
+                  <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Role</th>
+                  <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
+                  <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Properties</th>
+                  <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                <tr v-if="loading" v-for="i in 3" :key="i" class="animate-pulse">
+                  <td colspan="6" class="px-6 py-4"><div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div></td>
+                </tr>
+                <tr v-else-if="tableRows.length === 0">
+                  <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                    <UIcon name="i-heroicons-users" class="w-12 h-12 mx-auto mb-2 opacity-20" />
+                    <p>No users found</p>
+                  </td>
+                </tr>
+                <tr 
+                  v-else 
+                  v-for="row in tableRows" 
+                  :key="row.id"
+                  class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                 >
-                  {{ access.property_code }}
-                </UBadge>
-                <UBadge
-                  v-if="row.properties.length > 3"
-                  color="neutral"
-                  variant="subtle"
-                  size="xs"
-                >
-                  +{{ row.properties.length - 3 }}
-                </UBadge>
-                <span v-if="row.properties.length === 0" class="text-muted text-sm">
-                  None
-                </span>
-              </div>
-            </template>
-
-            <template #actions-cell="{ row }">
-              <UButton
-                icon="i-heroicons-pencil-square"
-                variant="ghost"
-                size="xs"
-                @click="handleEditUser(row.id)"
-              />
-            </template>
-
-            <template #empty>
-              <div class="text-center py-8 text-muted">
-                <UIcon name="i-heroicons-users" class="w-12 h-12 mx-auto mb-2" />
-                <p>No users found.</p>
-              </div>
-            </template>
-          </UTable>
-        </UCard>
+                  <td class="px-6 py-4 text-sm font-medium">{{ row.email }}</td>
+                  <td class="px-6 py-4 text-sm">{{ row.name }}</td>
+                  <td class="px-6 py-4 text-sm">
+                    <span 
+                      v-if="row.is_super_admin" 
+                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400"
+                    >
+                      Admin
+                    </span>
+                    <span v-else class="text-gray-400">-</span>
+                  </td>
+                  <td class="px-6 py-4 text-sm">
+                    <span 
+                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                      :class="row.is_active !== false ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'"
+                    >
+                      {{ row.is_active !== false ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-sm">
+                    <div class="flex flex-wrap gap-1">
+                      <span 
+                        v-for="access in row.properties.slice(0, 3)" 
+                        :key="access.id"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+                      >
+                        {{ access.property_code }}
+                      </span>
+                      <span 
+                        v-if="row.properties.length > 3"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-gray-100 dark:bg-gray-800 text-gray-400"
+                      >
+                        +{{ row.properties.length - 3 }}
+                      </span>
+                      <span v-if="row.properties.length === 0" class="text-gray-400 italic text-xs">None</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-center">
+                    <UButton
+                      icon="i-heroicons-pencil-square"
+                      size="sm"
+                      color="neutral"
+                      variant="ghost"
+                      @click="handleEditUser(row.id)"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- Create User -->
-      <div v-show="activeTab === 1">
+      <div v-else-if="activeTab === 1">
         <AdminUserCreate @created="handleUserCreated" />
       </div>
 
       <!-- Edit User -->
-      <div v-show="activeTab === 2">
+      <div v-else-if="activeTab === 2">
+        <div v-if="!selectedUserId" class="bg-gray-50 dark:bg-gray-800/30 border border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-12 text-center">
+          <UIcon name="i-heroicons-user-plus" class="w-16 h-16 mx-auto mb-4 text-gray-300" />
+          <h3 class="text-lg font-semibold">No User Selected</h3>
+          <p class="text-gray-500 mt-2">Please select a user from the list to edit their profile.</p>
+          <UButton 
+            class="mt-6"
+            label="Go to User List"
+            variant="soft"
+            @click="activeTab = 0"
+          />
+        </div>
         <AdminUserEdit
-          :initial-user-id="selectedUserId || undefined"
+          v-else
+          :initial-user-id="selectedUserId"
           @updated="handleUserUpdated"
         />
       </div>

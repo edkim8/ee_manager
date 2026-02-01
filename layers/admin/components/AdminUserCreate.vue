@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref, reactive } from 'vue'
+import { useSupabaseClient, useToast } from '#imports'
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 
@@ -94,70 +96,89 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 </script>
 
 <template>
-  <UCard>
-    <template #header>
-      <h2 class="text-lg font-semibold">Create New User</h2>
-      <p class="text-sm text-muted mt-1">
-        Create a new user account with email and password.
-      </p>
-    </template>
+  <div class="max-w-2xl mx-auto">
+    <UCard>
+      <template #header>
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+            <UIcon name="i-heroicons-user-plus" class="w-6 h-6 text-primary-600 dark:text-primary-400" />
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Create New User</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Set up identity and system privileges</p>
+          </div>
+        </div>
+      </template>
 
-    <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-      <div class="space-y-4 pb-4 border-b border-default">
-        <h3 class="text-sm font-semibold">Account Credentials</h3>
+      <UForm :schema="schema" :state="state" class="space-y-8" @submit="onSubmit">
+        <!-- Account Section -->
+        <div class="space-y-4">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
+            <h3 class="text-sm font-bold uppercase tracking-widest text-gray-400">Account Credentials</h3>
+          </div>
 
-        <UFormField label="Email Address" name="email" required>
-          <UInput
-            v-model="state.email"
-            type="email"
-            placeholder="user@example.com"
-            icon="i-heroicons-envelope"
-          />
-        </UFormField>
+          <div class="grid gap-6">
+            <UFormField label="Email Address" name="email" required>
+              <UInput
+                v-model="state.email"
+                type="email"
+                placeholder="user@example.com"
+                icon="i-heroicons-envelope"
+              />
+            </UFormField>
 
-        <UFormField label="Password" name="password" required>
-          <UInput
-            v-model="state.password"
-            type="password"
-            placeholder="Minimum 6 characters"
-            icon="i-heroicons-lock-closed"
-          />
-        </UFormField>
-      </div>
-
-      <div class="space-y-4">
-        <h3 class="text-sm font-semibold">Profile Information</h3>
-
-        <div class="grid grid-cols-2 gap-4">
-          <UFormField label="First Name" name="first_name">
-            <UInput
-              v-model="state.first_name"
-              type="text"
-              placeholder="John"
-              icon="i-heroicons-user"
-            />
-          </UFormField>
-
-          <UFormField label="Last Name" name="last_name">
-            <UInput
-              v-model="state.last_name"
-              type="text"
-              placeholder="Doe"
-              icon="i-heroicons-user"
-            />
-          </UFormField>
+            <UFormField label="Temporary Password" name="password" required>
+              <UInput
+                v-model="state.password"
+                type="password"
+                placeholder="Minimum 6 characters"
+                icon="i-heroicons-lock-closed"
+              />
+            </UFormField>
+          </div>
         </div>
 
-        <UFormField name="is_super_admin">
-          <UCheckbox v-model="state.is_super_admin" label="Grant Super Admin privileges" />
-        </UFormField>
-      </div>
+        <hr class="border-gray-100 dark:border-gray-800" />
 
-      <div class="pt-2">
-        <UButton type="submit" color="primary" :loading="loading" block>
-          Create User
-        </UButton>
-      </div>
-    </UForm>
-  </UCard>
+        <!-- Profile Section -->
+        <div class="space-y-4">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
+            <h3 class="text-sm font-bold uppercase tracking-widest text-gray-400">Profile Information</h3>
+          </div>
+
+          <div class="grid grid-cols-2 gap-6">
+            <UFormField label="First Name" name="first_name">
+              <UInput
+                v-model="state.first_name"
+                placeholder="John"
+              />
+            </UFormField>
+
+            <UFormField label="Last Name" name="last_name">
+              <UInput
+                v-model="state.last_name"
+                placeholder="Doe"
+              />
+            </UFormField>
+          </div>
+
+          <div class="mt-4 p-4 bg-primary-50/50 dark:bg-primary-950/20 border border-primary-100 dark:border-primary-900/30 rounded-xl flex items-center justify-between">
+            <div class="space-y-0.5">
+              <p class="text-sm font-semibold text-primary-900 dark:text-primary-100">Super Admin Privileges</p>
+              <p class="text-xs text-primary-700/70 dark:text-primary-400/60">Allow user to manage all system settings and users</p>
+            </div>
+            <UCheckbox v-model="state.is_super_admin" />
+          </div>
+        </div>
+
+        <div class="pt-6">
+          <UButton type="submit" color="primary" size="lg" :loading="loading" block>
+            Create System User
+          </UButton>
+        </div>
+      </UForm>
+    </UCard>
+  </div>
 </template>

@@ -51,17 +51,20 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 > - `docs/architecture/SYSTEM_MAP.md` (**READ ONLY**)
 > - `docs/status/HISTORY_INDEX.md` (**READ ONLY**)
 > - `docs/KNOWLEDGE_BASE.md` (**CRITICALLY IMPORTANT**)
+> - `docs/governance/ASSET_PROTOCOLS.md` (**MANDATORY FOR IMAGES**)
 > - [Specific Spec File...]
 >
 > INSTRUCTIONS:
 > 1. Read the Context.
 > 2. Implement the Code.
-> 3. Verify (Run tests).
+> 3. Use `<NuxtImg>` with `format="webp"` for all images.
+> 4. Verify (Run tests).
 >
 > **CRITICAL CONSTRAINTS:**
 > 1. **DO NOT EDIT ADMIN FILES:** (`HISTORY_INDEX.md`, `STATUS_BOARD.md`).
-> 2. **NO LEGACY SYNTAX:** Port V1 logic to Nuxt 4/Supabase.
-> 3. **NO SQL IN MAP:** Do not write code into the System Map.
+> 2. **MANDATORY ASSET OPTIMIZATION:** NEVER use native `<img>`. Use `<NuxtImg format="webp">` or `<NuxtPicture>`.
+> 3. **NO LEGACY SYNTAX:** Port V1 logic to Nuxt 4/Supabase.
+> 4. **NO SQL IN MAP:** Do not write code into the System Map.
 >
 > **FINAL STEP (MANDATORY):**
 > You MUST create/overwrite `docs/status/LATEST_UPDATE.md` with a Field Report containing:
@@ -80,17 +83,19 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 > - docs/architecture/SYSTEM_MAP.md (**READ ONLY**)
 > - docs/status/HISTORY_INDEX.md (**READ ONLY**)
 > - docs/KNOWLEDGE_BASE.md (**CRITICALLY IMPORTANT**)
+> - docs/governance/ASSET_PROTOCOLS.md (**MANDATORY**)
 > - [Specific Files...]
 >
 > STEPS:
 > 1. Read Context.
-> 2. Execute Code.
+> 2. Execute Code (Include `<NuxtImg format="webp">` for all assets).
 > 3. Verify.
 >
 > **CRITICAL CONSTRAINTS:**
 > 1. **NO ADMIN EDITS** (History/Status).
-> 2. **NO LEGACY SYNTAX**.
-> 3. **NO SQL IN MAP**.
+> 2. **MANDATORY ASSET OPTIMIZATION:** Use `<NuxtImg format="webp">` or `<NuxtPicture>`.
+> 3. **NO LEGACY SYNTAX**.
+> 4. **NO SQL IN MAP**.
 >
 > **FINAL STEP (MANDATORY):**
 > Overwrite `docs/status/LATEST_UPDATE.md` with Field Report. Write it to disk.'"
