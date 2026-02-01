@@ -53,6 +53,46 @@ const selectedValue = ref<string>('none')
 
 ---
 
+## Nuxt Image (@nuxt/image)
+
+### Why use Nuxt Image over native `<img>`?
+1.  **Optimization**: Automatically resizes and converts images to modern formats (WebP/AVIF).
+2.  **Performance**: Built-in lazy loading and `srcset` generation via the `sizes` prop.
+3.  **UX**: Native support for placeholders (blurred or custom) prevents layout shifts.
+4.  **DevEx**: Provider-agnostic (Cloudinary, Supabase, etc.)—change storage by updating config, not components.
+
+### Components
+
+#### `<NuxtImg>`
+Outputs a native `<img>` tag. Best for standard image rendering.
+```vue
+<NuxtImg 
+  src="/property.jpg" 
+  sizes="sm:100vw md:50vw lg:400px" 
+  placeholder 
+  loading="lazy"
+/>
+```
+
+#### `<NuxtPicture>`
+Outputs a `<picture>` tag with multiple `<source>` elements. Use this when you need aggressive optimization (serving AVIF to supported browsers, fallback to WebP/JPG).
+```vue
+<NuxtPicture src="/hero.jpg" format="avif,webp" />
+```
+
+### Critical Props
+- **`sizes`**: Defines responsive widths (e.g., `sm:100vw md:500px`). Nuxt generates necessary `srcset` automatically.
+- **`placeholder`**: Use as a boolean for default blur or `:placeholder="[50, 25, 75, 5]"` (width, height, quality, blur) for fine-tuning.
+- **`densities`**: Use `densities="x1 x2"` for high-DPI/Retina support.
+- **`preload`**: Use for "above the fold" images (Hero sections) to prioritize loading.
+
+### Best Practices
+- **Always provide a placeholder** for images that aren't immediately visible above the fold.
+- **Use `sizes`** instead of fixed `width`/`height` for responsive layouts.
+- **Use `<NuxtPicture>`** for large Hero images to maximize format-based compression.
+
+---
+
 ## TypeScript Patterns
 
 ### Vue Composable Type Inference

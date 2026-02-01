@@ -1,28 +1,30 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useSupabaseUser, useSupabaseClient, useRouter, useColorMode, navigateTo } from '#imports'
+import { usePropertyState } from '../composables/usePropertyState'
 
 const user = useSupabaseUser()
 const supabase = useSupabaseClient()
 const router = useRouter()
 const colorMode = useColorMode()
 
-// Stub: access_list and active_property (not yet implemented)
-const access_list = ref<string[]>([])
-const active_property = ref<string | null>(null)
+// Use shared property state
+const { 
+  activeProperty: active_property, 
+  propertyOptions, 
+  userContext,
+  fetchProperties,
+  setProperty,
+  resetProperty 
+} = usePropertyState()
 
 // Mobile menu state
 const isMobileMenuOpen = ref(false)
-
-// Profile computed from user (stub until profiles table is fetched)
-const profile = computed(() => {
-  if (!user.value) return null
-  return {
-    full_name: user.value.email?.split('@')[0] || 'User',
-    first_name: user.value.email?.split('@')[0] || '',
-    last_name: '',
-    department: 'Staff',
-    is_super_admin: false
-  }
+const profile = computed(() => userContext.value?.profile || {
+  full_name: user.value?.email?.split('@')[0] || 'User',
+  first_name: user.value?.email?.split('@')[0] || '',
+  last_name: '',
+  department: 'Staff'
 })
 
 // Dark mode toggle
@@ -45,14 +47,18 @@ const userInitials = computed(() => {
   return (first + last).toUpperCase() || 'U'
 })
 
-// Property switcher options (stubbed)
-const propertyOptions = computed(() => {
-  return access_list.value
-})
+// Fetch properties when user is available
+watch(user, async (newUser) => {
+  if (newUser) {
+    console.log('[AppNavigation] User available, fetching properties...')
+    await fetchProperties()
+  }
+}, { immediate: true })
 
-const handlePropertyChange = (newProperty: string) => {
-  active_property.value = newProperty
-}
+onMounted(async () => {
+  console.log('[AppNavigation] Mounted. User status:', !!user.value)
+  // fetchProperties is already handled by the watch(user, ..., { immediate: true }) above
+})
 
 // User menu items
 const userMenuItems = computed(() => [
@@ -74,7 +80,7 @@ const userMenuItems = computed(() => [
     {
       label: isDark.value ? 'Light Mode' : 'Dark Mode',
       icon: isDark.value ? 'i-heroicons-sun' : 'i-heroicons-moon',
-      click: () => {
+      onSelect: () => {
         toggleColorMode()
       }
     },
@@ -83,7 +89,7 @@ const userMenuItems = computed(() => [
     {
       label: 'Sign Out',
       icon: 'i-heroicons-arrow-left-on-rectangle',
-      click: async () => {
+      onSelect: async () => {
         await handleSignOut()
       }
     },
@@ -92,11 +98,19 @@ const userMenuItems = computed(() => [
 
 const handleSignOut = async () => {
   try {
+    console.log('[AppNavigation] Signing out...')
+    resetProperty() // Clear properties and user context
     await supabase.auth.signOut()
-    navigateTo('/auth/login')
+    
+    // Use a hard redirect to login to ensure all state is cleared
+    await navigateTo('/auth/login', { replace: true })
+    
+    // Optional: Refresh the window as a last resort if state persists
+    // window.location.href = '/auth/login'
   } catch (e) {
     console.error('Sign out error:', e)
-    navigateTo('/auth/login')
+    resetProperty()
+    await navigateTo('/auth/login', { replace: true })
   }
 }
 
@@ -146,7 +160,7 @@ const navigationItems = computed(() => {
     to: '/office/availabilities',
     children: [
       {
-        label: 'Availability',
+        label: 'Availabilities',
         icon: 'i-heroicons-clipboard-document-list',
         to: '/office/availabilities',
       },
@@ -170,14 +184,14 @@ const navigationItems = computed(() => {
     to: '/admin/upload',
     children: [
       {
+        label: 'Users',
+        icon: 'i-heroicons-users',
+        to: '/admin/users',
+      },
+      {
         label: 'Solver Engine',
         icon: 'i-heroicons-cpu-chip',
         to: '/admin/solver',
-      },
-      {
-        label: 'Solver Inspector',
-        icon: 'i-heroicons-beaker',
-        to: '/admin/solver/inspector',
       },
       {
         label: 'Solver Inspector',
@@ -233,13 +247,21 @@ const navigationItems = computed(() => {
         <div class="flex items-center gap-3">
           <!-- Property Switcher -->
           <div class="hidden lg:block">
-            <USelectMenu
-              v-if="propertyOptions.length > 0"
-              v-model="active_property"
-              :items="propertyOptions"
-              @update:model-value="handlePropertyChange"
-              class="min-w-[80px]"
-            />
+            <div class="flex flex-col items-end">
+              <USelectMenu
+                v-if="propertyOptions.length > 0"
+                v-model="active_property"
+                :items="propertyOptions"
+                value-key="value"
+                class="min-w-[200px]"
+              />
+              <div v-else class="text-xs text-gray-400 italic px-2">
+                No property access
+              </div>
+              <span class="text-[10px] text-primary-500 font-mono mt-1 px-1">
+                DEBUG [Property: {{ active_property || 'NONE' }}]
+              </span>
+            </div>
           </div>
 
           <!-- User Menu (Desktop) -->
@@ -290,12 +312,12 @@ const navigationItems = computed(() => {
           <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
             Property
           </label>
-          <USelectMenu
-            v-model="active_property"
-            :items="propertyOptions"
-            @update:model-value="handlePropertyChange"
-            class="w-full"
-          />
+            <USelectMenu
+              v-model="active_property"
+              :items="propertyOptions"
+              value-key="value"
+              class="w-full"
+            />
         </div>
 
         <!-- Navigation Menu (Mobile) -->
