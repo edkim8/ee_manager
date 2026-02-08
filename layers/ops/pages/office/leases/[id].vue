@@ -1,224 +1,268 @@
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
-import { usePropertyState } from '../../../../base/composables/usePropertyState'
-import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
-
-const route = useRoute()
-const supabase = useSupabaseClient()
-const { activeProperty } = usePropertyState()
+import { ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
+import type { TableColumn } from '../../../../table/types'
 
 definePageMeta({
   layout: 'dashboard'
 })
 
-// Fetch Lease Detail from view
-const { data: lease, status, error } = await useAsyncData(`lease-detail-${route.params.id}`, async () => {
+const route = useRoute()
+const router = useRouter()
+const supabase = useSupabaseClient()
+const leaseId = route.params.id as string
+
+// Fetch Lease Details (Main Record)
+const { data: lease, status, error } = await useAsyncData(`lease-${leaseId}`, async () => {
   const { data, error } = await supabase
     .from('view_table_leases')
     .select('*')
-    .eq('id', route.params.id)
+    .eq('id', leaseId)
+    .single()
+
+  if (error) throw error
+  return data
+})
+
+// Fetch All Residents for this Tenancy (Contact Card)
+const { data: household } = await useAsyncData(`lease-household-${leaseId}`, async () => {
+  if (!lease.value?.tenancy_id) return []
+  const { data, error } = await supabase
+    .from('residents')
+    .select('*')
+    .eq('tenancy_id', lease.value.tenancy_id)
+    .order('role', { ascending: true }) // Primary usually shows first
+  
+  if (error) throw error
+  return data
+})
+
+// Fetch Lease Chronology (History of adjustments/renewals for this tenancy)
+const { data: chronology, status: chronoStatus } = await useAsyncData(`lease-chronology-${leaseId}`, async () => {
+  if (!lease.value?.tenancy_id) return []
+  const { data, error } = await supabase
+    .from('leases')
+    .select('*')
+    .eq('tenancy_id', lease.value.tenancy_id)
+    .order('start_date', { ascending: false })
+  
+  if (error) throw error
+  return data
+})
+
+// Fetch Unit Summary from linked asset
+const { data: unitSummary } = await useAsyncData(`lease-unit-summary-${leaseId}`, async () => {
+  if (!lease.value?.unit_id) return null
+  const { data, error } = await supabase
+    .from('view_table_units')
+    .select('*')
+    .eq('id', lease.value.unit_id)
     .single()
   
   if (error) throw error
   return data
 })
 
-const statusColors: Record<string, string> = {
+const goBack = () => {
+  router.back()
+}
+
+const chronoColumns: TableColumn[] = [
+  { key: 'start_date', label: 'Start', sortable: true, width: '120px' },
+  { key: 'end_date', label: 'End', sortable: true, width: '120px' },
+  { key: 'rent_amount', label: 'Rent', sortable: true, align: 'right', width: '120px' },
+  { key: 'lease_status', label: 'Status', align: 'center', width: '100px' }
+]
+
+const leaseStatusColors: Record<string, string> = {
   'Current': 'primary',
-  'Active': 'primary',
-  'Pending': 'warning',
   'Notice': 'warning',
-  'Closed': 'neutral',
-  'Terminated': 'error',
-  'Expired': 'neutral'
+  'Future': 'primary',
+  'Past': 'neutral',
+  'Eviction': 'error'
 }
 </script>
 
 <template>
   <div class="p-6 max-w-7xl mx-auto">
     <!-- Breadcrumbs -->
-    <div class="mb-6 flex items-center gap-2 text-sm text-gray-500">
-      <NuxtLink to="/office/leases" class="hover:text-primary-600">Office</NuxtLink>
-      <UIcon name="i-heroicons-chevron-right" class="w-3 h-3" />
-      <NuxtLink to="/office/leases" class="hover:text-primary-600">Leases</NuxtLink>
-      <UIcon name="i-heroicons-chevron-right" class="w-3 h-3" />
-      <span class="text-gray-900 font-medium">Lease {{ lease?.id?.slice(0, 8) || '...' }}</span>
+    <nav class="flex mb-6 text-sm font-medium text-gray-600 dark:text-gray-400" aria-label="Breadcrumb">
+      <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+          <NuxtLink to="/office/leases" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Leases</NuxtLink>
+        </li>
+        <li v-if="lease">
+          <div class="flex items-center">
+            <UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            <span class="ml-1 md:ml-2 text-gray-900 dark:text-gray-100 font-bold">Lease for Unit {{ lease.unit_name }}</span>
+          </div>
+        </li>
+      </ol>
+    </nav>
+
+    <!-- Content Handling -->
+    <div v-if="status === 'pending'" class="p-12 space-y-8">
+      <USkeleton class="h-12 w-1/3" />
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <USkeleton class="h-64 lg:col-span-2" />
+        <USkeleton class="h-64" />
+      </div>
     </div>
 
-    <div v-if="status === 'pending'" class="flex justify-center p-12">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-gray-400" />
+    <div v-else-if="error" class="bg-red-50 dark:bg-red-900/10 p-6 rounded-xl border border-red-200 dark:border-red-900/50 text-center">
+      <UIcon name="i-heroicons-exclamation-circle" class="w-12 h-12 text-red-500 mx-auto mb-4" />
+      <h2 class="text-lg font-bold text-red-700 dark:text-red-400">Error loading lease</h2>
+      <p class="text-sm text-red-600 dark:text-red-500 mb-6">{{ error.message }}</p>
+      <UButton color="error" @click="goBack">Back to List</UButton>
     </div>
 
-    <div v-else-if="error" class="p-8 bg-red-50 border border-red-200 rounded-3xl text-red-700">
-      <h2 class="text-xl font-bold mb-2">Error Loading Lease</h2>
-      <p>{{ error.message }}</p>
-      <UButton color="error" variant="ghost" class="mt-4" to="/office/leases">
-        Back to Leases
-      </UButton>
-    </div>
+    <div v-else-if="lease" class="space-y-8">
+      <div class="mb-4">
+        <UButton
+          icon="i-heroicons-arrow-left"
+          label="Back to Leases"
+          color="neutral"
+          variant="ghost"
+          @click="goBack"
+          class="-ml-2.5 dark:text-gray-400 dark:hover:text-white"
+        />
+      </div>
 
-    <div v-else-if="lease" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <!-- Left Column: Primary Info -->
-      <div class="lg:col-span-2 space-y-8">
-        <!-- Header Card -->
-        <div class="bg-white p-8 rounded-3xl border border-gray-200 shadow-sm relative overflow-hidden">
-          <div class="absolute top-0 right-0 p-8 flex items-center gap-3">
-            <UBadge 
-              v-if="lease.is_mtm"
-              size="lg"
-              color="error"
-              variant="solid"
-              class="uppercase tracking-widest font-black animate-pulse"
-            >
-              MTM
+      <div class="border-b border-gray-200 dark:border-gray-800 pb-8 flex justify-between items-end">
+        <div>
+          <div class="flex items-center gap-3 mb-2">
+            <UBadge size="sm" :color="lease.is_active ? 'primary' : 'neutral'" variant="subtle" class="font-bold">
+              {{ lease.lease_status }}
             </UBadge>
-            <UBadge 
-              size="lg" 
-              :color="lease.lease_status === 'Notice' ? 'warning' : (lease.is_active ? 'primary' : (statusColors[lease.lease_status] || 'neutral'))"
-              variant="outline"
-              class="uppercase tracking-widest font-bold"
-            >
-              {{ lease.lease_status }} {{ (lease.is_active && lease.lease_status !== 'Notice') ? '(Active)' : '' }}
-            </UBadge>
+            <span v-if="lease.is_mtm" class="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider">Month-to-Month</span>
           </div>
-
-          <div class="flex items-center gap-6 mb-4">
-            <div class="w-20 h-20 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600 shadow-inner">
-              <UIcon name="i-heroicons-document-text" class="w-12 h-12" />
-            </div>
-            <div>
-              <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Lease Document</p>
-              <h1 class="text-4xl font-black tracking-tight text-gray-900 mb-1">
-                {{ lease.unit_name }} &middot; {{ lease.resident_name || 'Unassigned' }}
-              </h1>
-            </div>
-          </div>
+          <h1 class="text-4xl font-black text-gray-900 dark:text-white tracking-tight">
+            {{ lease.resident_name }}
+          </h1>
+          <p class="text-xl text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-2">
+            <span class="font-bold text-gray-900 dark:text-white">Unit {{ lease.unit_name }}</span>
+            <span class="text-gray-300 dark:text-gray-700 mx-1">&middot;</span>
+            <span>{{ lease.property_name }}</span>
+          </p>
         </div>
-
-        <!-- Financials Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <!-- Rent Card -->
-          <div class="bg-white p-8 rounded-3xl border border-gray-200 shadow-sm">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
-                <UIcon name="i-heroicons-banknotes" class="w-6 h-6" />
-              </div>
-              <h3 class="text-xl font-bold">Financials</h3>
-            </div>
-            <div class="space-y-6">
-              <div>
-                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Monthly Rent</p>
-                <p class="text-3xl font-black text-primary-600">
-                  ${{ lease.rent_amount?.toLocaleString() || '0' }}
-                </p>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Security Deposit</p>
-                <p class="text-xl font-bold text-gray-600">
-                  ${{ lease.deposit_amount?.toLocaleString() || '0' }}
-                </p>
-              </div>
-              <div class="pt-4 border-t border-gray-100">
-                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Household Size</p>
-                <p class="text-xl font-bold text-gray-700">
-                  {{ lease.household_count || 0 }} {{ (lease.household_count === 1) ? 'Person' : 'People' }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Dates Card -->
-          <div class="bg-white p-8 rounded-3xl border border-gray-200 shadow-sm">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                <UIcon name="i-heroicons-calendar-days" class="w-6 h-6" />
-              </div>
-              <h3 class="text-xl font-bold">Lease Term</h3>
-            </div>
-            <div class="space-y-6">
-              <div class="mb-4 pb-4 border-b border-gray-100">
-                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Tenancy Move-in</p>
-                <p class="text-xl font-bold text-primary-600">
-                  {{ lease.move_in_date ? new Date(lease.move_in_date).toLocaleDateString() : 'Not set' }}
-                </p>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Lease Start Date</p>
-                <p class="text-xl font-bold text-gray-900">
-                  {{ lease.start_date ? new Date(lease.start_date).toLocaleDateString() : 'Not set' }}
-                </p>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Lease End Date</p>
-                <p class="text-xl font-bold text-gray-900">
-                  {{ lease.end_date ? new Date(lease.end_date).toLocaleDateString() : 'Not set' }}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- System Metadata -->
-        <div class="bg-gray-50/50 p-6 rounded-2xl border border-dashed border-gray-200 text-xs text-gray-400 flex justify-between">
-           <div>System ID: {{ lease.id }}</div>
-           <div>Tenancy Reference: {{ lease.tenancy_id }}</div>
+        
+        <div class="text-right">
+          <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Contract Rent</p>
+          <p class="text-4xl font-black text-primary-600 dark:text-primary-400 tracking-tighter">
+            ${{ lease.rent_amount?.toLocaleString() }}
+          </p>
         </div>
       </div>
 
-      <!-- Right Column: Connections -->
-      <div class="space-y-8">
-        <div class="bg-gray-50 p-8 rounded-3xl border border-gray-200">
-          <h3 class="text-sm font-black uppercase text-gray-400 mb-6 tracking-widest">Connections</h3>
-          
-          <div class="space-y-8">
-            <!-- Resident -->
-            <div class="flex items-start gap-4">
-              <div class="w-12 h-12 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-primary-600 flex-shrink-0">
-                <UIcon name="i-heroicons-user" class="w-6 h-6" />
-              </div>
-              <div>
-                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Primary Resident</p>
-                <NuxtLink 
-                  v-if="lease.resident_id"
-                  :to="`/office/residents/${lease.resident_id}`"
-                  class="text-xl font-bold text-gray-900 hover:text-primary-600 transition-colors"
-                >
-                  {{ lease.resident_name }}
-                </NuxtLink>
-                <p v-else class="text-xl font-bold text-gray-400 italic">No resident</p>
-              </div>
-            </div>
-
-            <!-- Unit -->
-            <div class="flex items-start gap-4">
-              <div class="w-12 h-12 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-primary-600 flex-shrink-0">
-                <UIcon name="i-heroicons-key" class="w-6 h-6" />
-              </div>
-              <div>
-                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Assigned Unit</p>
-                <NuxtLink 
-                  :to="`/assets/units/${lease.unit_id}`"
-                  class="text-xl font-bold text-gray-900 hover:text-primary-600 transition-colors"
-                >
-                  Unit {{ lease.unit_name }}
-                </NuxtLink>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="md:col-span-2 space-y-8">
+          <!-- Resident Contact Card -->
+          <div class="bg-white dark:bg-gray-900/80 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <h3 class="text-xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
+              <UIcon name="i-heroicons-users" class="text-gray-400" />
+              Resident Contact
+            </h3>
+            <div class="space-y-4">
+              <div v-for="member in household" :key="member.id" class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 group hover:border-primary-500/50 transition-colors">
+                <div class="flex items-center gap-4">
+                   <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-700 dark:text-primary-400 font-bold">
+                     {{ member.name?.[0] }}
+                   </div>
+                   <div>
+                     <p class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                       {{ member.name }}
+                       <UBadge v-if="member.role === 'Primary'" size="xs" variant="subtle" color="primary">Primary</UBadge>
+                     </p>
+                     <p class="text-xs text-gray-500">{{ member.email || 'No email' }} &middot; {{ member.phone || 'No phone' }}</p>
+                   </div>
+                </div>
+                <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                   <UButton v-if="member.email" icon="i-heroicons-envelope" color="neutral" variant="ghost" size="xs" :to="`mailto:${member.email}`" />
+                   <UButton v-if="member.phone" icon="i-heroicons-phone" color="neutral" variant="ghost" size="xs" :to="`tel:${member.phone}`" />
+                   <UButton :to="`/office/residents/${member.id}`" icon="i-heroicons-arrow-top-right-on-square" color="primary" variant="ghost" size="xs" />
+                </div>
               </div>
             </div>
+          </div>
 
-            <!-- Building -->
-            <div class="flex items-start gap-4">
-              <div class="w-12 h-12 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-primary-600 flex-shrink-0">
-                <UIcon name="i-heroicons-home-modern" class="w-6 h-6" />
+          <!-- Lease Chronology -->
+          <div class="bg-white dark:bg-gray-900/80 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <h3 class="text-xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
+              <UIcon name="i-heroicons-clock" class="text-gray-400" />
+              Lease Chronology
+            </h3>
+            <GenericDataTable
+              :data="chronology || []"
+              :columns="chronoColumns"
+              :loading="chronoStatus === 'pending'"
+              row-key="id"
+              striped
+            >
+              <template #cell-start_date="{ value }">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ new Date(value).toLocaleDateString() }}</span>
+              </template>
+              <template #cell-end_date="{ value }">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ new Date(value).toLocaleDateString() }}</span>
+              </template>
+              <template #cell-rent_amount="{ value }">
+                <span class="font-bold text-gray-900 dark:text-white">${{ value?.toLocaleString() }}</span>
+              </template>
+              <template #cell-lease_status="{ value }">
+                <UBadge size="xs" variant="subtle" :color="leaseStatusColors[value] || 'neutral'">
+                  {{ value }}
+                </UBadge>
+              </template>
+            </GenericDataTable>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <!-- Unit Summary -->
+          <div v-if="unitSummary" class="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-800">
+            <h4 class="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6 font-mono">Unit Summary</h4>
+            <div class="space-y-6">
+               <div v-if="unitSummary.primary_image_url" class="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 aspect-video bg-white dark:bg-gray-900">
+                  <NuxtImg :src="unitSummary.primary_image_url" class="w-full h-full object-cover" />
+               </div>
+               <div class="grid grid-cols-2 gap-4">
+                  <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">Area (SF)</p>
+                    <p class="text-sm font-bold text-gray-900 dark:text-white">{{ unitSummary.sf?.toLocaleString() }} sqft</p>
+                  </div>
+                  <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">Floor</p>
+                    <p class="text-sm font-bold text-gray-900 dark:text-white">Level {{ unitSummary.floor_number }}</p>
+                  </div>
+               </div>
+               <div class="p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
+                  <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">Floor Plan</p>
+                  <p class="text-sm font-black text-primary-600 dark:text-primary-400 underline decoration-2 underline-offset-4">
+                     {{ unitSummary.floor_plan_marketing_name }}
+                  </p>
+               </div>
+               <UButton :to="`/assets/units/${unitSummary.id}`" block color="neutral" variant="outline" class="rounded-xl font-bold">View Asset Details</UButton>
+            </div>
+          </div>
+
+          <div class="bg-gray-900 dark:bg-gray-800/80 rounded-3xl p-8 text-white shadow-xl shadow-gray-900/10">
+            <h4 class="text-xs font-black uppercase tracking-widest opacity-60 mb-6 font-mono text-primary-400">Lease Meta</h4>
+            <div class="space-y-4 text-sm font-medium">
+               <div class="flex justify-between items-center py-2 border-b border-white/5 opacity-80">
+                <span>Lease ID</span>
+                <span class="font-mono text-[10px]">{{ lease.id?.slice(0, 8) }}...</span>
               </div>
-              <div>
-                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Building</p>
-                <NuxtLink 
-                  :to="`/assets/buildings/${lease.building_id}`"
-                  class="text-xl font-bold text-gray-900 hover:text-primary-600 transition-colors"
-                >
-                  {{ lease.building_name }}
-                </NuxtLink>
+              <div class="flex justify-between items-center py-2 border-b border-white/5 opacity-80">
+                <span>Tenancy ID</span>
+                <span class="font-mono text-[10px]">{{ lease.tenancy_id }}</span>
               </div>
+              <div class="flex justify-between items-center py-2 border-b border-white/5 opacity-80">
+                <span>Created At</span>
+                <span>{{ lease.created_at ? new Date(lease.created_at).toLocaleDateString() : '-' }}</span>
+              </div>
+            </div>
+            <div class="mt-8 pt-8 border-t border-white/10 italic text-[10px] opacity-40">
+              Contract financial data from Yardi Data Layer
             </div>
           </div>
         </div>

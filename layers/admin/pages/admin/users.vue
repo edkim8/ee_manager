@@ -5,7 +5,8 @@ import { PROPERTY_LIST, getPropertyName } from '../../../base/constants/properti
 import type { AdminUser, UserPropertyAccess } from '../../types/admin'
 
 definePageMeta({
-  layout: 'dashboard'
+  layout: 'dashboard',
+  middleware: ['admin']
 })
 
 useHead({

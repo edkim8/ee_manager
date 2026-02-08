@@ -10,16 +10,21 @@ import { useParseApplications, ApplicationsConfig } from '../../../parsing/compo
 import { useParseMakeready, MakeReadyConfig } from '../../../parsing/composables/parsers/useParseMakeready'
 import { useParseTransfers, TransfersConfig } from '../../../parsing/composables/parsers/useParseTransfers'
 import { useParseYardiReport, yardiReportConfig } from '../../../parsing/composables/parsers/useParseYardiReport'
+import { useParseAlerts, AlertsConfig } from '../../../parsing/composables/parsers/useParseAlerts'
+import { useParseWorkorders, WorkOrdersConfig } from '../../../parsing/composables/parsers/useParseWorkorders'
+import { useParseDelinquencies, DelinquenciesConfig } from '../../../parsing/composables/parsers/useParseDelinquencies'
 import { useDbIngestion } from '../../../parsing/composables/useDbIngestion'
 import { useDailyUploadStatus } from '../../../admin/composables/useDailyUploadStatus'
 
 definePageMeta({
   title: 'Data Ingestion',
-  layout: 'dashboard' 
+  layout: 'dashboard',
+  middleware: ['admin']
 })
 
-// --- 1. SOLVER CONFIGURATION ---
+// --- 1. UNIFIED SOLVER CONFIGURATION (Core + Ops) ---
 const SOLVER_PARSERS = [
+    // Core Reports (Phase 1)
     { id: 'residents_status', dbEnum: 'residents_status', config: residents_statusConfig, parse: useParseResidentsStatus, label: 'Residents Status', required: true },
     { id: 'expiring_leases', dbEnum: 'expiring_leases', config: ExpiringLeasesConfig, parse: useParseExpiringleases, label: 'Expiring Leases', required: true },
     { id: 'notices', dbEnum: 'notices', config: NoticesConfig, parse: useParseNotices, label: 'Notices', required: false },
@@ -28,6 +33,10 @@ const SOLVER_PARSERS = [
     { id: 'make_ready', dbEnum: 'make_ready', config: MakeReadyConfig, parse: useParseMakeready, label: 'Make Ready', required: false },
     { id: 'transfers', dbEnum: 'transfers', config: TransfersConfig, parse: useParseTransfers, label: 'Transfers', required: false },
     { id: 'leased_units', dbEnum: 'leased_units', config: { ...yardiReportConfig, id: 'leased_units', namePattern: '^5p_Leased_Units' }, parse: useParseYardiReport, label: 'Leased Units (Audit)', required: false },
+    // Ops Reports (Phase 2)
+    { id: 'alerts', dbEnum: 'alerts', config: AlertsConfig, parse: useParseAlerts, label: 'Alerts', required: false },
+    { id: 'work_orders', dbEnum: 'work_orders', config: WorkOrdersConfig, parse: useParseWorkorders, label: 'Work Orders', required: false },
+    { id: 'delinquencies', dbEnum: 'delinquencies', config: DelinquenciesConfig, parse: useParseDelinquencies, label: 'Delinquencies', required: false },
 ]
 
 // --- 2. OPERATIONAL CONFIGURATION ---
@@ -206,9 +215,9 @@ async function processBatch() {
             <div>
                 <h2 class="text-lg font-semibold flex items-center gap-2">
                     <UIcon name="i-heroicons-cpu-chip" class="text-primary-600" />
-                    Solver Engine
+                    Unified Solver Engine
                 </h2>
-                <p class="text-sm text-gray-500">Batch upload the 8 Core Reports to update Tenancy & Inventory.</p>
+                <p class="text-sm text-gray-500">Batch upload all 11 Daily Reports (8 Core + 3 Ops) in one go.</p>
             </div>
             <div class="flex gap-2">
                  <UButton v-if="pendingFiles.length > 0" @click="clearAll" color="gray" variant="ghost" size="sm">Clear</UButton>
@@ -230,8 +239,8 @@ async function processBatch() {
                 >
                     <input type="file" ref="fileInput" multiple class="hidden" @change="(e) => onDrop({ dataTransfer: { files: e.target.files } } as any)" accept=".xlsx,.xls,.csv" />
                     <UIcon name="i-heroicons-cloud-arrow-up" class="text-5xl text-gray-400 mb-4" />
-                    <h3 class="text-lg font-semibold text-gray-700">Drop User/Audit Reports Here</h3>
-                    <p class="text-sm text-gray-500 mt-2">Select all 8 files and drop them at once.</p>
+                    <h3 class="text-lg font-semibold text-gray-700">Drop All Daily Reports Here</h3>
+                    <p class="text-sm text-gray-500 mt-2">Select all 11 files (8 Core + 3 Ops) and drop them at once.</p>
                 </div>
 
                 <!-- Process Button -->
@@ -301,8 +310,8 @@ async function processBatch() {
             <!-- B. Verification Checklist -->
             <div class="bg-gray-50 rounded-lg p-5 border border-gray-200 h-full">
                 <h3 class="font-medium text-gray-900 mb-4 flex items-center justify-between">
-                    Required Reports
-                    <UBadge :color="allRequiredPresent ? 'green' : 'gray'" size="xs" variant="subtle">{{ verificationStatus.filter(x=>x.isPresent).length }} / 8</UBadge>
+                    File Verification
+                    <UBadge :color="allRequiredPresent ? 'green' : 'gray'" size="xs" variant="subtle">{{ verificationStatus.filter(x=>x.isPresent).length }} / 11</UBadge>
                 </h3>
                 <div class="space-y-2">
                     <div v-for="item in verificationStatus" :key="item.id" 
@@ -330,10 +339,20 @@ async function processBatch() {
         </div>
     </section>
 
-    <!-- SECTION 2: OPERATIONAL UPLOADS -->
-    <section>
-        <h2 class="text-xl font-bold text-gray-900 mb-4">Operational Data</h2>
-        
+    <!-- SECTION 2: LEGACY OPERATIONAL UPLOADS (Deprecated - Use Unified Solver Above) -->
+    <section class="opacity-50">
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <div class="flex items-start gap-2">
+                <UIcon name="i-heroicons-information-circle" class="w-5 h-5 text-yellow-600 mt-0.5" />
+                <div>
+                    <h3 class="font-semibold text-yellow-900">Legacy Upload Method</h3>
+                    <p class="text-sm text-yellow-700 mt-1">These individual uploaders are deprecated. Use the <strong>Unified Solver Engine</strong> above to upload all 11 files at once.</p>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Operational Data (Legacy)</h2>
+
         <UAccordion :items="OPERATIONAL_ITEMS" :unmount="false">
             <template #item="{ item }">
                 <div class="flex items-center justify-between w-full py-2">
@@ -352,16 +371,54 @@ async function processBatch() {
                     </div>
                 </div>
             </template>
-            
+
             <template #operational-slot="{ item }">
-                 <ParserUploader 
-                    :parser-id="item.parserId" 
-                    :table-name="item.tableName" 
-                    @saved="onSaved(item.parserId)" 
-                    :last-upload-status="getStatus(item.parserId)" 
+                 <ParserUploader
+                    :parser-id="item.parserId"
+                    :table-name="item.tableName"
+                    @saved="onSaved(item.parserId)"
+                    :last-upload-status="getStatus(item.parserId)"
                 />
             </template>
         </UAccordion>
+    </section>
+
+    <!-- SECTION 3: AMENITIES DATA -->
+    <section>
+        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center justify-between">
+            Amenities Management
+            <UButton to="/admin/generators/amenity-lookup" color="gray" variant="ghost" size="xs" icon="i-heroicons-wrench">Amenity Lookup Generator</UButton>
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <UCard>
+                <template #header>
+                    <div class="flex items-center gap-2">
+                        <UIcon name="i-heroicons-list-bullet" class="text-primary-600" />
+                        <span class="font-bold">Amenities List</span>
+                    </div>
+                </template>
+                <ParserUploader
+                    parser-id="amenities_list"
+                    table-name="amenities"
+                    @saved="onSaved('amenities_list')"
+                />
+            </UCard>
+
+            <UCard>
+                <template #header>
+                    <div class="flex items-center gap-2">
+                        <UIcon name="i-heroicons-document-magnifying-glass" class="text-primary-600" />
+                        <span class="font-bold">Amenities Audit</span>
+                    </div>
+                </template>
+                <ParserUploader
+                    parser-id="amenities_audit"
+                    table-name="unit_amenities"
+                    @saved="onSaved('amenities_audit')"
+                />
+            </UCard>
+        </div>
     </section>
 
   </div>

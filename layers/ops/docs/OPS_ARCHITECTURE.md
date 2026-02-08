@@ -50,6 +50,7 @@ The Availabilities module introduces a "Heatmap" pattern for units:
 
 ## 4. Documentation References
 - [AVAILABILITY_COLORS.md](file:///Users/edward/Dev/Nuxt/EE_manager/layers/ops/docs/AVAILABILITY_COLORS.md) - The intensity scale legend.
+- [DELINQUENCIES_ENGINE.md](file:///Users/edward/Dev/Nuxt/EE_manager/layers/ops/docs/DELINQUENCIES_ENGINE.md) - Tracking and Analytics architecture.
 - `walkthrough.md` - Chronological log of implementation steps.
 
 *This document is intended for transition to future development cycles.*

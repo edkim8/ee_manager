@@ -13,31 +13,40 @@ export function useWorkOrdersSync() {
     isSyncing.value = true
     syncError.value = null
     syncStats.value = null
-    
+
     try {
       if (!parsedRows || parsedRows.length === 0) {
         throw new Error('No data to sync')
       }
 
-      // 1. Fetch Existing ACTIVE Work Orders (Optimized Diffing)
-      const { data: existingData, error: fetchError } = await client
+      // 1. Extract property codes from incoming data (for property-scoped sync)
+      const propertyCodes = [...new Set(parsedRows.map(r => r.property_code))].filter(Boolean)
+
+      // 2. Fetch ONLY work orders for the properties in this batch
+      const query = client
         .from('work_orders')
         .select('id, property_code, yardi_work_order_id')
         .eq('is_active', true)
 
+      if (propertyCodes.length > 0) {
+        query.in('property_code', propertyCodes)
+      }
+
+      const { data: existingData, error: fetchError } = await query
+
       if (fetchError) throw fetchError
 
-      // Build Map for Fast Lookup: `${property_code}_${yardi_work_order_id}`
+      // 3. Build Map for Fast Lookup: `${property_code}_${yardi_work_order_id}`
       const existingActiveMap = new Set<string>()
       const existingIdMap = new Map<string, string>() // Key -> UUID
-      
+
       existingData?.forEach(row => {
         const key = `${row.property_code}_${row.yardi_work_order_id}`
         existingActiveMap.add(key)
         existingIdMap.set(key, row.id)
       })
 
-      // 2. Process Parsed Rows & Build Upsert Payload
+      // 4. Process Parsed Rows & Build Upsert Payload
       const parsedKeys = new Set<string>()
       
       const upsertPayload = parsedRows.map(row => {
@@ -65,7 +74,7 @@ export function useWorkOrdersSync() {
         }
       })
 
-      // 3. Identify Deletions (In Active DB but NOT in File)
+      // 5. Identify Deletions (within property scope only)
       const idsToDeactivate: string[] = []
       existingIdMap.forEach((id, key) => {
         if (!parsedKeys.has(key)) {
@@ -73,7 +82,7 @@ export function useWorkOrdersSync() {
         }
       })
 
-      // 4. Execute Operations
+      // 6. Execute Operations
       
       // A. Deactivations (Soft Delete + Completion Date)
       if (idsToDeactivate.length > 0) {
@@ -98,7 +107,7 @@ export function useWorkOrdersSync() {
 
       if (upsertError) throw upsertError
 
-      // 5. Generate Stats
+      // 7. Generate Stats
       const dateStr = new Date().toISOString().split('T')[0]
       const processed = upsertPayload.length
       const deactivated = idsToDeactivate.length

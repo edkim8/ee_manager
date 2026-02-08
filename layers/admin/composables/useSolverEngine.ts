@@ -3,10 +3,17 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Database } from '~/types/supabase'
 import type { ResidentsStatusRow } from '~/layers/parsing/composables/parsers/useParseResidentsStatus'
 import { resolveUnitId } from '../../base/utils/lookup'
+import { useSolverTracking } from './useSolverTracking'
+import { useSolverReportGenerator } from './useSolverReportGenerator'
+import { useAlertsSync } from '../../parsing/composables/useAlertsSync'
+import { useWorkOrdersSync } from '../../parsing/composables/useWorkOrdersSync'
+import { useDelinquenciesSync } from '../../parsing/composables/useDelinquenciesSync'
 
 export const useSolverEngine = () => {
     const supabase = useSupabaseClient<Database>()
     const user = useSupabaseUser()
+    const tracker = useSolverTracking()
+    const reportGen = useSolverReportGenerator()
     
     // --- Helper Functions ---
 
@@ -23,8 +30,11 @@ export const useSolverEngine = () => {
         return 'Current' // Fallback
     }
     
-    const parseCurrency = (val: string | null): number | null => {
-        if (!val) return null
+    const parseCurrency = (val: string | number | null | undefined): number | null => {
+        if (!val && val !== 0) return null
+        // If already a number, return it
+        if (typeof val === 'number') return val
+        // If string, parse it
         const num = parseFloat(val.replace(/[$,]/g, ''))
         return isNaN(num) ? null : num
     }
@@ -53,6 +63,120 @@ export const useSolverEngine = () => {
      * @param existingEndDate - End date of the existing lease in DB
      * @returns true if this is a renewal (preserve old lease, create new), false if it's an update
      */
+    // --- Amenity Sync Logic ---
+
+    /**
+     * Synchronizes unit amenities from a raw Yardi string (separated by <br>).
+     * 1. Parses fragments from the raw string.
+     * 2. Reconciles the global 'amenities' library for the property.
+     * 3. Updates 'unit_amenities' (adding new, deactivating missing).
+     */
+    const syncUnitAmenities = async (unitId: string, amenitiesInput: any, propertyCode: string) => {
+        if (!amenitiesInput) return
+
+        let amenitiesStr = ''
+        if (typeof amenitiesInput === 'string') {
+            amenitiesStr = amenitiesInput
+        } else if (typeof amenitiesInput === 'object' && amenitiesInput.raw) {
+            amenitiesStr = amenitiesInput.raw
+        }
+
+        if (!amenitiesStr) return
+
+        // 1. Parse fragments (Split by <br>, trim and filter empty)
+        const fragments = amenitiesStr.split(/<br\s*\/?>/i)
+            .map(f => f.trim())
+            .filter(Boolean)
+
+        if (fragments.length === 0) return
+
+        // 2. Reconcile Global Library
+        // Fetch existing amenities for this property to avoid duplicate inserts
+        const { data: globalAmenities } = await supabase
+            .from('amenities')
+            .select('id, yardi_amenity')
+            .eq('property_code', propertyCode)
+
+        const globalAmenityMap = new Map<string, string>(globalAmenities?.map((a: { id: string, yardi_amenity: string }) => [a.yardi_amenity.toLowerCase(), a.id]) || [])
+        
+        // Ensure all fragments exist in the global library
+        for (const fragment of fragments) {
+            if (!globalAmenityMap.has(fragment.toLowerCase())) {
+                const { data: newAmenity, error: insertError } = await supabase
+                    .from('amenities')
+                    .insert({
+                        property_code: propertyCode,
+                        yardi_code: fragment.toUpperCase().replace(/\s+/g, '_').substring(0, 50),
+                        yardi_name: fragment,
+                        yardi_amenity: fragment, // Primary label for lookup
+                        amount: 0,
+                        type: 'fixed' // Lowercase standard for case-insensitive handling
+                    })
+                    .select('id')
+                    .single()
+
+                if (!insertError && newAmenity) {
+                    globalAmenityMap.set(fragment.toLowerCase(), newAmenity.id)
+                }
+            }
+        }
+
+        // 3. Sync Unit Amenities (Snapshot Reconciliation)
+        // Fetch ALL links (active and inactive) for this unit to handle reactivation
+        const { data: allLinks, error: linksError } = await supabase
+            .from('unit_amenities')
+            .select('id, amenity_id, active, amenities(yardi_amenity)')
+            .eq('unit_id', unitId)
+
+        if (linksError) {
+            console.error('[Solver] Error fetching unit amenities:', linksError)
+            return // Skip amenities sync for this unit if fetch fails
+        }
+
+        const existingLinksMap = new Map<string, { id: string, active: boolean, yardi_amenity: string }>(
+            allLinks?.map((l: any) => [l.amenities.yardi_amenity.toLowerCase(), { id: l.id, active: l.active, yardi_amenity: l.amenities.yardi_amenity }]) || []
+        )
+        const fragmentsLower = new Set(fragments.map(f => f.toLowerCase()))
+        const currentUserId = user.value?.id
+
+        // A. Add/Activate amenities found in report
+        for (const fragment of fragments) {
+            const fragLower = fragment.toLowerCase()
+            const existing = existingLinksMap.get(fragLower)
+
+            if (!existing) {
+                // New link needed
+                const amenityId = globalAmenityMap.get(fragLower)
+                if (amenityId) {
+                    await supabase
+                        .from('unit_amenities')
+                        .insert({
+                            unit_id: unitId,
+                            amenity_id: amenityId,
+                            active: true,
+                            user_id: currentUserId,
+                            comment: 'Synced from Yardi'
+                        })
+                }
+            } else if (!existing.active) {
+                // Reactivate existing link
+                await supabase
+                    .from('unit_amenities')
+                    .update({ active: true, comment: 'Re-activated in Yardi Sync', user_id: currentUserId })
+                    .eq('id', existing.id)
+            }
+        }
+
+        // B. Deactivate amenities in DB that are missing from report
+        const linksToDeactivate = allLinks?.filter((l: any) => l.active && !fragmentsLower.has(l.amenities.yardi_amenity.toLowerCase())) || []
+        if (linksToDeactivate.length > 0) {
+            await supabase
+                .from('unit_amenities')
+                .update({ active: false, comment: 'Removed in Yardi Sync' })
+                .in('id', linksToDeactivate.map(l => l.id))
+        }
+    }
+
     const isRenewal = (
         newStartDate: string | null, 
         newEndDate: string | null,
@@ -103,6 +227,9 @@ export const useSolverEngine = () => {
     const skippedRows = useState<{ property: string; unit: string; reason: string }[]>('solver-skipped-rows', () => [])
 
     const processBatch = async (batchId: string) => {
+        // Initialize tracking
+        await tracker.startRun(batchId)
+
         statusMessage.value = `Starting Batch: ${batchId}`
         skippedRows.value = [] // Reset
         console.log(`[Solver] Processing Batch: ${batchId}`)
@@ -150,6 +277,7 @@ export const useSolverEngine = () => {
                 // Per-Property Buffers
                 const tenanciesMap = new Map<string, any>()
                 const residentsToUpsert: any[] = []
+                const leasesFromResidentsMap = new Map<string, any>() // NEW: Leases from Residents Status
 
                 try {
                     for (const row of rows) {
@@ -186,7 +314,7 @@ export const useSolverEngine = () => {
                         // A. Tenancy Logic (STRICT: Only Primary Updates Tenancy)
                         if (role === 'Primary') {
                             const tenancyStatus = mapTenancyStatus(row.status)
-                            
+
                             // MERGE LOGIC: Still good to have, but now strictly scoped to Primary rows
                             const currentInMap = tenanciesMap.get(row.tenancy_id)
                             const finalMoveIn = row.move_in_date || currentInMap?.move_in_date
@@ -209,6 +337,42 @@ export const useSolverEngine = () => {
                                 move_in_date: finalMoveIn,
                                 move_out_date: finalMoveOut,
                             })
+
+                            // NEW: If Future/Applicant, create lease record from Residents Status data
+                            if (tenancyStatus === 'Future' || tenancyStatus === 'Applicant') {
+                                const leaseStartDate = parseDate(row.lease_start_date)
+                                const leaseEndDate = parseDate(row.lease_end_date)
+                                const rentAmount = parseCurrency(row.rent)
+
+                                console.log(`[Solver Debug] ${tenancyStatus} tenancy ${row.tenancy_id}:`, {
+                                    unit: row.unit_name,
+                                    resident: residentName,
+                                    lease_start_date: row.lease_start_date,
+                                    lease_end_date: row.lease_end_date,
+                                    rent: row.rent,
+                                    parsed_start: leaseStartDate,
+                                    parsed_end: leaseEndDate,
+                                    parsed_rent: rentAmount
+                                })
+
+                                // Only create lease if we have valid dates
+                                if (leaseStartDate && leaseEndDate) {
+                                    leasesFromResidentsMap.set(row.tenancy_id, {
+                                        tenancy_id: row.tenancy_id,
+                                        property_code: pCode!,
+                                        start_date: leaseStartDate,
+                                        end_date: leaseEndDate,
+                                        rent_amount: rentAmount || 0,
+                                        deposit_amount: parseCurrency(row.deposit) || 0,
+                                        lease_status: tenancyStatus === 'Applicant' ? 'Applicant' : 'Future',
+                                        is_active: true
+                                    })
+
+                                    console.log(`[Solver] ✓ Creating lease for ${tenancyStatus} tenancy: ${row.tenancy_id} (${residentName} - Unit ${row.unit_name}) - Rent: $${rentAmount}`)
+                                } else {
+                                    console.log(`[Solver] ✗ Skipping lease for ${row.tenancy_id} - missing dates (start: ${!!leaseStartDate}, end: ${!!leaseEndDate})`)
+                                }
+                            }
                         }
 
                         // B. Resident (Always Add)
@@ -237,7 +401,7 @@ export const useSolverEngine = () => {
                             
                         if (checkError) throw checkError
                         
-                        const existingIds = new Set(existingData?.map(r => r.id) || [])
+                        const existingIds = new Set(existingData?.map((r: any) => r.id) || [])
                         const newTenancies = tenanciesToUpsert.filter(t => !existingIds.has(t.id))
                         const existingTenancies = tenanciesToUpsert.filter(t => existingIds.has(t.id))
                         
@@ -249,8 +413,10 @@ export const useSolverEngine = () => {
                                 if (error) throw error
                                 totalUpsertedTenancies += chunk.length // Treating both as "processed"
                              }
+                             // Track new tenancies (will add detailed tracking in residents section)
+                             tracker.trackTenancyUpdates(pCode, newTenancies.length)
                         }
-                        
+
                         // C. Update Existing
                         if (existingTenancies.length > 0) {
                              for (let i = 0; i < existingTenancies.length; i += 1000) {
@@ -259,6 +425,8 @@ export const useSolverEngine = () => {
                                 if (error) throw error
                                 totalUpsertedTenancies += chunk.length
                              }
+                             // Track tenancy updates
+                             tracker.trackTenancyUpdates(pCode, existingTenancies.length)
                         }
                         
                         console.log(`[Solver] Safe Sync ${pCode}: ${newTenancies.length} New, ${existingTenancies.length} Updates`)
@@ -284,13 +452,13 @@ export const useSolverEngine = () => {
                             })
                         }
 
-                        const newResidents: any[] = []
-                        const existingResidents: any[] = []
+                        const newResidentsMap = new Map<string, any>() // Dedup key: tenancy_id:name_lower
+                        const existingResidentsMap2 = new Map<string, any>() // Dedup by resident ID
 
                         for (const res of residentsToUpsert) {
                             const candidates = existingResidentsMap[res.tenancy_id] || []
                             const match = candidates.find(c => c.name.toLowerCase() === res.name.toLowerCase())
-                            
+
                             const payload = {
                                 property_code: res.pCode,
                                 tenancy_id: res.tenancy_id,
@@ -302,13 +470,18 @@ export const useSolverEngine = () => {
                             }
 
                             if (match) {
-                                // Existing: Include ID for Update
-                                existingResidents.push({ ...payload, id: match.id })
+                                // Existing: Deduplicate by resident ID (last occurrence wins)
+                                existingResidentsMap2.set(match.id, { ...payload, id: match.id })
                             } else {
-                                // New: Omit ID for Insert (Let DB generate)
-                                newResidents.push(payload)
+                                // New: Deduplicate by tenancy_id + name (last occurrence wins)
+                                const dedupKey = `${res.tenancy_id}:${res.name.toLowerCase()}`
+                                newResidentsMap.set(dedupKey, payload)
                             }
                         }
+
+                        // Convert deduped maps to arrays
+                        const newResidents = Array.from(newResidentsMap.values())
+                        const existingResidents = Array.from(existingResidentsMap2.values())
                         
                         // A. Insert New (No IDs)
                         if (newResidents.length > 0) {
@@ -321,6 +494,8 @@ export const useSolverEngine = () => {
                                 }
                                 totalUpsertedResidents += chunk.length
                             }
+                             // Track new residents
+                             tracker.trackResidentUpdates(pCode, newResidents.length)
                         }
 
                         // B. Update Existing (With IDs)
@@ -334,9 +509,62 @@ export const useSolverEngine = () => {
                                 }
                                 totalUpsertedResidents += chunk.length
                             }
+                             // Track resident updates
+                             tracker.trackResidentUpdates(pCode, existingResidents.length)
                         }
                     }
-                    
+
+                    // 3. Leases from Residents Status (Future/Applicant only)
+                    const leasesFromResidents = Array.from(leasesFromResidentsMap.values())
+
+                    if (leasesFromResidents.length > 0) {
+                        // Check which tenancies already have leases
+                        const tenancyIds = leasesFromResidents.map((l: any) => l.tenancy_id)
+
+                        const { data: existingLeases } = await supabase
+                            .from('leases')
+                            .select('id, tenancy_id')
+                            .in('tenancy_id', tenancyIds)
+
+                        const existingLeaseMap = new Map((existingLeases || []).map((l: any) => [l.tenancy_id, l.id]))
+
+                        const leasesToInsert: any[] = []
+                        const leasesToUpdate: any[] = []
+
+                        for (const lease of leasesFromResidents) {
+                            const existingLeaseId = existingLeaseMap.get(lease.tenancy_id)
+                            if (existingLeaseId) {
+                                // Update existing
+                                leasesToUpdate.push({ ...lease, id: existingLeaseId })
+                            } else {
+                                // Insert new
+                                leasesToInsert.push(lease)
+                            }
+                        }
+
+                        // Insert new leases
+                        if (leasesToInsert.length > 0) {
+                            const { error } = await supabase.from('leases').insert(leasesToInsert)
+                            if (error) {
+                                console.error(`[Solver] Lease Insert Error (from Residents) for ${pCode}:`, error)
+                            } else {
+                                console.log(`[Solver] Inserted ${leasesToInsert.length} leases from Residents Status for ${pCode}`)
+                                tracker.trackLeaseChanges(pCode, leasesToInsert.length, 0)
+                            }
+                        }
+
+                        // Update existing leases
+                        if (leasesToUpdate.length > 0) {
+                            const { error } = await supabase.from('leases').upsert(leasesToUpdate)
+                            if (error) {
+                                console.error(`[Solver] Lease Update Error (from Residents) for ${pCode}:`, error)
+                            } else {
+                                console.log(`[Solver] Updated ${leasesToUpdate.length} leases from Residents Status for ${pCode}`)
+                                tracker.trackLeaseChanges(pCode, 0, leasesToUpdate.length)
+                            }
+                        }
+                    }
+
                     processedCount += rows.length
                     
                 } catch (err: any) {
@@ -371,7 +599,7 @@ export const useSolverEngine = () => {
                     // Optimization: We could fetch all valid IDs for this property first.
                     // Or trust "Safe Sync" - but here we want to warn on Orphans.
                     // Let's first collect all tenancy_codes from the rows.
-                    const relevantTenancyIds = [...new Set(rows.map(r => r.tenancy_code).filter(Boolean))]
+                    const relevantTenancyIds = [...new Set(rows.map((r: any) => r.tenancy_code).filter(Boolean))]
                     
                     if (relevantTenancyIds.length === 0) continue
 
@@ -386,7 +614,7 @@ export const useSolverEngine = () => {
                             .select('id')
                             .in('id', chunk)
                         
-                        found?.forEach(f => validTenancyIds.add(f.id))
+                        found?.forEach((f: any) => validTenancyIds.add(f.id))
                     }
 
                     for (const row of rows) {
@@ -421,12 +649,12 @@ export const useSolverEngine = () => {
                         // Strategy: Check which tenancies already have leases, then UPDATE existing or INSERT new
                         // This handles duplicate rows in ExpiringLeases gracefully (multiple UPDATEs = idempotent)
                         
-                        const tenancyIds = [...new Set(leasesToUpsert.map(l => l.tenancy_id))]
+                        const tenancyIds = [...new Set(leasesToUpsert.map((l: any) => l.tenancy_id))]
                         
-                        // Fetch existing leases for these tenancies (need full data for renewal detection)
+                        // Fetch existing leases for these tenancies (need full data for renewal/inheritance)
                         const { data: existingLeases, error: fetchError } = await supabase
                             .from('leases')
-                            .select('id, tenancy_id, start_date, end_date, is_active')
+                            .select('id, tenancy_id, property_code, start_date, end_date, rent_amount, deposit_amount, lease_status, is_active')
                             .in('tenancy_id', tenancyIds)
                             .eq('is_active', true) // Only fetch active leases
                         
@@ -434,7 +662,7 @@ export const useSolverEngine = () => {
                         
                         // Build map: tenancy_id -> active lease record
                         const leaseMap = new Map<string, any>()
-                        existingLeases?.forEach(lease => {
+                        existingLeases?.forEach((lease: any) => {
                             // Only keep the active lease (should be only one per tenancy)
                             if (!leaseMap.has(lease.tenancy_id)) {
                                 leaseMap.set(lease.tenancy_id, lease)
@@ -457,17 +685,50 @@ export const useSolverEngine = () => {
                             if (existingLease) {
                                 // Check if this is a RENEWAL
                                 if (isRenewal(
-                                    newLease.start_date, 
+                                    newLease.start_date,
                                     newLease.end_date,
                                     existingLease.start_date,
                                     existingLease.end_date
                                 )) {
-                                    // RENEWAL: Deactivate old lease, insert new lease
+                                    // RENEWAL: Mark old lease as Past, create new Current lease
                                     toDeactivate.push({
                                         id: existingLease.id,
-                                        is_active: false
+                                        is_active: false,
+                                        lease_status: 'Past' // Historical record
                                     })
-                                    toInsert.push(newLease) // New lease with same tenancy_id
+
+                                    // New lease inherits from old, overrides dates/rent
+                                    const renewedLease = {
+                                        // Inherit from old lease
+                                        tenancy_id: existingLease.tenancy_id,
+                                        property_code: existingLease.property_code,
+                                        deposit_amount: existingLease.deposit_amount,
+                                        // Override with new data from report
+                                        start_date: newLease.start_date,
+                                        end_date: newLease.end_date,
+                                        rent_amount: newLease.rent_amount,
+                                        // Set as current active lease
+                                        lease_status: 'Current',
+                                        is_active: true
+                                    }
+                                    toInsert.push(renewedLease)
+
+                                    // Track renewal (unit lookup would be needed for unit_name/unit_id)
+                                    tracker.trackLeaseRenewal(pCode, {
+                                        tenancy_id: existingLease.tenancy_id,
+                                        unit_name: 'Unit', // Would need lookup
+                                        unit_id: null, // NULL instead of empty string for UUID column
+                                        old_lease: {
+                                            start_date: existingLease.start_date,
+                                            end_date: existingLease.end_date,
+                                            rent_amount: existingLease.rent_amount || 0
+                                        },
+                                        new_lease: {
+                                            start_date: newLease.start_date,
+                                            end_date: newLease.end_date,
+                                            rent_amount: newLease.rent_amount || 0
+                                        }
+                                    })
                                 } else {
                                     // UPDATE: Same lease term, just updating details
                                     toUpdate.push({ ...newLease, id: existingLease.id })
@@ -479,16 +740,21 @@ export const useSolverEngine = () => {
                         })
                         
                         // Execute Deactivations (for renewals)
+                        // Mark old leases as Past + inactive to preserve history
                         if (toDeactivate.length > 0) {
                             for (let i = 0; i < toDeactivate.length; i += 1000) {
                                 const chunk = toDeactivate.slice(i, i + 1000)
-                                const { error } = await supabase.from('leases').upsert(chunk)
+                                const chunkIds = chunk.map(l => l.id)
+                                const { error } = await supabase
+                                    .from('leases')
+                                    .update({ is_active: false, lease_status: 'Past' })
+                                    .in('id', chunkIds)
                                 if (error) {
                                     console.error(`[Solver] Lease Deactivation Error ${pCode}:`, error)
                                     throw error
                                 }
                             }
-                            console.log(`[Solver] Deactivated ${toDeactivate.length} leases (renewals) for ${pCode}`)
+                            console.log(`[Solver] Archived ${toDeactivate.length} leases as Past (renewals) for ${pCode}`)
                         }
                         
                         // Execute Updates
@@ -516,6 +782,9 @@ export const useSolverEngine = () => {
                                 totalUpsertedLeases += chunk.length
                             }
                         }
+
+                        // Track lease changes
+                        tracker.trackLeaseChanges(pCode, toInsert.length, toUpdate.length)
                     }
                  }
                  statusMessage.value = `Leases Synced: ${totalUpsertedLeases} records.`
@@ -541,7 +810,7 @@ export const useSolverEngine = () => {
                     const availabilitiesToUpsert: any[] = []
 
                     // Resolve unit_ids for all rows
-                    const unitNames = [...new Set(rows.map(r => r.unit_name).filter(Boolean))]
+                    const unitNames = [...new Set(rows.map((r: any) => r.unit_name).filter(Boolean))]
                     
                     if (unitNames.length === 0) continue
 
@@ -555,22 +824,30 @@ export const useSolverEngine = () => {
                             .eq('property_code', pCode)
                             .in('unit_name', chunk)
                         
-                        units?.forEach(u => unitMap.set(u.unit_name, u.id))
+                        units?.forEach((u: any) => unitMap.set(u.unit_name, u.id))
                     }
 
-                    // Fetch active tenancies for status derivation
+                    // Fetch active tenancies for status derivation and linking
                     const unitIds = Array.from(unitMap.values())
-                    const tenancyMap = new Map<string, string>() // unit_id -> tenancy_status
-                    
+                    const tenancyMap = new Map<string, { status: string; id: string }>() // unit_id -> { status, id }
+
                     if (unitIds.length > 0) {
                         for (let i = 0; i < unitIds.length; i += 1000) {
                             const chunk = unitIds.slice(i, i + 1000)
                             const { data: tenancies } = await supabase
                                 .from('tenancies')
-                                .select('unit_id, status')
+                                .select('id, unit_id, status')
                                 .in('unit_id', chunk)
-                            
-                            tenancies?.forEach(t => tenancyMap.set(t.unit_id, t.status))
+
+                            tenancies?.forEach((t: any) => {
+                                // Keep only Future or Applicant tenancies for linking
+                                if (t.status === 'Future' || t.status === 'Applicant') {
+                                    tenancyMap.set(t.unit_id, { status: t.status, id: t.id })
+                                } else if (!tenancyMap.has(t.unit_id)) {
+                                    // Store other statuses only if no Future/Applicant already exists
+                                    tenancyMap.set(t.unit_id, { status: t.status, id: t.id })
+                                }
+                            })
                         }
                     }
 
@@ -585,18 +862,26 @@ export const useSolverEngine = () => {
                         }
 
                         // Derive status from tenancy
-                        const tenancyStatus = tenancyMap.get(unitId)
+                        const tenancyData = tenancyMap.get(unitId)
+                        const tenancyStatus = tenancyData?.status
                         let availabilityStatus = 'Available' // Default
                         let isActive = true // Default
                         let shouldClearApplicantFields = false
-                        
+                        let futureTenancyId: string | null = null
+
                         if (tenancyStatus) {
                             if (tenancyStatus === 'Current') {
                                 availabilityStatus = 'Occupied'
                                 isActive = false // End this availability cycle
                             }
-                            else if (tenancyStatus === 'Future') availabilityStatus = 'Leased'
-                            else if (tenancyStatus === 'Applicant') availabilityStatus = 'Applied'
+                            else if (tenancyStatus === 'Future') {
+                                availabilityStatus = 'Leased'
+                                futureTenancyId = tenancyData.id // Link to Future tenancy
+                            }
+                            else if (tenancyStatus === 'Applicant') {
+                                availabilityStatus = 'Applied'
+                                futureTenancyId = tenancyData.id // Link to Applicant tenancy
+                            }
                             else if (tenancyStatus === 'Notice' || tenancyStatus === 'Eviction') {
                                 availabilityStatus = 'Available'
                             }
@@ -617,7 +902,8 @@ export const useSolverEngine = () => {
                             available_date: parseDate(row.available_date),
                             rent_offered: row.offered_rent || 0,
                             amenities: row.amenities ? { raw: row.amenities } : {},
-                            is_active: isActive
+                            is_active: isActive,
+                            future_tenancy_id: futureTenancyId // Populate with resolved Tenancy ID
                         }
 
                         // Clear applicant-related fields when Denied/Canceled
@@ -630,18 +916,33 @@ export const useSolverEngine = () => {
                         }
 
                         availabilitiesToUpsert.push(availabilityRecord)
+
+                        // --- SYNC AMENITIES ---
+                        if (row.amenities) {
+                            await syncUnitAmenities(unitId, row.amenities, pCode!)
+                        }
                     }
 
                     if (availabilitiesToUpsert.length > 0) {
-                        // Fetch existing active availabilities
+                        // ==========================================
+                        // TRACKING CODE START - Fetch existing availabilities with rent for price change detection
+                        // ==========================================
                         const { data: existingAvails } = await supabase
                             .from('availabilities')
-                            .select('id, unit_id')
+                            .select('id, unit_id, unit_name, rent_offered')
                             .in('unit_id', availabilitiesToUpsert.map(a => a.unit_id))
                             .eq('is_active', true)
-                        
+
                         const availMap = new Map<string, string>() // unit_id -> availability_id
-                        existingAvails?.forEach(a => availMap.set(a.unit_id, a.id))
+                        const rentMap = new Map<string, number>() // unit_id -> old rent_offered
+                        const unitNameMap = new Map<string, string>() // unit_id -> unit_name
+                        existingAvails?.forEach((a: any) => {
+                            availMap.set(a.unit_id, a.id)
+                            rentMap.set(a.unit_id, a.rent_offered || 0)
+                            unitNameMap.set(a.unit_id, a.unit_name)
+                        })
+                        // TRACKING CODE END
+                        // ==========================================
                         
                         const toUpdate: any[] = []
                         const toInsert: any[] = []
@@ -654,6 +955,31 @@ export const useSolverEngine = () => {
                                 toInsert.push(avail)
                             }
                         })
+
+                        // ==========================================
+                        // TRACKING CODE START - Detect and track price changes
+                        // ==========================================
+                        toUpdate.forEach(avail => {
+                            const oldRent = rentMap.get(avail.unit_id) || 0
+                            const newRent = avail.rent_offered || 0
+
+                            // Only track if there's an actual change (threshold: $1)
+                            if (Math.abs(newRent - oldRent) >= 1) {
+                                const changeAmount = newRent - oldRent
+                                const changePercent = oldRent > 0 ? ((changeAmount / oldRent) * 100) : 0
+
+                                tracker.trackPriceChange(pCode, {
+                                    unit_name: avail.unit_name,
+                                    unit_id: avail.unit_id,
+                                    old_rent: oldRent,
+                                    new_rent: newRent,
+                                    change_amount: changeAmount,
+                                    change_percent: changePercent
+                                })
+                            }
+                        })
+                        // TRACKING CODE END
+                        // ==========================================
 
                         // Execute Updates
                         if (toUpdate.length > 0) {
@@ -680,9 +1006,63 @@ export const useSolverEngine = () => {
                                 totalUpsertedAvailabilities += chunk.length
                             }
                         }
+
+                        // Track availability changes
+                        tracker.trackAvailabilityChanges(pCode, toInsert.length, toUpdate.length)
                     }
                 }
                 statusMessage.value = `Availabilities Synced: ${totalUpsertedAvailabilities} records.`
+            }
+
+            // --- PHASE 2C-2: Update Stale Availability Records ---
+            statusMessage.value = 'Updating stale availability records...'
+
+            // Find availability records that are stale (status still 'Available' but unit has Future/Applicant tenancy)
+            const { data: staleAvailabilities } = await supabase
+                .from('availabilities')
+                .select('id, unit_id, property_code')
+                .eq('is_active', true)
+                .in('status', ['Available', 'Notice'])
+
+            if (staleAvailabilities && staleAvailabilities.length > 0) {
+                const staleUnitIds = staleAvailabilities.map((a: any) => a.unit_id)
+
+                // Find which of these units have Future/Applicant tenancies
+                const { data: activeTenancies } = await supabase
+                    .from('tenancies')
+                    .select('id, unit_id, status')
+                    .in('unit_id', staleUnitIds)
+                    .in('status', ['Future', 'Applicant'])
+
+                if (activeTenancies && activeTenancies.length > 0) {
+                    const tenancyMap = new Map(activeTenancies.map((t: any) => [t.unit_id, t]))
+                    const availsToUpdate: any[] = []
+
+                    for (const avail of staleAvailabilities) {
+                        const tenancy: any = tenancyMap.get(avail.unit_id)
+                        if (tenancy) {
+                            availsToUpdate.push({
+                                id: avail.id,
+                                unit_id: avail.unit_id,
+                                property_code: avail.property_code,
+                                status: tenancy.status === 'Future' ? 'Leased' : 'Applied',
+                                future_tenancy_id: tenancy.id
+                            })
+                        }
+                    }
+
+                    if (availsToUpdate.length > 0) {
+                        for (let i = 0; i < availsToUpdate.length; i += 1000) {
+                            const chunk = availsToUpdate.slice(i, i + 1000)
+                            const { error } = await supabase.from('availabilities').upsert(chunk)
+                            if (error) {
+                                console.error(`[Solver] Stale Availability Update Error:`, error)
+                            }
+                        }
+                        console.log(`[Solver] Updated ${availsToUpdate.length} stale availability records`)
+                        tracker.trackAvailabilityChanges('STALE_UPDATE', 0, availsToUpdate.length)
+                    }
+                }
             }
 
             // --- STEP 2A: NOTICES (Move-Out Intent) ---
@@ -785,6 +1165,8 @@ export const useSolverEngine = () => {
                             // Auto-fix: Update status to 'Notice'
                             finalStatus = 'Notice'
                             warnings.push(`Auto-fixed status for ${row.unit_name}: ${tenancy.status} → Notice`)
+                            // Track status auto-fix
+                            tracker.trackStatusAutoFix(pCode, row.unit_name, `${tenancy.status} → Notice`)
                         }
 
                         const updatePayload: any = {
@@ -796,6 +1178,17 @@ export const useSolverEngine = () => {
                         }
 
                         tenancyUpdates.push(updatePayload)
+
+                        // Track notice given (we need to fetch resident name from DB for accurate tracking)
+                        tracker.trackNotice(pCode, {
+                            tenancy_id: tenancy.id,
+                            resident_name: row.resident_name || 'Unknown',
+                            unit_name: row.unit_name,
+                            unit_id: unitId,
+                            move_in_date: tenancy.move_in_date,
+                            move_out_date: parseDate(row.move_out_date) || undefined,
+                            status_change: finalStatus !== tenancy.status ? `${tenancy.status} → ${finalStatus}` : undefined
+                        })
                         
                         // Track for availability update
                         availabilityUpdates.push({
@@ -895,8 +1288,8 @@ export const useSolverEngine = () => {
                         .in('unit_name', unitNames)
                     
                     const unitMap = new Map<string, string>()
-                    units?.forEach(u => unitMap.set(u.unit_name, u.id))
-                    
+                    units?.forEach((u: any) => unitMap.set(u.unit_name, u.id))
+
                     // Step 2: Detect overdue units
                     console.log(`[Solver DEBUG] Today: ${today.toISOString()}, Cushion: ${cushionDays} days`)
                     
@@ -944,25 +1337,47 @@ export const useSolverEngine = () => {
                                 }
                             }
                         })
-                        .filter(Boolean)
-                    
-                    // Step 3: Upsert flags
+                        .filter((f): f is NonNullable<typeof f> => f !== null && f !== undefined)
+
+                    // Step 3: Insert flags (check for existing unresolved flags first)
                     if (overdueUnits.length > 0) {
-                        // Use insert with ignoreDuplicates to handle the partial unique index
-                        const { data: inserted, error: flagError } = await supabase
+                        // Query for existing unresolved flags to avoid 409 conflicts
+                        const unitIdsToCheck = overdueUnits.map((f: any) => f.unit_id)
+                        const { data: existingFlags } = await supabase
                             .from('unit_flags')
-                            .insert(overdueUnits, { ignoreDuplicates: true })
-                            .select('id')
-                        
-                        // Suppress duplicate errors (code 23505) - expected on re-runs
-                        if (flagError && flagError.code !== '23505') {
-                            console.error(`[Solver] Flag Creation Error (MakeReady) ${pCode}:`, flagError)
-                        } else {
-                            const createdCount = inserted?.length || 0
-                            totalFlagsCreated += createdCount
-                            if (createdCount > 0) {
-                                console.log(`[Solver] Created ${createdCount} overdue flags for ${pCode}`)
+                            .select('unit_id, flag_type')
+                            .eq('flag_type', 'makeready_overdue')
+                            .in('unit_id', unitIdsToCheck)
+                            .is('resolved_at', null)
+
+                        // Create a Set of existing (unit_id, flag_type) combinations
+                        const existingSet = new Set(
+                            (existingFlags || []).map((f: any) => `${f.unit_id}:${f.flag_type}`)
+                        )
+
+                        // Filter out flags that already exist
+                        const newFlags = overdueUnits.filter((f: any) =>
+                            !existingSet.has(`${f.unit_id}:${f.flag_type}`)
+                        )
+
+                        if (newFlags.length > 0) {
+                            const { data: inserted, error: flagError } = await supabase
+                                .from('unit_flags')
+                                .insert(newFlags)
+                                .select('id')
+
+                            if (flagError) {
+                                console.error(`[Solver] Flag Creation Error (MakeReady) ${pCode}:`, flagError)
+                            } else {
+                                const createdCount = inserted?.length || 0
+                                totalFlagsCreated += createdCount
+                                if (createdCount > 0) {
+                                    console.log(`[Solver] Created ${createdCount} new overdue flags for ${pCode}`)
+                                    tracker.trackFlag(pCode, 'makeready_overdue', createdCount)
+                                }
                             }
+                        } else {
+                            console.log(`[Solver] No new MakeReady flags to create for ${pCode} (all already exist)`)
                         }
                     }
                     
@@ -1029,7 +1444,7 @@ export const useSolverEngine = () => {
                         .in('unit_name', unitNames)
 
                     const unitMap = new Map<string, string>()
-                    units?.forEach(u => unitMap.set(u.unit_name, u.id))
+                    units?.forEach((u: any) => unitMap.set(u.unit_name, u.id))
 
                     // Step 2: Process each application
                     let propertyApplicationsSaved = 0
@@ -1040,16 +1455,18 @@ export const useSolverEngine = () => {
                             continue
                         }
 
-                        // Step 3: Update availability with leasing agent
+                        // Step 3: Update availability with leasing agent (non-critical, best-effort)
                         if (row.leasing_agent) {
+                            // Query for active availability without status filter to avoid 406 errors
                             const { data: availability } = await supabase
                                 .from('availabilities')
-                                .select('id')
+                                .select('id, status')
                                 .eq('unit_id', unitId)
-                                .in('status', ['Applied', 'Leased'])  // Fixed: Use availability_status ENUM values
-                                .single()
+                                .eq('is_active', true)
+                                .maybeSingle()
 
-                            if (availability) {
+                            // Only update if availability exists and is in applicable status
+                            if (availability && ['Applied', 'Leased'].includes(availability.status || '')) {
                                 const { error: availError } = await supabase
                                     .from('availabilities')
                                     .update({ leasing_agent: row.leasing_agent })
@@ -1071,13 +1488,26 @@ export const useSolverEngine = () => {
                             screening_result: row.screening_result || null
                         }
 
+                        // Upsert with explicit conflict resolution on unique constraint
                         const { error: appError } = await supabase
                             .from('applications')
-                            .upsert(applicationData)
+                            .upsert(applicationData, {
+                                onConflict: 'property_code,unit_id,applicant_name,application_date',
+                                ignoreDuplicates: false  // Update on conflict
+                            })
 
                         if (!appError) {
                             totalApplicationsSaved++
                             propertyApplicationsSaved++
+
+                            // Track application saved
+                            tracker.trackApplication(pCode, {
+                                applicant_name: row.applicant,
+                                unit_name: row.unit_name,
+                                unit_id: unitId,
+                                application_date: parseDate(row.application_date) || new Date().toISOString(),
+                                screening_result: row.screening_result
+                            })
                         } else {
                             console.error(`[Solver] Application save error for ${row.applicant}:`, appError)
                         }
@@ -1085,38 +1515,51 @@ export const useSolverEngine = () => {
                         // Step 5: Check for overdue applications (no screening result after 7 days)
                         if (!row.screening_result && row.application_date) {
                             const appDateStr = parseDate(row.application_date)
-                            const appDate = new Date(appDateStr)
-                            const daysOld = Math.floor((today.getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24))
+                            if (appDateStr) {
+                                const appDate = new Date(appDateStr)
+                                const daysOld = Math.floor((today.getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24))
 
-                            if (daysOld > overdueThreshold) {
+                                if (daysOld > overdueThreshold) {
                                 const severity = daysOld > 14 ? 'error' : 'warning'
                                 
-                                const flag = {
-                                    unit_id: unitId,
-                                    property_code: pCode,
-                                    flag_type: 'application_overdue',
-                                    severity: severity,
-                                    title: 'Application Screening Overdue',
-                                    message: `Application for ${row.applicant} submitted ${daysOld} days ago without screening result`,
-                                    metadata: {
-                                        application_date: appDateStr,
-                                        days_overdue: daysOld,
-                                        applicant_name: row.applicant,
-                                        unit_name: row.unit_name,
-                                        agent: row.leasing_agent
-                                    }
-                                }
-
-                                const { error: flagError } = await supabase
+                                // Check if flag already exists before inserting
+                                const { data: existingFlag } = await supabase
                                     .from('unit_flags')
-                                    .insert([flag], { ignoreDuplicates: true })
+                                    .select('id')
+                                    .eq('unit_id', unitId)
+                                    .eq('flag_type', 'application_overdue')
+                                    .is('resolved_at', null)
+                                    .maybeSingle()
 
-                                // Suppress duplicate errors (code 23505) - expected on re-runs
-                                if (!flagError || flagError.code === '23505') {
+                                if (!existingFlag) {
+                                    const flag = {
+                                        unit_id: unitId,
+                                        property_code: pCode,
+                                        flag_type: 'application_overdue',
+                                        severity: severity,
+                                        title: 'Application Screening Overdue',
+                                        message: `Application for ${row.applicant} submitted ${daysOld} days ago without screening result`,
+                                        metadata: {
+                                            application_date: appDateStr,
+                                            days_overdue: daysOld,
+                                            applicant_name: row.applicant,
+                                            unit_name: row.unit_name,
+                                            agent: row.leasing_agent
+                                        }
+                                    }
+
+                                    const { error: flagError } = await supabase
+                                        .from('unit_flags')
+                                        .insert([flag])
+
                                     if (!flagError) {
                                         totalApplicationFlags++
+                                        tracker.trackFlag(pCode, 'application_overdue', 1)
+                                    } else {
+                                        console.error(`[Solver] Application flag creation error:`, flagError)
                                     }
                                 }
+                            }
                             }
                         }
                     }
@@ -1220,28 +1663,44 @@ export const useSolverEngine = () => {
                         })
                     }
                     
-                    // Insert flags in batches
+                    // Insert flags in batches (check for existing flags first)
                     if (flagsToCreate.length > 0) {
-                        for (let i = 0; i < flagsToCreate.length; i += 1000) {
-                            const chunk = flagsToCreate.slice(i, i + 1000)
-                            const { error } = await supabase
-                                .from('unit_flags')
-                                .insert(chunk, { ignoreDuplicates: true })
-                            
-                            if (error) {
-                                // Suppress duplicate errors (23505)
-                                if (error.code !== '23505') {
+                        // Query for existing unresolved transfer flags
+                        const unitIdsToCheck = flagsToCreate.map((f: any) => f.unit_id)
+                        const { data: existingFlags } = await supabase
+                            .from('unit_flags')
+                            .select('unit_id, flag_type')
+                            .eq('flag_type', 'unit_transfer_active')
+                            .in('unit_id', unitIdsToCheck)
+                            .is('resolved_at', null)
+
+                        // Create Set of existing (unit_id, flag_type) combinations
+                        const existingSet = new Set(
+                            (existingFlags || []).map((f: any) => `${f.unit_id}:${f.flag_type}`)
+                        )
+
+                        // Filter out flags that already exist
+                        const newFlags = flagsToCreate.filter((f: any) =>
+                            !existingSet.has(`${f.unit_id}:${f.flag_type}`)
+                        )
+
+                        if (newFlags.length > 0) {
+                            for (let i = 0; i < newFlags.length; i += 1000) {
+                                const chunk = newFlags.slice(i, i + 1000)
+                                const { error } = await supabase
+                                    .from('unit_flags')
+                                    .insert(chunk)
+
+                                if (error) {
                                     console.error(`[Solver] Transfer Flag Error ${pCode}:`, error)
+                                } else {
+                                    totalTransferFlags += chunk.length
+                                    tracker.trackFlag(pCode, 'unit_transfer_active', chunk.length)
                                 }
-                            } else {
-                                totalTransferFlags += chunk.length
                             }
+                        } else {
+                            console.log(`[Solver] No new transfer flags to create for ${pCode} (all already exist)`)
                         }
-                    }
-                    
-                    // Log per-property results
-                    if (flagsToCreate.length > 0) {
-                        console.log(`[Solver] ${pCode}: ${flagsToCreate.length} transfer flags created`)
                     }
                 }
 
@@ -1249,8 +1708,149 @@ export const useSolverEngine = () => {
                 console.log(`[Solver] Phase 2E Complete: ${totalTransferFlags} transfer flags created`)
             }
 
+            // ==========================================
+            // PHASE 3: OPS LOGIC (Alerts, Work Orders, Delinquencies)
+            // ==========================================
+
+            // --- STEP 3A: ALERTS ---
+            statusMessage.value = 'Processing Alerts...'
+            const { data: alertsReports } = await supabase
+                .from('import_staging')
+                .select('id, raw_data, property_code')
+                .eq('batch_id', batchId)
+                .eq('report_type', 'alerts')
+
+            if (alertsReports && alertsReports.length > 0) {
+                console.log(`[Solver] Phase 3A: Processing Alerts for ${alertsReports.length} properties`)
+
+                const alertsSync = useAlertsSync()
+
+                for (const report of alertsReports) {
+                    const pCode = report.property_code
+                    const rows = report.raw_data as any[]
+
+                    if (!rows || rows.length === 0) continue
+
+                    console.log(`[Solver] Processing Alerts for ${pCode} (${rows.length} rows)`)
+
+                    // Sync alerts using existing sync logic
+                    const success = await alertsSync.syncAlerts(rows)
+
+                    if (success) {
+                        console.log(`[Solver] ✓ Alerts synced for ${pCode}: ${alertsSync.syncStats.value}`)
+                    } else {
+                        console.error(`[Solver] ✗ Alerts sync failed for ${pCode}: ${alertsSync.syncError.value}`)
+                    }
+                }
+
+                statusMessage.value = 'Alerts Synced'
+                console.log(`[Solver] Phase 3A Complete: Alerts processed`)
+            }
+
+            // --- STEP 3B: WORK ORDERS ---
+            statusMessage.value = 'Processing Work Orders...'
+            const { data: workOrdersReports } = await supabase
+                .from('import_staging')
+                .select('id, raw_data, property_code')
+                .eq('batch_id', batchId)
+                .eq('report_type', 'work_orders')
+
+            if (workOrdersReports && workOrdersReports.length > 0) {
+                console.log(`[Solver] Phase 3B: Processing Work Orders for ${workOrdersReports.length} properties`)
+
+                const workOrdersSync = useWorkOrdersSync()
+
+                for (const report of workOrdersReports) {
+                    const pCode = report.property_code
+                    const rows = report.raw_data as any[]
+
+                    if (!rows || rows.length === 0) continue
+
+                    console.log(`[Solver] Processing Work Orders for ${pCode} (${rows.length} rows)`)
+
+                    // Sync work orders using existing sync logic
+                    const success = await workOrdersSync.syncWorkOrders(rows)
+
+                    if (success) {
+                        console.log(`[Solver] ✓ Work Orders synced for ${pCode}: ${workOrdersSync.syncStats.value}`)
+                    } else {
+                        console.error(`[Solver] ✗ Work Orders sync failed for ${pCode}: ${workOrdersSync.syncError.value}`)
+                    }
+                }
+
+                statusMessage.value = 'Work Orders Synced'
+                console.log(`[Solver] Phase 3B Complete: Work Orders processed`)
+            }
+
+            // --- STEP 3C: DELINQUENCIES ---
+            statusMessage.value = 'Processing Delinquencies...'
+            const { data: delinquenciesReports } = await supabase
+                .from('import_staging')
+                .select('id, raw_data, property_code')
+                .eq('batch_id', batchId)
+                .eq('report_type', 'delinquencies')
+
+            if (delinquenciesReports && delinquenciesReports.length > 0) {
+                console.log(`[Solver] Phase 3C: Processing Delinquencies for ${delinquenciesReports.length} properties`)
+
+                const delinquenciesSync = useDelinquenciesSync()
+
+                for (const report of delinquenciesReports) {
+                    const pCode = report.property_code
+                    const rows = report.raw_data as any[]
+
+                    if (!rows || rows.length === 0) continue
+
+                    console.log(`[Solver] Processing Delinquencies for ${pCode} (${rows.length} rows)`)
+
+                    // Sync delinquencies using existing sync logic
+                    const success = await delinquenciesSync.syncDelinquencies(rows)
+
+                    if (success) {
+                        console.log(`[Solver] ✓ Delinquencies synced for ${pCode}: ${delinquenciesSync.syncStats.value}`)
+                    } else {
+                        console.error(`[Solver] ✗ Delinquencies sync failed for ${pCode}: ${delinquenciesSync.syncError.value}`)
+                    }
+                }
+
+                statusMessage.value = 'Delinquencies Synced'
+                console.log(`[Solver] Phase 3C Complete: Delinquencies processed`)
+            }
+
+            // Complete tracking and generate report
+            const propertiesProcessed = reports.map((r: any) => r.property_code)
+            const result = await tracker.completeRun(batchId, propertiesProcessed)
+
+            if (result) {
+                // Generate markdown report
+                const markdown = reportGen.generateMarkdown(
+                    batchId,
+                    new Date().toISOString(),
+                    result.summary,
+                    result.events
+                )
+
+                // Generate filename
+                const filename = reportGen.generateFilename(new Date().toISOString(), batchId)
+                console.log(`[Solver] Report generated: ${filename}`)
+                console.log('\n' + markdown + '\n')
+
+                // Trigger automated email notifications
+                console.log('[Solver] Triggering email notifications...')
+                $fetch('/api/admin/notifications/send-summary', {
+                    method: 'POST',
+                    body: { runId: result.runId }
+                }).then(resp => {
+                    console.log('[Solver] Email trigger response:', resp)
+                }).catch(err => {
+                    console.error('[Solver] Email trigger failed:', err)
+                })
+            }
+
             statusMessage.value = `Completed: ${totalUpsertedTenancies} Tenancies, ${totalUpsertedResidents} Residents, ${totalUpsertedLeases} Leases, ${totalUpsertedAvailabilities || 0} Availabilities.`
         } catch (e: any) {
+            // Mark run as failed
+            await tracker.failRun(e.message)
             statusMessage.value = `Error: ${e.message}`
             throw e
         }

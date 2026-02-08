@@ -7,7 +7,8 @@ import { useDailyUploadStatus } from '../../composables/useDailyUploadStatus'
 
 definePageMeta({
   title: 'File Uploads',
-  layout: 'dashboard' 
+  layout: 'dashboard',
+  middleware: ['admin']
 })
 
 useHead({ title: 'Yardi Data Processing' })

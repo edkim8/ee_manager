@@ -1,8 +1,8 @@
 # Status Board: EE_manager V2
 
 ## Overview
-**Current Phase**: Solver Engine (Data Synthesis)
-**Latest Update**: [2026-01-31] Solver Engine Core Complete (All Data Processing Phases)
+**Current Phase**: Pricing & Reporting (Optimization)
+**Latest Update**: [2026-02-06] Pricing Manager & Leasing Pipeline Complete; Bug Fixes Applied.
 
 ## Feature Tracker
 
@@ -16,6 +16,12 @@
 | F-012 | Assets List & Detail Pages | Assets | **COMPLETED** | Antigravity |
 | F-013 | Solver Engine (Complex Data) | Parsing | **COMPLETED** | Antigravity/Claude |
 | F-014 | Office Integrated Layers | Office | **COMPLETED** | Antigravity |
+| F-015 | Email Notification System | Base/Admin | **COMPLETED** | Antigravity |
+| F-016 | Admin Stability & SSR Auth | Base/Admin | **COMPLETED** | Antigravity |
+| F-017 | Solver Reliability (Idempotency) | Parsing | **COMPLETED** | Claude |
+| F-018 | Floor Plan Pricing Manager | Ops | **COMPLETED** | Antigravity |
+| F-019 | Leasing Pipeline Visibility | Ops | **COMPLETED** | Claude |
+| F-020 | Executive Email Enhancements | Admin | **COMPLETED** | Claude |
 
 > **F-010 Note:** Stable Core Layer - Open for Extension. See `layers/table/AI_USAGE_GUIDE.md`.
 > **F-011 Note:** Parser Playground with Export feature. See `layers/parsing/docs/PARSER_PLAYGROUND.md`.
@@ -43,17 +49,24 @@
 - [x] Implement Solver Phase 2A (Notices, Status Auto-Fix, Dual Updates)
 - [x] Implement Solver Phase 2C (MakeReady, Unit Flags System)
 - [x] Implement Solver Phase 2D (Applications, Overdue Flags)
+- [x] Fix Admin Middleware & Auth (SSR Stabilization)
+- [x] Implement Email Notification System (F-015)
+- [x] Refactor Admin UI for Custom Table Engine
+- [x] Fix case-sensitivity in Amenity pricing (fixed vs Fixed)
+- [x] Implement Leasing Pipeline hybrid view (view_leasing_pipeline)
+- [x] Enhance Solver with Property Scoping & Idempotency
+- [x] Polish Executive Email Reports (F-020)
+- [x] Polish Executive Email Reports (F-020)
+- [x] Institutionalize "Simple Components Law" (H-030)
+- [x] Fix SYNC Alert Severity & Field Matching (H-031)
+- [/] **Next Step**: Global Solver Verification (Tomorrow's Upload)
 
-## Next Priority (Incoming Foreman)
-> **Goal**: Table Presentation Phase (UI Development)
-> **Context**:
-> - Solver Engine core is complete (all data processing phases working)
-> - **unit_flags** system has 2 flag types: `makeready_overdue`, `application_overdue`
-> - Availabilities data is in database, ready for UI presentation
+## Next Priority (Foreman Oversight)
+> **Goal**: Reporting & Executive Visibility
 > **Action**:
-> 1. Start with simpler Asset tables (Properties, Buildings, Units, Floor Plans)
-> 2. Tackle complex tables (Availabilities) after establishing patterns
-> 3. May need to add database views for table presentation
+> 1. Complete F-020 (Email Enhancements) to provide high-fidelity summaries.
+> 2. Verify Solver performance with 11-report daily batches.
+> 3. Monitor for data discrepancies between Yardi and Internal calculations.
 
 ## Legend
 - **COMPLETED**: Deployed & Verified.

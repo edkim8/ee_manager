@@ -33,6 +33,7 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 1.  **The Logic Rule**: Every logic Spec requires a `.test.ts`.
 2.  **The Regression Rule**: Definition of Done = `npm run test:unit` is Green.
 3.  **The Scribe Rule**: The Builder (Gemini or Claude) MUST write the `LATEST_UPDATE.md`.
+4.  **The Simple Components Law**: For complex UI (Modals, Tabs, Multi-step Overlays), **DO NOT use Nuxt UI**. Use `layers/base/components/SimpleModal.vue` or `SimpleTabs.vue`. See `docs/architecture/SIMPLE_COMPONENTS.md`.
 
 ## 4. DATABASE PROTOCOLS
 1.  **Truth**: `npx supabase inspect`, NOT Markdown files.
@@ -52,6 +53,7 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 > - `docs/status/HISTORY_INDEX.md` (**READ ONLY**)
 > - `docs/KNOWLEDGE_BASE.md` (**CRITICALLY IMPORTANT**)
 > - `docs/governance/ASSET_PROTOCOLS.md` (**MANDATORY FOR IMAGES**)
+> - `docs/references/CUSTOM_TOOLS_INDEX.md` (**THE TOOLBOX - CHECK BEFORE BUILDING**)
 > - [Specific Spec File...]
 >
 > INSTRUCTIONS:
@@ -84,6 +86,8 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 > - docs/status/HISTORY_INDEX.md (**READ ONLY**)
 > - docs/KNOWLEDGE_BASE.md (**CRITICALLY IMPORTANT**)
 > - docs/governance/ASSET_PROTOCOLS.md (**MANDATORY**)
+- docs/architecture/SIMPLE_COMPONENTS.md (**READ ONLY - MANDATORY FOR UI**)
+> - docs/references/CUSTOM_TOOLS_INDEX.md (**THE TOOLBOX - CHECK BEFORE BUILDING**)
 > - [Specific Files...]
 >
 > STEPS:
