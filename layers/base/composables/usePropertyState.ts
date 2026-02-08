@@ -1,5 +1,5 @@
-import { ref, watch } from 'vue'
-import { useSupabaseClient, useSupabaseUser, useState, useCookie, useFetch } from '#imports'
+import { ref, watch, computed } from 'vue'
+import { useSupabaseClient, useSupabaseUser, useState, useCookie, useFetch, useRequestFetch, useAsyncData } from '#imports'
 
 export const usePropertyState = () => {
   const supabase = useSupabaseClient()
@@ -12,94 +12,94 @@ export const usePropertyState = () => {
     default: () => null
   })
 
-  // 2. Runtime State
-  const activeProperty = useState<string | null>('active-property', () => activePropertyCookie.value)
-  const propertyOptions = useState<{ label: string; value: string }[]>('property-options', () => [])
-
-  // 3. User Context (Profile + Permissions)
-  const userContext = useState<any>('user-context', () => null)
-
+  // 2. Runtime State - Initialize from cookie immediately
+  const activeProperty = useState<string | null>('active-property', () => {
+    const initial = activePropertyCookie.value
+    if (initial) {
+      console.log('[usePropertyState] Initialized from cookie:', initial)
+    }
+    return initial
+  })
   // 4. Sync state to cookie
   watch(activeProperty, (newVal: any) => {
-    console.log('[usePropertyState] State changed -> updating cookie:', newVal)
     activePropertyCookie.value = newVal
   })
 
-  // 5. Fetch Properties & Context
-  const fetchProperties = async () => {
-    if (!user.value) {
-      console.warn('[usePropertyState] No user found, skipping fetch')
-      return
-    }
-
+  // 5. SSR-friendly Fetch
+  // We use useAsyncData to fetch the user context. This is awaited on the server.
+  const { data: me, refresh: fetchProperties } = useAsyncData('user-me-context', async () => {
+    if (!user.value) return null
     try {
-      console.log('[usePropertyState] Fetching user context and properties from /api/me...')
-      
-      const data: any = await $fetch('/api/me')
-      
-      if (!data) {
-        console.warn('[usePropertyState] No data returned from /api/me')
-        return
-      }
-
-      userContext.value = data.user
-      const access = data.access
-      const allProps = data.properties
-
-      // Filter properties by allowed codes from the server
-      const filtered = (allProps || []).filter((p: any) => access.allowed_codes.includes(p.code))
-      console.log(`[usePropertyState] Found ${filtered.length} accessible properties`)
-
-      if (filtered.length > 0) {
-        const newOptions = filtered.map((p: any) => ({
-          label: `${p.code} - ${p.name}`,
-          value: p.code
-        }))
-        
-        propertyOptions.value = newOptions
-        console.log('[usePropertyState] Updated propertyOptions:', newOptions.map(o => o.value))
-
-        // Auto-select logic
-        const currentVal = activeProperty.value || activePropertyCookie.value
-        const isValid = newOptions.some(o => o.value === currentVal)
-        
-        console.log(`[usePropertyState] State: "${activeProperty.value}", Cookie: "${activePropertyCookie.value}", isValid: ${isValid}`)
-
-        if (!currentVal || !isValid) {
-          console.log('[usePropertyState] Selection invalid or missing. Defaulting to:', newOptions[0].value)
-          activeProperty.value = newOptions[0].value
-        } else if (activeProperty.value !== currentVal) {
-          console.log('[usePropertyState] Restoring selection from cookie:', currentVal)
-          activeProperty.value = currentVal
-        } else {
-          console.log('[usePropertyState] Maintaining current valid selection:', currentVal)
-        }
-      } else {
-        console.warn('[usePropertyState] No properties matched for user')
-        propertyOptions.value = []
-        activeProperty.value = null
-      }
-    } catch (error) {
-      console.error('[usePropertyState] Critical context fetch error:', error)
+      const fetchWithContext = useRequestFetch()
+      return await fetchWithContext('/api/me')
+    } catch (e) {
+      console.error('[usePropertyState] API Error:', e)
+      return null
     }
-  }
+  }, {
+    watch: [user],
+    immediate: true
+  })
 
-  // 6. Select Property
+  // 6. Derived State - User Context
+  // Instead of a separate useState + watch, we compute this directly from 'me'
+  // This ensures that as soon as 'me' is hydrated from the server, userContext is ready.
+  const userContext = computed(() => {
+    if (!me.value) return null
+    return {
+      ...me.value.user,
+      access: me.value.access
+    }
+  })
+
+  // 7. Derived State - Property Options
+  const propertyOptions = computed(() => {
+    if (!me.value) return []
+    const access = me.value.access
+    const allProps = me.value.properties
+    const filtered = (allProps || []).filter((p: any) => access.allowed_codes.includes(p.code))
+    
+    return filtered.map((p: any) => ({
+      label: `${p.code} - ${p.name}`,
+      value: p.code
+    }))
+  })
+
+  // 8. Auto-select logic moved to a watch, but the options themselves are stable
+  // IMPORTANT: Don't overwrite property from cookie until options are loaded and validated
+  watch(propertyOptions, (newOptions) => {
+    if (newOptions.length > 0) {
+      // Options are loaded, now validate and set property
+      const currentVal = activeProperty.value || activePropertyCookie.value
+      const isValid = newOptions.some(o => o.value === currentVal)
+
+      if (!currentVal || !isValid) {
+        // No valid property, select first option
+        activeProperty.value = newOptions[0].value
+      } else if (activeProperty.value !== currentVal) {
+        // Property from cookie is valid, ensure it's set
+        activeProperty.value = currentVal
+      }
+    }
+    // Don't set to null when options are empty - preserve cookie value until validated
+    // This prevents race conditions on page load/reload
+  }, { immediate: true })
+
+  // 9. Methods
   const setProperty = (code: string) => {
     activeProperty.value = code
   }
 
-  // 7. Reset
   const resetProperty = () => {
     activeProperty.value = null
-    userContext.value = null
-    propertyOptions.value = []
+    activePropertyCookie.value = null
+    me.value = null
   }
 
   return {
     activeProperty,
-    propertyOptions,
-    userContext,
+    propertyOptions, // Still reactive, but derived
+    userContext,     // Still reactive, but derived
     fetchProperties,
     setProperty,
     resetProperty

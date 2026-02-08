@@ -1,0 +1,103 @@
+amenity_id,apt_code,yardi_amenity,yardi_amenity_code,yardi_amenity_name,amenity_amount,amenity_type,description,created_at,match,active
+1,SB,ADA,ADA,ADA Handicap Access,0,fixed,Amenity for a larger 1st floor patio instead of balcony,2025-03-20 03:10:25.012436+00,true,true
+2,SB,Court Yardi View,CV,Courtyard,15,fixed,,2025-03-20 03:10:25.012436+00,true,true
+3,SB,1st floor vinyl UG,Vinyl UG 1,Flooring Upgrade,65,fixed,,2025-03-20 03:10:25.012436+00,true,true
+4,SB,1st floor,1st floor,Level 01,75,fixed,,2025-03-20 03:10:25.012436+00,true,true
+5,SB,2nd Floor Building,2nd Floor,Level 02,15,fixed,,2025-03-20 03:10:25.012436+00,true,true
+6,SB,1x1 Renovation,1x1 Reno,Rent Adjustment 01,150,fixed,,2025-03-20 03:10:25.012436+00,true,true
+7,SB,2x2 Renovation,2x2 Reno,Rent Adjustment 02,185,fixed,,2025-03-20 03:10:25.012436+00,true,true
+8,SB,3x2 Renovation,3x2 Reno,Rent Adjustment 03,185,fixed,,2025-03-20 03:10:25.012436+00,true,true
+9,RS,Level 01,1B1,1st Floor 1x1,30,fixed,,2025-03-20 03:10:25.012436+00,true,true
+10,RS,Renovated Unit,1R,1x1 New Reno,75,fixed,,2025-03-20 03:10:25.012436+00,true,true
+11,RS,Level 01 III,1st Flr Stdo,1st Floor Studio,20,fixed,,2025-03-20 03:10:25.012436+00,true,true
+12,RS,Upgrade IX,1U,1x1 Upgrade,35,fixed,,2025-03-20 03:10:25.012436+00,true,true
+13,RS,Level 01 II,2B1,1st Floor 2x2,30,fixed,,2025-03-20 03:10:25.012436+00,true,true
+14,RS,Renovated Unit II,2R,2x2 New Reno,100,fixed,,2025-03-20 03:10:25.012436+00,true,true
+15,RS,Upgrade X,2U,2x2 Upgrade,55,fixed,,2025-03-20 03:10:25.012436+00,true,true
+16,RS,Base Level,3B1,1st Floor 3x2,35,fixed,,2025-03-20 03:10:25.012436+00,true,true
+17,RS,Renovated Unit III,3R,3x2 New Reno,150,fixed,,2025-03-20 03:10:25.012436+00,true,true
+18,RS,Upgrade XI,3U,3x2 Upgrade,75,fixed,,2025-03-20 03:10:25.012436+00,true,true
+19,RS,ADA Handicap Access,ADA,ADA,-35,fixed,,2025-03-20 03:10:25.012436+00,true,true
+20,RS,View 01,Blvd View,Boulevard View,30,fixed,,2025-03-20 03:10:25.012436+00,true,true
+21,RS,View 03,Blvd View 2,Boulevard View 2x2,35,fixed,,2025-03-20 03:10:25.012436+00,true,true
+22,RS,Covered Parking,CRP,Tucked Under Carport,20,fixed,,2025-03-20 03:10:25.012436+00,true,true
+23,RS,Rent Adjustment 19,Rent adj,Courtesy patrol,-225,fixed,,2025-03-20 03:10:25.012436+00,true,true
+24,RS,Flooring Hardwood,WDF,Wood Floors,20,fixed,,2025-03-20 03:10:25.012436+00,true,true
+25,OB,Washer Dryer,Washer/Dryer,App W/D,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+26,OB,1st Floor,1st,Level 01,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+27,OB,2nd Floor,2nd,Level 02,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+28,OB,Full Upgrade 1,upgrade1,Upgrade IX,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+29,OB,Partial Upgrade,partial,Upgrade XI,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+30,CV,Fireplace,fireplace,Fireplace,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+31,CV,Obstructed View,Obstructed V,Rent Adjustment 01,-25,fixed,,2025-03-20 03:10:25.012436+00,true,true
+32,CV,top floor,top floor,Top Level,25,fixed,,2025-03-20 03:10:25.012436+00,true,true
+33,CV,Partial Upgrade,partupgrade,Upgrade IX,75,fixed,,2025-03-20 03:10:25.012436+00,true,true
+34,CV,Full Upgrade,fullupgrade,Upgrade X,150,fixed,,2025-03-20 03:10:25.012436+00,true,true
+35,CV,Double View,Double View,View 01,175,fixed,,2025-03-20 03:10:25.012436+00,true,true
+36,CV,Coronado View,CoronadoView,View 02,150,fixed,,2025-03-20 03:10:25.012436+00,true,true
+37,CV,View,view,View 04,100,fixed,,2025-03-20 03:10:25.012436+00,true,true
+38,WO,Washer Dryer Upgrade,washerdryer,App W/D,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+39,WO,Garage,Garage,Garage,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+40,WO,No Garage,No Garage,Garage II,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+41,WO,Granite Upgrade,granite,Granite Counters,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+42,WO,1st Floor,1st,Level 01,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+43,WO,2nd Floor,2nd,Level 02,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+44,WO,Washer Dryer Included,was/dry,Rent Adjustment 01,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+45,WO,Full Upgrade 2,upgrade2,Upgrade X,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+46,WO,Partial Upgrade,partial,Upgrade XII,0,fixed,,2025-03-20 03:10:25.012436+00,true,true
+49,RS,premium 005v1,premium005v1,premium 005v1,5,premium,,2025-04-15 05:53:17.776099+00,true,true
+50,RS,premium 010v1,premium010v1,premium 010v1,10,premium,,2025-04-15 05:53:17.776099+00,true,true
+51,RS,premium 015v1,premium015v1,premium 015v1,15,premium,,2025-04-15 05:53:17.776099+00,true,true
+52,RS,premium 025v1,premium025v1,premium 025v1,25,premium,,2025-04-15 05:53:17.776099+00,true,true
+53,RS,premium 025v2,premium025v2,premium 025v2,25,premium,,2025-04-15 05:53:17.776099+00,true,true
+54,RS,premium 025v3,premium025v3,premium 025v3,25,premium,,2025-04-15 05:53:17.776099+00,true,true
+55,RS,premium 050v1,premium050v1,premium 050v1,50,premium,,2025-04-15 05:53:17.776099+00,true,true
+56,RS,premium 050v2,premium050v2,premium 050v2,50,premium,,2025-04-15 05:53:17.776099+00,true,true
+57,RS,premium 075v1,premium075v1,premium 075v1,75,premium,,2025-04-15 05:53:17.776099+00,true,true
+58,RS,premium 075v2,premium075v2,premium 075v2,75,premium,,2025-04-15 05:53:17.776099+00,true,true
+59,RS,premium 0100v1,premium0100v1,premium 0100v1,100,premium,,2025-04-15 05:53:17.776099+00,true,true
+60,RS,premium 0100v2,premium0100v2,premium 0100v2,100,premium,,2025-04-15 05:53:17.776099+00,true,true
+61,RS,premium 0150v1,premium0150v1,premium 0150v1,150,premium,,2025-04-15 05:53:17.776099+00,true,true
+62,RS,premium 0200v1,premium0200v1,premium 0200v1,200,premium,,2025-04-15 05:53:17.776099+00,true,true
+63,RS,discount 005v1,discount005v1,discount 005v1,-5,discount,,2025-04-15 05:53:17.776099+00,true,true
+64,RS,discount 010v1,discount010v1,discount 010v1,-10,discount,,2025-04-15 05:53:17.776099+00,true,true
+65,RS,discount 015v1,discount015v1,discount 015v1,-15,discount,,2025-04-15 05:53:17.776099+00,true,true
+66,RS,discount 025v1,discount025v1,discount 025v1,-25,discount,,2025-04-15 05:53:17.776099+00,true,true
+67,RS,discount 025v2,discount025v2,discount 025v2,-25,discount,,2025-04-15 05:53:17.776099+00,true,true
+68,RS,discount 025v3,discount025v3,discount 025v3,-25,discount,,2025-04-15 05:53:17.776099+00,true,true
+69,RS,discount 050v1,discount050v1,discount 050v1,-50,discount,,2025-04-15 05:53:17.776099+00,true,true
+70,RS,discount 050v2,discount050v2,discount 050v2,-50,discount,,2025-04-15 05:53:17.776099+00,true,true
+71,RS,discount 075v1,discount075v1,discount 075v1,-75,discount,,2025-04-15 05:53:17.776099+00,true,true
+72,RS,discount 075v2,discount075v2,discount 075v2,-75,discount,,2025-04-15 05:53:17.776099+00,true,true
+73,RS,discount 0100v1,discount0100v1,discount 0100v1,-100,discount,,2025-04-15 05:53:17.776099+00,true,true
+74,RS,discount 0100v2,discount0100v2,discount 0100v2,-100,discount,,2025-04-15 05:53:17.776099+00,true,true
+75,RS,discount 0150v1,discount0150v1,discount 0150v1,-150,discount,,2025-04-15 05:53:17.776099+00,true,true
+76,RS,discount 0200v1,discount0200v1,discount 0200v1,-200,discount,,2025-04-15 05:53:17.776099+00,true,true
+77,SB,premium 005v1,premium005v1,premium 005v1,5,premium,,2025-04-15 05:53:17.776099+00,true,true
+78,SB,premium 010v1,premium010v1,premium 010v1,10,premium,,2025-04-15 05:53:17.776099+00,true,true
+79,SB,premium 015v1,premium015v1,premium 015v1,15,premium,,2025-04-15 05:53:17.776099+00,true,true
+80,SB,premium 025v1,premium025v1,premium 025v1,25,premium,,2025-04-15 05:53:17.776099+00,true,true
+81,SB,premium 025v2,premium025v2,premium 025v2,25,premium,,2025-04-15 05:53:17.776099+00,true,true
+82,SB,premium 025v3,premium025v3,premium 025v3,25,premium,,2025-04-15 05:53:17.776099+00,true,true
+83,SB,premium 050v1,premium050v1,premium 050v1,50,premium,,2025-04-15 05:53:17.776099+00,true,true
+84,SB,premium 050v2,premium050v2,premium 050v2,50,premium,,2025-04-15 05:53:17.776099+00,true,true
+85,SB,premium 075v1,premium075v1,premium 075v1,75,premium,,2025-04-15 05:53:17.776099+00,true,true
+86,SB,premium 075v2,premium075v2,premium 075v2,75,premium,,2025-04-15 05:53:17.776099+00,true,true
+87,SB,premium 0100v1,premium0100v1,premium 0100v1,100,premium,,2025-04-15 05:53:17.776099+00,true,true
+88,SB,premium 0100v2,premium0100v2,premium 0100v2,100,premium,,2025-04-15 05:53:17.776099+00,true,true
+89,SB,premium 0150v1,premium0150v1,premium 0150v1,150,premium,,2025-04-15 05:53:17.776099+00,true,true
+90,SB,premium 0200v1,premium0200v1,premium 0200v1,200,premium,,2025-04-15 05:53:17.776099+00,true,true
+91,SB,discount 005v1,discount005v1,discount 005v1,-5,discount,,2025-04-15 05:53:17.776099+00,true,true
+92,SB,discount 010v1,discount010v1,discount 010v1,-10,discount,,2025-04-15 05:53:17.776099+00,true,true
+93,SB,discount 015v1,discount015v1,discount 015v1,-15,discount,,2025-04-15 05:53:17.776099+00,true,true
+94,SB,discount 025v1,discount025v1,discount 025v1,-25,discount,,2025-04-15 05:53:17.776099+00,true,true
+95,SB,discount 025v2,discount025v2,discount 025v2,-25,discount,,2025-04-15 05:53:17.776099+00,true,true
+96,SB,discount 025v3,discount025v3,discount 025v3,-25,discount,,2025-04-15 05:53:17.776099+00,true,true
+97,SB,discount 050v1,discount050v1,discount 050v1,-50,discount,,2025-04-15 05:53:17.776099+00,true,true
+98,SB,discount 050v2,discount050v2,discount 050v2,-50,discount,,2025-04-15 05:53:17.776099+00,true,true
+99,SB,discount 075v1,discount075v1,discount 075v1,-75,discount,,2025-04-15 05:53:17.776099+00,true,true
+100,SB,discount 075v2,discount075v2,discount 075v2,-75,discount,,2025-04-15 05:53:17.776099+00,true,true
+101,SB,discount 0100v1,discount0100v1,discount 0100v1,-100,discount,,2025-04-15 05:53:17.776099+00,true,true
+102,SB,discount 0100v2,discount0100v2,discount 0100v2,-100,discount,,2025-04-15 05:53:17.776099+00,true,true
+103,SB,discount 0150v1,discount0150v1,discount 0150v1,-150,discount,,2025-04-15 05:53:17.776099+00,true,true
+104,SB,discount 0200v1,discount0200v1,discount 0200v1,-200,discount,,2025-04-15 05:53:17.776099+00,true,true

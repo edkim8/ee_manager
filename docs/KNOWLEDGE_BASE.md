@@ -53,6 +53,36 @@ const selectedValue = ref<string>('none')
 
 ---
 
+### UI Component Framework Choice (Simple vs Magic)
+
+**Problem**: Nuxt UI components (especially `UModal`, `UTabs`, and `overlay.create()`) have "magic" behaviors that often fail in complex scenarios. Specifically, `overlay.create()` strips all object properties and refs from props.
+
+**The Simple Components Pattern**: For any non-trivial UI layout, bypass Nuxt UI and use our custom "Simple" components located in `layers/base/components/`.
+
+**When to use Simple vs Nuxt UI**:
+
+| Component Type | Use Nuxt UI | Use Simple Components |
+|---------------|-------------|----------------------|
+| Buttons/Inputs | ✅ Yes (UButton, UInput) | ❌ Not needed |
+| Cards/Icons | ✅ Yes (UCard, UIcon) | ❌ Not needed |
+| **Modals** | ❌ **NO** | ✅ **SimpleModal.vue** |
+| **Tabs** | ❌ **NO** | ✅ **SimpleTabs.vue** |
+
+**Reference Implementation**: 
+- `docs/architecture/SIMPLE_COMPONENTS.md`
+- `layers/ops/pages/office/pricing/floor-plans/index.vue` (Pricing Manager)
+
+---
+
+## custom Tools Registry ("The Toolbox")
+
+We maintain a registry of our own custom tools (Simple Components, Table Engine, Parsing Engine) that are built for reuse. 
+**Location**: `docs/references/CUSTOM_TOOLS_INDEX.md`.
+
+---
+
+---
+
 ## Nuxt Image (@nuxt/image)
 
 ### Why use Nuxt Image over native `<img>`?

@@ -15,7 +15,10 @@ import { useParseDelinquencies, DelinquenciesConfig } from '../composables/parse
 import { useParseResidentsStatus, residents_statusConfig } from '../composables/parsers/useParseResidentsStatus'
 import { useParseTransfers, TransfersConfig } from '../composables/parsers/useParseTransfers'
 import { useParseExpiringleases, ExpiringLeasesConfig } from '../composables/parsers/useParseExpiringLeases'
+import { useParseAmenitiesList, amenitiesListConfig } from '../composables/parsers/useParseAmenitiesList'
+import { useParseAmenitiesAudit, amenitiesAuditConfig } from '../composables/parsers/useParseAmenitiesAudit'
 import { useDbIngestion } from '../composables/useDbIngestion'
+import { useAmenitiesSync } from '../composables/useAmenitiesSync'
 import { useAlertsSync } from '../composables/useAlertsSync'
 import { useWorkOrdersSync } from '../composables/useWorkOrdersSync'
 import { useDelinquenciesSync } from '../composables/useDelinquenciesSync'
@@ -48,6 +51,8 @@ const PARSER_MAP: Record<string, { parse: Function, config: ParserConfig }> = {
   'work_orders': { parse: useParseWorkorders, config: WorkOrdersConfig },
   'make_ready': { parse: useParseMakeready, config: MakeReadyConfig },
   'delinquencies': { parse: useParseDelinquencies, config: DelinquenciesConfig },
+  'amenities_list': { parse: useParseAmenitiesList, config: amenitiesListConfig },
+  'amenities_audit': { parse: useParseAmenitiesAudit, config: amenitiesAuditConfig },
 }
 
 const parserDef = computed(() => PARSER_MAP[props.parserId])
@@ -130,8 +135,9 @@ const { ingest, isSaving: isIngesting, saveError } = useDbIngestion()
 const { syncAlerts, isSyncing, syncError, syncStats } = useAlertsSync()
 const { syncWorkOrders, isSyncing: isSyncingWO, syncError: syncErrorWO, syncStats: syncStatsWO } = useWorkOrdersSync()
 const { syncDelinquencies, isSyncing: isSyncingDel, syncError: syncErrorDel, syncStats: syncStatsDel } = useDelinquenciesSync()
+const { syncAmenitiesList, syncAmenitiesAudit, isSyncing: isSyncingAmenities, syncError: syncErrorAmenities } = useAmenitiesSync()
 
-const isSaving = computed(() => isIngesting.value || isSyncing.value || isSyncingWO.value || isSyncingDel.value)
+const isSaving = computed(() => isIngesting.value || isSyncing.value || isSyncingWO.value || isSyncingDel.value || isSyncingAmenities.value)
 
 const emit = defineEmits(['saved'])
 
@@ -166,6 +172,22 @@ async function saveToDb() {
       successMessage.value = syncStatsDel.value
     } else {
       error.value = syncErrorDel.value
+    }
+  } else if (props.tableName === 'amenities') {
+    // Specialized Sync for Amenities
+    success = await syncAmenitiesList(result.value.data)
+    if (success) {
+      successMessage.value = 'Amenities successfully updated.'
+    } else {
+      error.value = syncErrorAmenities.value
+    }
+  } else if (props.tableName === 'unit_amenities') {
+    // Specialized Sync for Unit Amenities (Audit)
+    success = await syncAmenitiesAudit(result.value.data)
+    if (success) {
+      successMessage.value = 'Unit Amenities successfully updated via Audit.'
+    } else {
+      error.value = syncErrorAmenities.value
     }
   } else {
     // Standard Upsert for others
@@ -301,7 +323,6 @@ async function saveToDb() {
             Parse File
           </UButton>
 
-          <!-- Save Button (Only if Parsed & Table Name provided) -->
           <UButton
             v-if="result && tableName && !error"
             :loading="isSaving"
@@ -310,7 +331,14 @@ async function saveToDb() {
             variant="solid"
             icon="i-heroicons-cloud-arrow-up"
           >
-            {{ tableName === 'alerts' ? 'Sync Alerts' : (tableName === 'work_orders' ? 'Sync Work Orders' : (tableName === 'delinquencies' ? 'Sync Delinquencies' : 'Save to DB')) }}
+            {{ 
+               tableName === 'alerts' ? 'Sync Alerts' : 
+               tableName === 'work_orders' ? 'Sync Work Orders' : 
+               tableName === 'delinquencies' ? 'Sync Delinquencies' : 
+               tableName === 'amenities' ? 'Sync Amenities' :
+               tableName === 'unit_amenities' ? 'Sync Audit' :
+               'Save to DB' 
+            }}
           </UButton>
         </div>
       </div>

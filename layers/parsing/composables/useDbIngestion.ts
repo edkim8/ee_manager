@@ -17,10 +17,15 @@ export function useDbIngestion() {
 
       // Supabase Upsert
       // Assuming 'unique constraints' handle duplicates.
-      // If data is massive, we might want to chunk it, but let's start simple.
+      // Filter out 'unique_id' as it's a parser-only field not present in DB
+      const cleanData = data.map(row => {
+        const { unique_id, ...rest } = row
+        return rest
+      })
+
       const { error } = await client
         .from(tableName)
-        .upsert(data)
+        .upsert(cleanData)
 
       if (error) throw error
       

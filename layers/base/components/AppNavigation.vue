@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useSupabaseUser, useSupabaseClient, useRouter, useColorMode, navigateTo } from '#imports'
+import { useSupabaseUser, useSupabaseClient, useRouter, useColorMode, navigateTo, useOverlay } from '#imports'
 import { usePropertyState } from '../composables/usePropertyState'
+import ConstantsModal from './modals/ConstantsModal.vue'
 
 const user = useSupabaseUser()
 const supabase = useSupabaseClient()
@@ -47,17 +48,9 @@ const userInitials = computed(() => {
   return (first + last).toUpperCase() || 'U'
 })
 
-// Fetch properties when user is available
-watch(user, async (newUser) => {
-  if (newUser) {
-    console.log('[AppNavigation] User available, fetching properties...')
-    await fetchProperties()
-  }
-}, { immediate: true })
-
+// AppNavigation logic... user and fetchProperties are now synchronized automatically by the useAsyncData in usePropertyState
 onMounted(async () => {
   console.log('[AppNavigation] Mounted. User status:', !!user.value)
-  // fetchProperties is already handled by the watch(user, ..., { immediate: true }) above
 })
 
 // User menu items
@@ -114,9 +107,19 @@ const handleSignOut = async () => {
   }
 }
 
+const overlay = useOverlay()
+const modal = overlay.create(ConstantsModal)
+const openConstantsModal = () => {
+  console.log('[AppNavigation] Opening Global Constants Modal')
+  modal.open({ 
+    title: 'System Constants',
+    propertyCode: active_property.value
+  })
+}
+
 // Navigation items
 const navigationItems = computed(() => {
-  const items: { label: string; icon: string; to?: string; children?: any[] }[] = [
+  const items: { label: string; icon: string; to?: string; onSelect?:Function; children?: any[] }[] = [
     {
       label: 'Dashboard',
       icon: 'i-heroicons-home',
@@ -174,12 +177,18 @@ const navigationItems = computed(() => {
         icon: 'i-heroicons-users',
         to: '/office/residents',
       },
+      {
+        label: 'Delinquencies',
+        icon: 'i-heroicons-chart-bar',
+        to: '/office/delinquencies',
+      },
     ],
   })
 
   // Add Admin menu
-  items.push({
-    label: 'Admin',
+  if (userContext.value?.access?.is_super_admin) {
+    items.push({
+      label: 'Admin',
     icon: 'i-heroicons-cog-6-tooth',
     to: '/admin/upload',
     children: [
@@ -204,23 +213,28 @@ const navigationItems = computed(() => {
         to: '/admin/upload',
       },
       {
-        label: 'Playground',
-        icon: 'i-heroicons-beaker',
-        children: [
-          {
-            label: 'Parser Engine',
-            icon: 'i-heroicons-document-text',
-            to: '/admin/upload',
-          },
-          {
-             label: 'Unit Lookup Generator',
-             icon: 'i-heroicons-code-bracket',
-             to: '/admin/generators/unit-lookup',
-          }
-        ]
+        label: 'Edit Constants',
+        icon: 'i-heroicons-adjustments-horizontal',
+        onSelect: () => openConstantsModal()
+      },
+      {
+        label: 'Parser Engine',
+        icon: 'i-heroicons-document-text',
+        to: '/admin/parse_engine',
+      },
+      {
+        label: 'Unit Lookup Generator',
+        icon: 'i-heroicons-code-bracket',
+        to: '/admin/generators/unit-lookup',
+      },
+      {
+        label: 'Email Notifications',
+        icon: 'i-heroicons-envelope',
+        to: '/admin/notifications',
       }
     ],
-  })
+    })
+  }
 
   return [items]
 })

@@ -13,29 +13,34 @@ export function useAlertsSync() {
     isSyncing.value = true
     syncError.value = null
     syncStats.value = null
-    
+
     try {
       if (!parsedRows || parsedRows.length === 0) {
         throw new Error('No data to sync')
       }
 
-      // 1. Fetch ALL alerts to handle reactivation and avoid duplicates
-      const { data: existingData, error: fetchError } = await client
-        .from('alerts')
-        .select('*')
+      // 1. Extract property codes from incoming data (for property-scoped sync)
+      const propertyCodes = [...new Set(parsedRows.map(r => r.property_code))].filter(Boolean)
+
+      // 2. Fetch ONLY alerts for the properties in this batch
+      const query = client.from('alerts').select('*')
+
+      if (propertyCodes.length > 0) {
+        query.in('property_code', propertyCodes)
+      }
+
+      const { data: existingData, error: fetchError } = await query
 
       if (fetchError) throw fetchError
 
-      // 2. Build Map
+      // 3. Build Map
       const existingMap = new Map<string, any>()
       existingData?.forEach(row => {
         const key = AlertsConfig.getUniqueId ? AlertsConfig.getUniqueId(row) : `${row.property_code || ''}_${row.unit_name || ''}_${row.description || ''}_${row.resident || ''}`
         existingMap.set(key, row)
       })
 
-      // 3. Process Parsed Rows
-      // 3. Process Parsed Rows & Identify Deletions
-      // 3. Process Parsed Rows & Identify Deletions
+      // 4. Process Parsed Rows & Identify Deletions
       const toInsert: any[] = []
       const idsToReactivate: string[] = []
       const parsedKeys = new Set<string>()
@@ -66,7 +71,7 @@ export function useAlertsSync() {
         }
       }
 
-      // 4. Identify Removed (Soft Delete)
+      // 5. Identify Removed (Soft Delete - within property scope)
       const idsToDeactivate: string[] = []
       
       existingMap.forEach((row, key) => {
@@ -79,7 +84,7 @@ export function useAlertsSync() {
         }
       })
 
-      // 5. Execute DB Operations
+      // 6. Execute DB Operations
       
       // A. Inserts (New)
       if (toInsert.length > 0) {
@@ -123,7 +128,7 @@ export function useAlertsSync() {
 
 
 
-      // 6. Generate Stats
+      // 7. Generate Stats
       // Alert date: yyyy-mm-dd, Alerts count: nn, Alerts added: nn, Alerts removed: nn
       const dateStr = new Date().toISOString().split('T')[0]
       const totalParsed = parsedRows.length

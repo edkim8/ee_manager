@@ -603,6 +603,8 @@ export type Database = {
           end_date: string
           rent_amount?: number | null
           deposit_amount?: number | null
+          concession_upfront_amount?: number | null
+          concession_free_rent_days?: number | null
           lease_status: Database["public"]["Enums"]["lease_status"]
           is_active?: boolean
           created_at?: string
@@ -616,6 +618,8 @@ export type Database = {
           end_date?: string
           rent_amount?: number | null
           deposit_amount?: number | null
+          concession_upfront_amount?: number | null
+          concession_free_rent_days?: number | null
           lease_status?: Database["public"]["Enums"]["lease_status"]
           is_active?: boolean
           created_at?: string
@@ -649,6 +653,8 @@ export type Database = {
           future_tenancy_id: string | null
           is_mi_inspection: boolean | null
           screening_result: string | null
+          concession_upfront_amount: number | null
+          concession_free_rent_days: number | null
           is_active: boolean
           created_at: string
           updated_at: string
@@ -669,6 +675,8 @@ export type Database = {
           future_tenancy_id?: string | null
           is_mi_inspection?: boolean | null
           screening_result?: string | null
+          concession_upfront_amount?: number | null
+          concession_free_rent_days?: number | null
           is_active?: boolean
           created_at?: string
           updated_at?: string
@@ -689,6 +697,8 @@ export type Database = {
           future_tenancy_id?: string | null
           is_mi_inspection?: boolean | null
           screening_result?: string | null
+          concession_upfront_amount?: number | null
+          concession_free_rent_days?: number | null
           is_active?: boolean
           created_at?: string
           updated_at?: string
@@ -798,6 +808,27 @@ export type Database = {
           }
         ]
       }
+      view_concession_analysis: {
+        Row: {
+          unit_id: string
+          property_code: string
+          status: string | null
+          rent_market: number | null
+          rent_offered: number | null
+          concession_upfront_amount: number | null
+          concession_free_rent_days: number | null
+          amenity_concession_monthly: number | null
+          upfront_concession_monthly: number | null
+          free_rent_concession_monthly: number | null
+          concession_amenity_pct: number | null
+          concession_total_pct: number | null
+          concession_display: string | null
+          future_tenancy_id: string | null
+          is_active: boolean | null
+          created_at: string | null
+          updated_at: string | null
+        }
+      }
     }
     Functions: {
       [_ in never]: never
@@ -812,7 +843,7 @@ export type Database = {
       tenancy_status: "Current" | "Notice" | "Future" | "Applicant" | "Eviction" | "Past" | "Denied" | "Canceled"
       household_role: "Primary" | "Roommate" | "Occupant" | "Guarantor"
       lease_status: "Current" | "Notice" | "Future" | "Past" | "Eviction"
-      import_report_type: "residents_status" | "leased_units" | "expiring_leases" | "availables" | "applications" | "make_ready" | "notices" | "transfers"
+      import_report_type: "residents_status" | "leased_units" | "expiring_leases" | "availables" | "applications" | "make_ready" | "notices" | "transfers" | "alerts" | "work_orders" | "delinquencies"
     }
     CompositeTypes: {
       [_ in never]: never

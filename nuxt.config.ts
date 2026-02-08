@@ -14,5 +14,17 @@ export default defineNuxtConfig({
 
   supabase: {
     redirect: false
+  },
+
+  runtimeConfig: {
+    // Only available on the server
+    mailersendPassword: process.env.MAILERSEND_PASSWORD,
+    
+    public: {
+      mailersendSmtpName: process.env.MAILERSEND_SMTP_NAME,
+      mailersendPort: process.env.MAILERSEND_PORT || '587',
+      mailersendServer: process.env.MAILERSEND_SERVER || 'smtp.mailersend.net',
+      mailersendUsername: process.env.MAILERSEND_USERNAME,
+    }
   }
 })
