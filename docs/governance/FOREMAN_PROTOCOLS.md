@@ -1,4 +1,4 @@
-# Foreman Protocols: EE_manager (Unified V3.4)
+# Foreman Protocols: EE_manager (Unified V3.5)
 
 ## 1. THE TRINITY ROLES
 - **The Executive (User)**: Vision and Final Sign-off.
@@ -34,6 +34,7 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 2.  **The Regression Rule**: Definition of Done = `npm run test:unit` is Green.
 3.  **The Scribe Rule**: The Builder (Gemini or Claude) MUST write the `LATEST_UPDATE.md`.
 4.  **The Simple Components Law**: For complex UI (Modals, Tabs, Multi-step Overlays), **DO NOT use Nuxt UI**. Use `layers/base/components/SimpleModal.vue` or `SimpleTabs.vue`. See `docs/architecture/SIMPLE_COMPONENTS.md`.
+5.  **The Image Compression Law**: For ALL photo uploads (user-generated images), **ALWAYS use client-side compression** via `useImageCompression` composable before uploading to Supabase Storage. This reduces file sizes by ~90% and improves mobile UX. See `layers/ops/composables/useImageCompression.ts` and `docs/handovers/H-033_LOCATION_NOTES_IMAGE_COMPRESSION.md` for implementation pattern.
 
 ## 4. DATABASE PROTOCOLS
 1.  **Truth**: `npx supabase inspect`, NOT Markdown files.
@@ -103,3 +104,21 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 >
 > **FINAL STEP (MANDATORY):**
 > Overwrite `docs/status/LATEST_UPDATE.md` with Field Report. Write it to disk.'"
+
+## 6. GIT & GITHUB PROTOCOLS (The "Shift" Loop)
+*Policy: One Foreman = One Active Branch.*
+
+### Phase 1: Shift Start (Foreman-Driven)
+1.  **Foreman**: Asks User for the "Task Title/Branch Name".
+2.  **User**: Provides name (e.g., `feat/global-solver`).
+3.  **Foreman**: Executes:
+    *   `git checkout main`
+    *   `git pull origin main`
+    *   `git checkout -b feat/task-name`
+
+### Phase 2: Shift End (Foreman-Driven)
+1.  **User**: Declares "Shift Complete".
+2.  **Foreman**: Executes:
+    *   `gh pr create -B main -H feat/your-task-name --title "Title" --body "Summary"`
+    *   `gh pr merge --merge --auto`
+    *   **Cleanup**: `git checkout main && git pull && git branch -d feat/task-name`

@@ -22,6 +22,8 @@
 | F-018 | Floor Plan Pricing Manager | Ops | **COMPLETED** | Antigravity |
 | F-019 | Leasing Pipeline Visibility | Ops | **COMPLETED** | Claude |
 | F-020 | Executive Email Enhancements | Admin | **COMPLETED** | Claude |
+| F-021 | Location Intelligence Module | Ops | **COMPLETED** | Claude |
+
 
 > **F-010 Note:** Stable Core Layer - Open for Extension. See `layers/table/AI_USAGE_GUIDE.md`.
 > **F-011 Note:** Parser Playground with Export feature. See `layers/parsing/docs/PARSER_PLAYGROUND.md`.

@@ -153,6 +153,11 @@ const navigationItems = computed(() => {
         icon: 'i-heroicons-key',
         to: '/assets/units',
       },
+      {
+        label: 'Locations',
+        icon: 'i-heroicons-map-pin',
+        to: '/assets/locations',
+      },
     ],
   })
 

@@ -25,6 +25,7 @@ export default defineNuxtConfig({
       mailersendPort: process.env.MAILERSEND_PORT || '587',
       mailersendServer: process.env.MAILERSEND_SERVER || 'smtp.mailersend.net',
       mailersendUsername: process.env.MAILERSEND_USERNAME,
+      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
     }
   }
 })
