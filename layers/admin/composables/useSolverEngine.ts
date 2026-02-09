@@ -415,6 +415,30 @@ export const useSolverEngine = () => {
                              }
                              // Track new tenancies (will add detailed tracking in residents section)
                              tracker.trackTenancyUpdates(pCode, newTenancies.length)
+
+                             // ==========================================
+                             // TRACKING CODE START - New Leases Signed
+                             // ==========================================
+                             // Track new leases signed (Future/Applicant status)
+                             for (const tenancy of newTenancies) {
+                                if (tenancy.status === 'Future' || tenancy.status === 'Applicant') {
+                                    // Find corresponding resident and lease data
+                                    const resident = residentsToUpsert.find(r => r.tenancy_id === tenancy.id && r.role === 'Primary')
+                                    const lease = leasesFromResidentsMap.get(tenancy.id)
+
+                                    tracker.trackNewLeaseSigned(pCode, {
+                                        tenancy_id: tenancy.id,
+                                        resident_name: resident?.name || 'Unknown',
+                                        unit_name: rows.find(r => r.tenancy_id === tenancy.id)?.unit_name || 'Unknown',
+                                        unit_id: tenancy.unit_id,
+                                        move_in_date: tenancy.move_in_date,
+                                        rent_amount: lease?.rent_amount,
+                                        previous_status: 'New'
+                                    })
+                                }
+                             }
+                             // TRACKING CODE END
+                             // ==========================================
                         }
 
                         // C. Update Existing
@@ -657,16 +681,42 @@ export const useSolverEngine = () => {
                             .select('id, tenancy_id, property_code, start_date, end_date, rent_amount, deposit_amount, lease_status, is_active')
                             .in('tenancy_id', tenancyIds)
                             .eq('is_active', true) // Only fetch active leases
-                        
+
                         if (fetchError) throw fetchError
-                        
-                        // Build map: tenancy_id -> active lease record
+
+                        // Fetch tenancy and resident data for renewal tracking
+                        const { data: tenanciesData, error: tenancyError } = await supabase
+                            .from('tenancies')
+                            .select('id, unit_id, units(name)')
+                            .in('id', tenancyIds)
+
+                        if (tenancyError) console.error('[Solver] Tenancy fetch error for renewals:', tenancyError)
+
+                        const { data: residentsData, error: residentsError } = await supabase
+                            .from('residents')
+                            .select('tenancy_id, name, role')
+                            .in('tenancy_id', tenancyIds)
+                            .eq('role', 'Primary') // Only fetch primary resident for tracking
+
+                        if (residentsError) console.error('[Solver] Residents fetch error for renewals:', residentsError)
+
+                        // Build maps for quick lookup
                         const leaseMap = new Map<string, any>()
                         existingLeases?.forEach((lease: any) => {
                             // Only keep the active lease (should be only one per tenancy)
                             if (!leaseMap.has(lease.tenancy_id)) {
                                 leaseMap.set(lease.tenancy_id, lease)
                             }
+                        })
+
+                        const tenancyMap = new Map<string, any>()
+                        tenanciesData?.forEach((t: any) => {
+                            tenancyMap.set(t.id, t)
+                        })
+
+                        const residentMap = new Map<string, string>()
+                        residentsData?.forEach((r: any) => {
+                            residentMap.set(r.tenancy_id, r.name)
                         })
                         
                         const toUpdate: any[] = []
@@ -713,11 +763,17 @@ export const useSolverEngine = () => {
                                     }
                                     toInsert.push(renewedLease)
 
-                                    // Track renewal (unit lookup would be needed for unit_name/unit_id)
+                                    // Track renewal with resident and unit details
+                                    const tenancyInfo = tenancyMap.get(existingLease.tenancy_id)
+                                    const residentName = residentMap.get(existingLease.tenancy_id)
+                                    const unitName = tenancyInfo?.units?.name || 'Unit'
+                                    const unitId = tenancyInfo?.unit_id || null
+
                                     tracker.trackLeaseRenewal(pCode, {
                                         tenancy_id: existingLease.tenancy_id,
-                                        unit_name: 'Unit', // Would need lookup
-                                        unit_id: null, // NULL instead of empty string for UUID column
+                                        resident_name: residentName,
+                                        unit_name: unitName,
+                                        unit_id: unitId,
                                         old_lease: {
                                             start_date: existingLease.start_date,
                                             end_date: existingLease.end_date,
@@ -1179,10 +1235,10 @@ export const useSolverEngine = () => {
 
                         tenancyUpdates.push(updatePayload)
 
-                        // Track notice given (we need to fetch resident name from DB for accurate tracking)
+                        // Track notice given
                         tracker.trackNotice(pCode, {
                             tenancy_id: tenancy.id,
-                            resident_name: row.resident_name || 'Unknown',
+                            resident_name: row.resident || 'Unknown',
                             unit_name: row.unit_name,
                             unit_id: unitId,
                             move_in_date: tenancy.move_in_date,

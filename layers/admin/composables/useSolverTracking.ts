@@ -27,6 +27,9 @@ interface PropertySummary {
     // ========== TRACKING ENHANCEMENTS - Price Changes ==========
     priceChanges: number
     // ========== END TRACKING ENHANCEMENTS ==========
+    // ========== TRACKING ENHANCEMENTS - New Leases Signed ==========
+    newLeasesSigned: number
+    // ========== END TRACKING ENHANCEMENTS ==========
 }
 
 export const useSolverTracking = () => {
@@ -86,7 +89,10 @@ export const useSolverTracking = () => {
                 transferFlags: 0,
                 applicationsSaved: 0,
                 // ========== TRACKING ENHANCEMENTS - Price Changes ==========
-                priceChanges: 0
+                priceChanges: 0,
+                // ========== END TRACKING ENHANCEMENTS ==========
+                // ========== TRACKING ENHANCEMENTS - New Leases Signed ==========
+                newLeasesSigned: 0
                 // ========== END TRACKING ENHANCEMENTS ==========
             }
         }
@@ -301,6 +307,36 @@ export const useSolverTracking = () => {
     // END TRACKING ENHANCEMENTS
     // ==========================================
 
+    // ==========================================
+    // TRACKING ENHANCEMENTS - New Leases Signed
+    // ==========================================
+    /**
+     * Track new lease signed (transitions to Future status)
+     */
+    const trackNewLeaseSigned = (propertyCode: string, details: {
+        tenancy_id: string
+        resident_name: string
+        unit_name: string
+        unit_id: string
+        move_in_date?: string
+        rent_amount?: number
+        previous_status?: string
+    }) => {
+        initProperty(propertyCode)
+        propertySummaries[propertyCode].newLeasesSigned++
+
+        events.push({
+            property_code: propertyCode,
+            event_type: 'lease_signed',
+            tenancy_id: details.tenancy_id,
+            unit_id: details.unit_id,
+            details
+        })
+    }
+    // ==========================================
+    // END TRACKING ENHANCEMENTS
+    // ==========================================
+
     /**
      * Complete the run and save all data
      */
@@ -385,6 +421,7 @@ export const useSolverTracking = () => {
         trackApplication,
         // ========== TRACKING ENHANCEMENTS ==========
         trackPriceChange,
+        trackNewLeaseSigned,
         // ========== END TRACKING ENHANCEMENTS ==========
         completeRun,
         failRun,
