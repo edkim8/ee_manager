@@ -2,7 +2,7 @@
 
 ## Overview
 **Current Phase**: Pricing & Reporting (Optimization)
-**Latest Update**: [2026-02-06] Pricing Manager & Leasing Pipeline Complete; Bug Fixes Applied.
+**Latest Update**: [2026-02-09] Daily Upload System Audit Complete; Email Reporting Enhanced; Data Quality Fixes Deployed.
 
 ## Feature Tracker
 
@@ -61,14 +61,64 @@
 - [x] Polish Executive Email Reports (F-020)
 - [x] Institutionalize "Simple Components Law" (H-030)
 - [x] Fix SYNC Alert Severity & Field Matching (H-031)
-- [/] **Next Step**: Global Solver Verification (Tomorrow's Upload)
+- [x] Daily Upload System Audit (2026-02-09)
+- [x] Fix Resident Name Field References (data quality)
+- [x] Enhance Email Reporting with Leasing Events
+- [x] Filter STALE_UPDATE from Executive Reports
+- [/] **Next Step**: Deploy Holding Pages for Operational Links
+
+## Recent Audit & Improvements (2026-02-09)
+
+### Daily Upload System Health ✅
+**Status:** All 10 recent solver runs completed successfully (0 failures)
+- **Infrastructure:** Stable - No fatal errors or parsing mismatches
+- **Performance:** 83 events tracked in latest run
+- **Email Delivery:** Successfully sending to 2 recipients
+- **Price Tracking:** Feature confirmed working (8 changes detected at CV)
+
+### Bugs Fixed 🔧
+1. **Resident Names in Reports** (HIGH PRIORITY)
+   - **Issue:** Notices and Renewals showed "Unknown" instead of resident names
+   - **Root Cause:** Field mismatch (`resident_name` vs `residents.name`)
+   - **Fix:** Updated tracking code to use correct database fields
+   - **Impact:** All future reports will show actual resident names
+
+2. **STALE_UPDATE in Executive Reports** (MEDIUM PRIORITY)
+   - **Issue:** System operation "STALE_UPDATE" appearing in property list
+   - **Root Cause:** Cross-property cleanup tracked as pseudo-property
+   - **Fix:** Filtered from email reports
+   - **Impact:** Cleaner reports for stakeholders
+
+3. **Duplicate Flag Error** (LOW PRIORITY - Cosmetic)
+   - **Issue:** 409 Conflict when creating transfer flags that already exist
+   - **Status:** Non-critical, logged but doesn't crash system
+   - **Recommendation:** Add duplicate check before insert (future enhancement)
+
+### Email Reporting Enhanced 📧
+**New Capabilities:**
+- **New Leases Signed Section:** Track all transitions to Future status
+  - Available → Future (fresh leases)
+  - Applicant → Future (approved applications)
+  - Includes resident name, unit, move-in date, rent amount
+- **Operational Summaries:** Added placeholder sections for:
+  - Alerts (open/new/closed counts + link)
+  - Work Orders (summary + link)
+  - MakeReady Status (summary + link)
+  - Delinquencies (total, 30+ days + link)
+- **STALE_UPDATE Filtered:** System operations no longer confuse stakeholders
+
+### Data Quality Improvements 📊
+- Resident names now captured in all tracking events
+- Lease renewal tracking includes full unit and resident details
+- Database queries optimized for renewal tracking (fetch tenancy + resident data)
 
 ## Next Priority (Foreman Oversight)
-> **Goal**: Reporting & Executive Visibility
+> **Goal**: Operational Detail Pages & Enhanced Tracking
 > **Action**:
-> 1. Complete F-020 (Email Enhancements) to provide high-fidelity summaries.
-> 2. Verify Solver performance with 11-report daily batches.
-> 3. Monitor for data discrepancies between Yardi and Internal calculations.
+> 1. Create holding pages for operational links (Alerts, Work Orders, MakeReady, Delinquencies)
+> 2. Enhance tracking to capture operational counts for summary boxes
+> 3. Add 30-day delinquency breakdown calculations
+> 4. Test enhanced email reports with next daily upload
 
 ## Legend
 - **COMPLETED**: Deployed & Verified.
