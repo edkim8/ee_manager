@@ -183,9 +183,28 @@ const navigationItems = computed(() => {
         to: '/office/residents',
       },
       {
+        label: 'Alerts',
+        icon: 'i-heroicons-bell-alert',
+        to: '/office/alerts',
+      },
+      {
         label: 'Delinquencies',
         icon: 'i-heroicons-chart-bar',
         to: '/office/delinquencies',
+      },
+    ],
+  })
+
+  // Add Maintenance menu
+  items.push({
+    label: 'Maintenance',
+    icon: 'i-heroicons-wrench-screwdriver',
+    to: '/maintenance/work-orders',
+    children: [
+      {
+        label: 'Work Orders',
+        icon: 'i-heroicons-clipboard-document-check',
+        to: '/maintenance/work-orders',
       },
     ],
   })
