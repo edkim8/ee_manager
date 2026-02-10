@@ -1,4 +1,5 @@
 import { format, isValid, parse } from 'date-fns'
+import { parseDateString } from '../../../layers/base/utils/date-helpers'
 
 /**
  * Yardi ID to Property Code mapping.
@@ -34,56 +35,59 @@ export function parseCurrency(value: any): number | null {
 }
 
 /**
- * Format date values to strict yyyy-MM-dd format.
- * Strips any time/timezone information.
+ * Format date values to strict yyyy-MM-dd format WITHOUT timezone conversion.
+ *
+ * IMPORTANT: This function treats dates as calendar dates, not timestamps.
+ * NO timezone conversion is applied - the date you pass is the date you get.
  *
  * Handles:
- * - Date objects (from Excel)
- * - Date-like objects (with getFullYear method - for Vue reactivity)
- * - JS Date strings ("Thu Sep 11 2025 00:00:00 GMT...")
- * - ISO strings ("2024-01-15T00:00:00.000Z")
- * - US format ("01/15/2024", "1/15/24")
- * - European format ("15/01/2024")
- * - Text dates ("January 15, 2024")
+ * - Simple date strings: "01/15/2024", "1/5/24" → "2024-01-15"
+ * - ISO strings: "2024-01-15" → "2024-01-15" (no change)
+ * - Date objects (from Excel) → extracts date in UTC to avoid timezone shift
  * - Excel serial numbers (e.g., 45292 = 2024-01-15)
+ * - null/empty values → null
+ *
+ * For Yardi CSV dates (simple date strings), use this function.
+ * It will parse them as calendar dates without timezone conversion.
  */
 export function formatDateForDB(value: any): string | null {
   if (!value) return null
 
-  // If already a Date object OR date-like object (duck typing for Vue reactivity)
-  // Check for getFullYear method to handle objects that lost their Date prototype
-  if (value instanceof Date || (typeof value === 'object' && typeof value.getFullYear === 'function')) {
-    const d = value instanceof Date ? value : new Date(value)
-    if (!isValid(d)) return null
-    // Format to yyyy-MM-dd string (strip time)
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
+  // Handle Excel serial date numbers FIRST (before string conversion)
+  if (typeof value === 'number' && value > 0 && value < 100000) {
+    // Excel epoch is 1900-01-01, but Excel incorrectly treats 1900 as leap year
+    // Use UTC to avoid timezone issues
+    const excelEpoch = Date.UTC(1899, 11, 30) // Dec 30, 1899
+    const ms = excelEpoch + (value * 24 * 60 * 60 * 1000)
+    const d = new Date(ms)
+
+    const year = d.getUTCFullYear()
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(d.getUTCDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
   }
 
-  // Handle Excel serial date numbers (days since 1900-01-01)
-  if (typeof value === 'number' && value > 0 && value < 100000) {
-    // Excel epoch is 1900-01-01, but Excel incorrectly treats 1900 as leap year
-    const excelEpoch = new Date(1899, 11, 30) // Dec 30, 1899
-    const d = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000)
-    if (isValid(d)) {
-      const year = d.getFullYear()
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
+  // If Date object, extract date in UTC to avoid timezone shift
+  if (value instanceof Date || (typeof value === 'object' && typeof value.getFullYear === 'function')) {
+    const d = value instanceof Date ? value : new Date(value)
+    if (!isValid(d)) return null
+
+    // Use UTC methods to avoid timezone conversion
+    const year = d.getUTCFullYear()
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(d.getUTCDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 
+  // For string values, use the timezone-agnostic parser
   const str = String(value).trim()
   if (!str) return null
 
-  // Check if already in yyyy-MM-dd format
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-    return str
-  }
+  // Use parseDateString for simple date strings (most common case)
+  const parsed = parseDateString(str)
+  if (parsed) return parsed
 
-  // Check for JS Date.toString() format: "Thu Sep 11 2025 00:00:00 GMT..."
+  // Fallback: Handle JS Date.toString() format: "Thu Sep 11 2025 00:00:00 GMT..."
   // This happens when Date objects are converted to strings
   const jsDateMatch = str.match(/^[A-Za-z]{3}\s+([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4})/)
   if (jsDateMatch) {
@@ -101,42 +105,34 @@ export function formatDateForDB(value: any): string | null {
     }
   }
 
-  // Try parsing as ISO string first
-  let d = new Date(str)
+  // Fallback: Try date-fns parsing (for complex formats)
+  // Use UTC date to avoid timezone issues
+  const formats = [
+    'MM/dd/yyyy',   // US: 01/15/2024
+    'M/d/yyyy',     // US short: 1/5/2024
+    'MM/dd/yy',     // US short year: 01/15/24
+    'M/d/yy',       // US minimal: 1/5/24
+    'MMMM d, yyyy', // Long: January 15, 2024
+    'MMM d, yyyy',  // Short: Jan 15, 2024
+  ]
 
-  // If invalid, try common date formats
-  if (!isValid(d)) {
-    const formats = [
-      'MM/dd/yyyy',   // US: 01/15/2024
-      'M/d/yyyy',     // US short: 1/5/2024
-      'MM/dd/yy',     // US short year: 01/15/24
-      'M/d/yy',       // US minimal: 1/5/24
-      'dd/MM/yyyy',   // EU: 15/01/2024
-      'yyyy-MM-dd',   // ISO: 2024-01-15
-      'MMMM d, yyyy', // Long: January 15, 2024
-      'MMM d, yyyy',  // Short: Jan 15, 2024
-    ]
-
-    for (const fmt of formats) {
-      try {
-        const parsed = parse(str, fmt, new Date())
-        if (isValid(parsed)) {
-          d = parsed
-          break
-        }
-      } catch {
-        // Continue to next format
+  for (const fmt of formats) {
+    try {
+      // Parse with a fixed reference date in UTC
+      const refDate = new Date(Date.UTC(2000, 0, 1))
+      const parsed = parse(str, fmt, refDate)
+      if (isValid(parsed)) {
+        const year = parsed.getFullYear()
+        const month = String(parsed.getMonth() + 1).padStart(2, '0')
+        const day = String(parsed.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
       }
+    } catch {
+      // Continue to next format
     }
   }
 
-  if (!isValid(d)) return null
-
-  // Output strict yyyy-MM-dd (no time component)
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  return null
 }
 
 /**

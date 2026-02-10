@@ -29,11 +29,40 @@ export interface PropertySummary {
     priceChanges?: number
 }
 
+export interface OperationalSummary {
+    alerts: {
+        active: number
+        newToday: number
+        closedToday: number
+    }
+    workOrders: {
+        open: number
+        newToday: number
+        completedToday: number
+    }
+    makeReady: {
+        active: number
+        overdue: number
+        readyThisWeek: number
+    }
+    delinquencies: {
+        count: number
+        totalAmount: number
+        over90Days: number
+    }
+    technical: {
+        filesProcessed: number
+        filesWithErrors: number
+        status: string
+        errorMessage: string | null
+    }
+}
+
 /**
  * Generate a premium HTML report for a Solver run.
  * Optimized for email clients with inline CSS.
  */
-export function generateHighFidelityHtmlReport(run: any, events: SolverEvent[]): string {
+export function generateHighFidelityHtmlReport(run: any, events: SolverEvent[], operationalSummary?: OperationalSummary): string {
     const summaryData = run.summary as Record<string, PropertySummary>
     // Filter out STALE_UPDATE (system operation, not a real property)
     const properties = (run.properties_processed || []).filter((code: string) => code !== 'STALE_UPDATE')
@@ -52,58 +81,124 @@ export function generateHighFidelityHtmlReport(run: any, events: SolverEvent[]):
         </div>
 
         <div style="padding: 32px; background-color: #ffffff; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-            
-            <!-- Global Overview -->
+
+            <!-- 1. Property Breakdown (MOVED TO TOP) -->
+            <div style="margin-bottom: 48px;">
+                <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Property Breakdown</h2>
+                ${properties.map((code: string) => renderPropertySummary(code, summaryData[code])).join('')}
+            </div>
+
+            <!-- 2. System Overview - Details -->
             <div style="margin-bottom: 40px;">
-                <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px;">System Overview</h2>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">System Overview - Details</h2>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
                     ${renderStatCard('Properties', properties.length)}
                     ${renderStatCard('New Tenancies', events.filter(e => e.event_type === 'new_tenancy').length)}
                     ${renderStatCard('Renewals', events.filter(e => e.event_type === 'lease_renewal').length)}
                 </div>
             </div>
 
-            <!-- Detailed Tables -->
+            <!-- Detailed Event Tables -->
+            ${renderAvailabilitiesSection(events.filter(e => e.event_type === 'price_change'))}
             ${renderEventSection('✍️ New Leases Signed', events.filter(e => e.event_type === 'lease_signed'), renderLeaseSignedRow)}
             ${renderEventSection('🔄 Lease Renewals', events.filter(e => e.event_type === 'lease_renewal'), renderLeaseRenewalRow)}
             ${renderEventSection('💰 Price Changes', events.filter(e => e.event_type === 'price_change'), renderPriceChangeRow)}
-            ${renderEventSection('📋 Notices Given', events.filter(e => e.event_type === 'notice_given'), renderNoticeRow)}
             ${renderEventSection('📝 New Applications', events.filter(e => e.event_type === 'application_saved'), renderApplicationRow)}
+            ${renderEventSection('📋 Notices Given', events.filter(e => e.event_type === 'notice_given'), renderNoticeRow)}
 
             <!-- Operational Summaries -->
             <div style="margin-top: 48px;">
                 <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 24px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Operational Summary</h2>
 
-                ${renderSummaryBox('Alerts', '🚨', [
-                    { label: 'Open Alerts', value: 'Coming Soon' },
-                    { label: 'New Today', value: 'Coming Soon' },
-                    { label: 'Closed Today', value: 'Coming Soon' }
-                ], 'View All Alerts', '/coming-soon')}
+                ${operationalSummary ? renderSummaryBox('Alerts', '🚨', [
+                    { label: 'Open Alerts', value: operationalSummary.alerts.active.toString() },
+                    { label: 'New Today', value: operationalSummary.alerts.newToday.toString() },
+                    { label: 'Closed Today', value: operationalSummary.alerts.closedToday.toString() }
+                ], 'View All Alerts', '/office/alerts') : ''}
 
-                ${renderSummaryBox('Work Orders', '🔧', [
-                    { label: 'Open Orders', value: 'Coming Soon' },
-                    { label: 'New Today', value: 'Coming Soon' },
-                    { label: 'Completed Today', value: 'Coming Soon' }
-                ], 'View All Work Orders', '/coming-soon')}
+                ${operationalSummary ? renderSummaryBox('Work Orders', '🔧', [
+                    { label: 'Open Orders', value: operationalSummary.workOrders.open.toString() },
+                    { label: 'New Today', value: operationalSummary.workOrders.newToday > 0 ? operationalSummary.workOrders.newToday.toString() : 'N/A' },
+                    { label: 'Completed Today', value: operationalSummary.workOrders.completedToday.toString() }
+                ], 'View All Work Orders', '/maintenance/work-orders') : ''}
 
-                ${renderSummaryBox('MakeReady Status', '🏠', [
-                    { label: 'Units in MakeReady', value: 'Coming Soon' },
-                    { label: 'Overdue Units', value: 'Coming Soon' },
-                    { label: 'Ready This Week', value: 'Coming Soon' }
-                ], 'View MakeReady Dashboard', '/coming-soon')}
+                ${operationalSummary ? renderSummaryBox('MakeReady Status', '🏠', [
+                    { label: 'Units in MakeReady', value: operationalSummary.makeReady.active.toString() },
+                    { label: 'Overdue Units', value: operationalSummary.makeReady.overdue.toString() },
+                    { label: 'Ready This Week', value: operationalSummary.makeReady.readyThisWeek > 0 ? operationalSummary.makeReady.readyThisWeek.toString() : 'N/A' }
+                ], 'View MakeReady Dashboard', '/office/makeready') : ''}
 
-                ${renderSummaryBox('Delinquencies', '💵', [
-                    { label: 'Total Delinquent', value: 'Coming Soon' },
-                    { label: 'Total Amount', value: 'Coming Soon' },
-                    { label: 'Over 30 Days', value: 'Coming Soon' }
-                ], 'View Delinquency Report', '/coming-soon')}
+                ${operationalSummary ? renderSummaryBox('Delinquencies', '💵', [
+                    { label: 'Total Delinquent', value: operationalSummary.delinquencies.count.toString() },
+                    { label: 'Total Amount', value: '$' + operationalSummary.delinquencies.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
+                    { label: 'Over 90 Days', value: operationalSummary.delinquencies.over90Days.toString() }
+                ], 'View Delinquency Report', '/office/delinquencies') : ''}
             </div>
 
-            <!-- Property Breakdown -->
+            <!-- 3. Operational Summary -->
             <div style="margin-top: 48px;">
-                <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Property Breakdown</h2>
-                ${properties.map((code: string) => renderPropertySummary(code, summaryData[code])).join('')}
+                <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 24px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Operational Summary</h2>
+
+                ${operationalSummary ? renderSummaryBox('Alerts', '🚨', [
+                    { label: 'Open Alerts', value: operationalSummary.alerts.active.toString() },
+                    { label: 'New Today', value: operationalSummary.alerts.newToday.toString() },
+                    { label: 'Closed Today', value: operationalSummary.alerts.closedToday.toString() }
+                ], 'View All Alerts', '/office/alerts') : ''}
+
+                ${operationalSummary ? renderSummaryBox('Work Orders', '🔧', [
+                    { label: 'Open Orders', value: operationalSummary.workOrders.open.toString() },
+                    { label: 'New Today', value: operationalSummary.workOrders.newToday > 0 ? operationalSummary.workOrders.newToday.toString() : 'N/A' },
+                    { label: 'Completed Today', value: operationalSummary.workOrders.completedToday.toString() }
+                ], 'View All Work Orders', '/maintenance/work-orders') : ''}
+
+                ${operationalSummary ? renderSummaryBox('MakeReady Status', '🏠', [
+                    { label: 'Units in MakeReady', value: operationalSummary.makeReady.active.toString() },
+                    { label: 'Overdue Units', value: operationalSummary.makeReady.overdue.toString() },
+                    { label: 'Ready This Week', value: operationalSummary.makeReady.readyThisWeek > 0 ? operationalSummary.makeReady.readyThisWeek.toString() : 'N/A' }
+                ], 'View MakeReady Dashboard', '/office/makeready') : ''}
+
+                ${operationalSummary ? renderSummaryBox('Delinquencies', '💵', [
+                    { label: 'Total Delinquent', value: operationalSummary.delinquencies.count.toString() },
+                    { label: 'Total Amount', value: '$' + operationalSummary.delinquencies.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
+                    { label: 'Over 90 Days', value: operationalSummary.delinquencies.over90Days.toString() }
+                ], 'View Delinquency Report', '/office/delinquencies') : ''}
             </div>
+
+            <!-- 4. Technical Health -->
+            ${operationalSummary ? `
+            <div style="margin-top: 48px;">
+                <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+                    ⚙️ Technical Health
+                </h2>
+                <div style="background-color: ${operationalSummary.technical.status === 'completed' ? '#ecfdf5' : operationalSummary.technical.status === 'failed' ? '#fef2f2' : '#fef3c7'}; border-radius: 8px; padding: 20px; border: 1px solid ${operationalSummary.technical.status === 'completed' ? '#d1fae5' : operationalSummary.technical.status === 'failed' ? '#fecaca' : '#fde68a'};">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: ${operationalSummary.technical.errorMessage ? '16px' : '0'};">
+                        <div>
+                            <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600;">Status</div>
+                            <div style="font-size: 16px; font-weight: 700; color: ${operationalSummary.technical.status === 'completed' ? '#065f46' : operationalSummary.technical.status === 'failed' ? '#991b1b' : '#92400e'}; margin-top: 4px; text-transform: uppercase;">
+                                ${operationalSummary.technical.status === 'completed' ? '✓ SUCCESS' : operationalSummary.technical.status === 'failed' ? '✗ FAILED' : '⋯ RUNNING'}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600;">Files Processed</div>
+                            <div style="font-size: 16px; font-weight: 700; color: #4f46e5; margin-top: 4px;">
+                                ${operationalSummary.technical.filesProcessed}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600;">Parse Errors</div>
+                            <div style="font-size: 16px; font-weight: 700; color: ${operationalSummary.technical.filesWithErrors > 0 ? '#dc2626' : '#059669'}; margin-top: 4px;">
+                                ${operationalSummary.technical.filesWithErrors}
+                            </div>
+                        </div>
+                    </div>
+                    ${operationalSummary.technical.errorMessage ? `
+                        <div style="margin-top: 12px; padding: 12px; background-color: rgba(0,0,0,0.05); border-radius: 6px; font-size: 13px; color: #991b1b; font-family: 'Courier New', monospace;">
+                            <strong>Error:</strong> ${operationalSummary.technical.errorMessage}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            ` : ''}
 
             <!-- Footer -->
             <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
@@ -125,9 +220,38 @@ function renderStatCard(label: string, value: number) {
     `
 }
 
+function renderAvailabilitiesSection(priceChangeEvents: SolverEvent[]) {
+    // Show availabilities summary based on price change events
+    // This gives a snapshot of units that had pricing updates
+
+    return `
+    <div style="margin-bottom: 40px;">
+        <h3 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 12px; display: flex; align-items: center;">
+            🏢 Current Availabilities
+            ${priceChangeEvents.length > 0 ? `<span style="margin-left: 8px; background: #e0e7ff; color: #4338ca; font-size: 12px; padding: 2px 8px; border-radius: 9999px;">${priceChangeEvents.length} pricing updates</span>` : ''}
+        </h3>
+        <div style="padding: 16px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 13px;">
+                ${priceChangeEvents.length > 0
+                    ? `${priceChangeEvents.length} units had pricing updates today. Price changes are tracked in the section below.`
+                    : 'No pricing updates today. All availabilities remain at current market rates.'}
+            </p>
+            <div style="padding: 12px; background-color: white; border-radius: 6px; border: 1px solid #e5e7eb; text-align: center;">
+                <a href="/office/availabilities" style="color: #4f46e5; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 4px;">
+                    View Full Availabilities Dashboard →
+                </a>
+                <p style="margin: 8px 0 0 0; font-size: 12px; color: #9ca3af;">
+                    See all available units, market rents, and leasing pipeline
+                </p>
+            </div>
+        </div>
+    </div>
+    `
+}
+
 function renderEventSection(title: string, events: SolverEvent[], rowRenderer: (e: SolverEvent) => string) {
     if (events.length === 0) return ''
-    
+
     return `
     <div style="margin-bottom: 40px;">
         <h3 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 12px; display: flex; align-items: center;">
@@ -328,7 +452,11 @@ function renderPropertySummary(code: string, s: PropertySummary) {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h4 style="margin: 0; font-size: 15px; color: #111827;">${code} - ${getPropertyName(code)}</h4>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; font-size: 12px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; font-size: 12px;">
+            <div>
+                <div style="color: #6b7280;">Availabilities</div>
+                <div style="font-weight: 600;">+${s.availabilitiesNew} / ${s.availabilitiesUpdated} mod</div>
+            </div>
             <div>
                 <div style="color: #6b7280;">Tenancies</div>
                 <div style="font-weight: 600;">+${s.tenanciesNew} / ${s.tenanciesUpdated} mod</div>

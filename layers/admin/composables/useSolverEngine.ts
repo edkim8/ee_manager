@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Database } from '~/types/supabase'
 import type { ResidentsStatusRow } from '~/layers/parsing/composables/parsers/useParseResidentsStatus'
 import { resolveUnitId } from '../../base/utils/lookup'
+import { getTodayPST, getNowPST, daysBetween, addDays } from '../../base/utils/date-helpers'
 import { useSolverTracking } from './useSolverTracking'
 import { useSolverReportGenerator } from './useSolverReportGenerator'
 import { useAlertsSync } from '../../parsing/composables/useAlertsSync'
@@ -389,17 +390,73 @@ export const useSolverEngine = () => {
                     // EXECUTE UPSERTS FOR THIS PROPERTY
                     // 1. Tenancies (Safe Sync: Check -> Insert/Update)
                     const tenanciesToUpsert = Array.from(tenanciesMap.values())
-                    
+
                     if (tenanciesToUpsert.length > 0) {
                         const allTenancyIds = tenanciesToUpsert.map(t => t.id)
-                        
-                        // A. Check which already exist
+
+                        // A. Check which already exist AND fetch status for Past transition detection
                         const { data: existingData, error: checkError } = await supabase
                             .from('tenancies')
-                            .select('id')
+                            .select('id, status, move_out_date, unit_id')
                             .in('id', allTenancyIds)
-                            
+
                         if (checkError) throw checkError
+
+                        // ==========================================
+                        // PAST STATUS TRANSITION HANDLER
+                        // ==========================================
+                        // Detect status changes to 'Past' and handle move-out logic
+                        const existingStatusMap = new Map<string, any>()
+                        existingData?.forEach((t: any) => existingStatusMap.set(t.id, t))
+
+                        const unitsToRemoveOverdueFlag: string[] = []
+                        const today = getTodayPST()
+
+                        for (const newTenancy of tenanciesToUpsert) {
+                            const oldTenancy = existingStatusMap.get(newTenancy.id)
+
+                            // Detect transition to 'Past' status
+                            if (oldTenancy && newTenancy.status === 'Past' && oldTenancy.status !== 'Past') {
+                                console.log(`[Solver] Status Change Detected: ${oldTenancy.status} → Past for tenancy ${newTenancy.id}`)
+
+                                // Remove "Move Out Overdue" flag if exists
+                                unitsToRemoveOverdueFlag.push(newTenancy.unit_id)
+
+                                // Check for early move-out (log only, no flag)
+                                if (newTenancy.move_out_date && newTenancy.move_out_date > today) {
+                                    const plannedDate = newTenancy.move_out_date
+                                    const actualDate = today
+                                    console.log(`[Solver] 🏃 Early Move Out Detected: Unit ${newTenancy.unit_id} - Planned: ${plannedDate}, Actual: ${actualDate}`)
+
+                                    // Track as status auto-fix (for reporting)
+                                    tracker.trackStatusAutoFix(
+                                        pCode,
+                                        `Tenancy ${newTenancy.id}`,
+                                        `Early Move Out: Planned ${plannedDate}, Actual ${actualDate}`
+                                    )
+                                }
+                            }
+                        }
+
+                        // Remove overdue flags for units that transitioned to Past
+                        if (unitsToRemoveOverdueFlag.length > 0) {
+                            const { error: flagRemoveError } = await supabase
+                                .from('unit_flags')
+                                .update({
+                                    resolved_at: getNowPST(),
+                                    resolved_by: user.value?.id || null
+                                })
+                                .in('unit_id', unitsToRemoveOverdueFlag)
+                                .eq('flag_type', 'moveout_overdue')
+                                .is('resolved_at', null)
+
+                            if (flagRemoveError) {
+                                console.error('[Solver] Flag Removal Error:', flagRemoveError)
+                            } else {
+                                console.log(`[Solver] ✓ Removed move-out overdue flags for ${unitsToRemoveOverdueFlag.length} units`)
+                            }
+                        }
+                        // ==========================================
                         
                         const existingIds = new Set(existingData?.map((r: any) => r.id) || [])
                         const newTenancies = tenanciesToUpsert.filter(t => !existingIds.has(t.id))
@@ -1311,6 +1368,118 @@ export const useSolverEngine = () => {
             }
 
             // ==========================================
+            // Step 2D.5: Move Out Overdue Check
+            // ==========================================
+            // Check all Notice tenancies where move_out_date has passed
+            // Create "Move Out Overdue" flags with severity based on days overdue
+            statusMessage.value = 'Checking for overdue move-outs...'
+
+            const today = getTodayPST()
+
+            const { data: noticeWithDates, error: noticeQueryError } = await supabase
+                .from('tenancies')
+                .select('id, unit_id, property_code, move_out_date, units(unit_name)')
+                .eq('status', 'Notice')
+                .not('move_out_date', 'is', null)
+
+            if (noticeQueryError) {
+                console.error('[Solver] Move Out Overdue Query Error:', noticeQueryError)
+            } else if (noticeWithDates && noticeWithDates.length > 0) {
+                // Filter for overdue tenancies using string comparison
+                const overdueTenancies = noticeWithDates.filter((t: any) => {
+                    return t.move_out_date < today
+                })
+
+                console.log(`[Solver] Found ${overdueTenancies.length} overdue move-outs to flag`)
+
+                if (overdueTenancies.length > 0) {
+                    // Fetch existing overdue flags to avoid duplicates
+                    const unitIds = overdueTenancies.map((t: any) => t.unit_id)
+                    const { data: existingFlags } = await supabase
+                        .from('unit_flags')
+                        .select('id, unit_id, metadata')
+                        .in('unit_id', unitIds)
+                        .eq('flag_type', 'moveout_overdue')
+                        .is('resolved_at', null)
+
+                    const existingFlagMap = new Map<string, any>()
+                    existingFlags?.forEach((f: any) => existingFlagMap.set(f.unit_id, f))
+
+                    const flagsToCreate: any[] = []
+                    const flagsToUpdate: any[] = []
+
+                    for (const tenancy of overdueTenancies) {
+                        // Calculate days overdue using timezone-agnostic function
+                        const daysOverdue = daysBetween(tenancy.move_out_date, today)
+
+                        // Determine severity: 1-3 days = warning, 4+ days = error
+                        const severity = daysOverdue <= 3 ? 'warning' : 'error'
+
+                        const flagData = {
+                            unit_id: tenancy.unit_id,
+                            property_code: tenancy.property_code,
+                            flag_type: 'moveout_overdue',
+                            severity: severity,
+                            title: 'Move Out Overdue',
+                            message: `Planned move-out: ${tenancy.move_out_date}. ${daysOverdue} days overdue.`,
+                            metadata: {
+                                tenancy_id: tenancy.id,
+                                planned_move_out_date: tenancy.move_out_date,
+                                days_overdue: daysOverdue
+                            }
+                        }
+
+                        const existingFlag = existingFlagMap.get(tenancy.unit_id)
+
+                        if (existingFlag) {
+                            // Update existing flag (severity might have escalated)
+                            flagsToUpdate.push({
+                                id: existingFlag.id,
+                                ...flagData
+                            })
+                        } else {
+                            // Create new flag
+                            flagsToCreate.push(flagData)
+                        }
+                    }
+
+                    // Create new flags
+                    if (flagsToCreate.length > 0) {
+                        const { error: createError } = await supabase
+                            .from('unit_flags')
+                            .insert(flagsToCreate)
+
+                        if (createError) {
+                            console.error('[Solver] Move Out Overdue Flag Creation Error:', createError)
+                        } else {
+                            console.log(`[Solver] Created ${flagsToCreate.length} move-out overdue flags`)
+                        }
+                    }
+
+                    // Update existing flags (severity escalation)
+                    if (flagsToUpdate.length > 0) {
+                        for (const flag of flagsToUpdate) {
+                            const { error: updateError } = await supabase
+                                .from('unit_flags')
+                                .update({
+                                    severity: flag.severity,
+                                    message: flag.message,
+                                    metadata: flag.metadata
+                                })
+                                .eq('id', flag.id)
+
+                            if (updateError) {
+                                console.error('[Solver] Move Out Overdue Flag Update Error:', updateError)
+                            }
+                        }
+                        console.log(`[Solver] Updated ${flagsToUpdate.length} move-out overdue flags (severity escalation)`)
+                    }
+                }
+            }
+
+            console.log('[Solver] Phase 2D.5 Complete: Move-out overdue check finished')
+
+            // ==========================================
             // Step 2C: MakeReady (Flag Overdue Units)
             // ==========================================
             statusMessage.value = 'Processing MakeReady...'
@@ -1324,17 +1493,18 @@ export const useSolverEngine = () => {
             let totalFlagsResolved = 0
             
             if (makeReadyReports && makeReadyReports.length > 0) {
-                const today = new Date()
+                const today = getTodayPST()
                 const cushionDays = 1  // Grace period
-                
+                const cutoffDate = addDays(today, -cushionDays)  // Subtract grace period
+
                 for (const report of makeReadyReports) {
                     const pCode = report.property_code
                     const rows = report.raw_data as any[]
-                    
+
                     if (!rows || rows.length === 0) continue
-                    
+
                     console.log(`[Solver] Processing MakeReady ${pCode} (${rows.length} rows)`)
-                    
+
                     // Step 1: Resolve units
                     const unitNames = [...new Set(rows.map((r: any) => r.unit_name).filter(Boolean))]
                     const { data: units } = await supabase
@@ -1342,13 +1512,13 @@ export const useSolverEngine = () => {
                         .select('id, unit_name')
                         .eq('property_code', pCode)
                         .in('unit_name', unitNames)
-                    
+
                     const unitMap = new Map<string, string>()
                     units?.forEach((u: any) => unitMap.set(u.unit_name, u.id))
 
                     // Step 2: Detect overdue units
-                    console.log(`[Solver DEBUG] Today: ${today.toISOString()}, Cushion: ${cushionDays} days`)
-                    
+                    console.log(`[Solver DEBUG] Today: ${today}, Cutoff: ${cutoffDate} (${cushionDays} day cushion)`)
+
                     const overdueUnits = rows
                         .filter((row: any) => {
                             const makeReadyDateStr = parseDate(row.make_ready_date)
@@ -1356,14 +1526,11 @@ export const useSolverEngine = () => {
                                 console.log(`[Solver DEBUG] ${row.unit_name}: No make_ready_date`)
                                 return false
                             }
-                            
-                            const makeReadyDate = new Date(makeReadyDateStr)
-                            const cutoffDate = new Date(today)
-                            cutoffDate.setDate(cutoffDate.getDate() - cushionDays)
-                            
-                            const isOverdue = makeReadyDate < cutoffDate
-                            console.log(`[Solver DEBUG] ${row.unit_name}: ready=${makeReadyDateStr}, cutoff=${cutoffDate.toISOString()}, overdue=${isOverdue}`)
-                            
+
+                            // Simple string comparison (both are YYYY-MM-DD)
+                            const isOverdue = makeReadyDateStr < cutoffDate
+                            console.log(`[Solver DEBUG] ${row.unit_name}: ready=${makeReadyDateStr}, cutoff=${cutoffDate}, overdue=${isOverdue}`)
+
                             return isOverdue
                         })
                         .map((row: any) => {
@@ -1372,10 +1539,9 @@ export const useSolverEngine = () => {
                                 console.log(`[Solver DEBUG] ${row.unit_name}: Unit not found in map`)
                                 return null
                             }
-                            
+
                             const makeReadyDateStr = parseDate(row.make_ready_date)!
-                            const makeReadyDate = new Date(makeReadyDateStr)
-                            const daysOverdue = Math.floor((today.getTime() - makeReadyDate.getTime()) / (1000 * 60 * 60 * 24))
+                            const daysOverdue = daysBetween(makeReadyDateStr, today)
                             
                             console.log(`[Solver DEBUG] Creating flag for ${row.unit_name}: ${daysOverdue} days overdue`)
                             
@@ -1449,7 +1615,7 @@ export const useSolverEngine = () => {
                     if (currentMakeReadyUnitIds.length > 0) {
                         const { data: resolvedFlags } = await supabase
                             .from('unit_flags')
-                            .update({ resolved_at: new Date().toISOString() })
+                            .update({ resolved_at: getNowPST() })
                             .eq('flag_type', 'makeready_overdue')
                             .eq('property_code', pCode)
                             .not('unit_id', 'in', currentMakeReadyUnitIds)
@@ -1480,7 +1646,7 @@ export const useSolverEngine = () => {
             let totalApplicationFlags = 0
 
             if (applicationsReports && applicationsReports.length > 0) {
-                const today = new Date()
+                const today = getTodayPST()
                 const overdueThreshold = 7  // Days before application is considered overdue
 
                 for (const report of applicationsReports) {
@@ -1561,7 +1727,7 @@ export const useSolverEngine = () => {
                                 applicant_name: row.applicant,
                                 unit_name: row.unit_name,
                                 unit_id: unitId,
-                                application_date: parseDate(row.application_date) || new Date().toISOString(),
+                                application_date: parseDate(row.application_date) || today,
                                 screening_result: row.screening_result
                             })
                         } else {
@@ -1572,8 +1738,7 @@ export const useSolverEngine = () => {
                         if (!row.screening_result && row.application_date) {
                             const appDateStr = parseDate(row.application_date)
                             if (appDateStr) {
-                                const appDate = new Date(appDateStr)
-                                const daysOld = Math.floor((today.getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24))
+                                const daysOld = daysBetween(appDateStr, today)
 
                                 if (daysOld > overdueThreshold) {
                                 const severity = daysOld > 14 ? 'error' : 'warning'
@@ -1675,9 +1840,9 @@ export const useSolverEngine = () => {
                             console.warn(`[Solver] Transfer TO unit not found: ${row.to_unit_name} (${row.to_property_code})`)
                             continue
                         }
-                        
-                        const transferDate = new Date().toISOString().split('T')[0]
-                        
+
+                        const transferDate = getTodayPST()
+
                         // Create flag for FROM unit
                         flagsToCreate.push({
                             unit_id: fromUnitId,
@@ -1879,15 +2044,16 @@ export const useSolverEngine = () => {
 
             if (result) {
                 // Generate markdown report
+                const reportTimestamp = getNowPST()
                 const markdown = reportGen.generateMarkdown(
                     batchId,
-                    new Date().toISOString(),
+                    reportTimestamp,
                     result.summary,
                     result.events
                 )
 
                 // Generate filename
-                const filename = reportGen.generateFilename(new Date().toISOString(), batchId)
+                const filename = reportGen.generateFilename(reportTimestamp, batchId)
                 console.log(`[Solver] Report generated: ${filename}`)
                 console.log('\n' + markdown + '\n')
 
