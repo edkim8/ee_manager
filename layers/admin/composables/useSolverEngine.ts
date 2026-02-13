@@ -779,6 +779,7 @@ export const useSolverEngine = () => {
                         const toUpdate: any[] = []
                         const toInsert: any[] = []
                         const toDeactivate: any[] = [] // Leases to mark as inactive (renewals)
+                        const renewalTenancyIds: Set<string> = new Set() // Track renewals for worksheet confirmation
                         
                         // Deduplicate leasesToUpsert by tenancy_id (last one wins for duplicates in source data)
                         const deduped = new Map<string, any>()
@@ -819,6 +820,7 @@ export const useSolverEngine = () => {
                                         is_active: true
                                     }
                                     toInsert.push(renewedLease)
+                                    renewalTenancyIds.add(existingLease.tenancy_id) // Track for worksheet confirmation
 
                                     // Track renewal with resident and unit details
                                     const tenancyInfo = tenancyMap.get(existingLease.tenancy_id)
@@ -895,6 +897,63 @@ export const useSolverEngine = () => {
                                 totalUpsertedLeases += chunk.length
                             }
                         }
+
+                        // ==========================================
+                        // RENEWALS YARDI CONFIRMATION HOOK
+                        // ==========================================
+                        // Auto-confirm renewal worksheet items when Solver detects renewals
+                        if (renewalTenancyIds.size > 0) {
+                            const tenancyIdsArray = Array.from(renewalTenancyIds)
+
+                            // Query worksheet items for these tenancies
+                            const { data: worksheetItems, error: worksheetQueryError } = await supabase
+                                .from('renewal_worksheet_items')
+                                .select('id, tenancy_id, status, yardi_confirmed')
+                                .in('tenancy_id', tenancyIdsArray)
+                                .eq('active', true)
+                                .is('yardi_confirmed', false) // Only update items not yet confirmed
+
+                            if (worksheetQueryError) {
+                                console.error(`[Solver] Renewals worksheet query error ${pCode}:`, worksheetQueryError)
+                            } else if (worksheetItems && worksheetItems.length > 0) {
+                                const today = new Date().toISOString().split('T')[0]
+                                const itemsToUpdate = worksheetItems.map(item => {
+                                    // Transition status based on current state
+                                    let newStatus = item.status
+                                    if (item.status === 'manually_accepted') {
+                                        newStatus = 'accepted'
+                                    } else if (item.status === 'manually_declined') {
+                                        newStatus = 'declined'
+                                    } else if (item.status === 'pending') {
+                                        // Don't auto-accept pending items, just mark as Yardi confirmed
+                                        newStatus = 'pending'
+                                    }
+
+                                    return {
+                                        id: item.id,
+                                        yardi_confirmed: true,
+                                        yardi_confirmed_date: today,
+                                        status: newStatus
+                                    }
+                                })
+
+                                // Batch update worksheet items
+                                for (let i = 0; i < itemsToUpdate.length; i += 1000) {
+                                    const chunk = itemsToUpdate.slice(i, i + 1000)
+                                    const { error: updateError } = await supabase
+                                        .from('renewal_worksheet_items')
+                                        .upsert(chunk)
+
+                                    if (updateError) {
+                                        console.error(`[Solver] Renewals worksheet update error ${pCode}:`, updateError)
+                                    }
+                                }
+
+                                console.log(`[Solver] Updated ${itemsToUpdate.length} renewal worksheet items for ${pCode} (Yardi confirmed)`)
+                            }
+                        }
+                        // END RENEWALS CONFIRMATION HOOK
+                        // ==========================================
 
                         // Track lease changes
                         tracker.trackLeaseChanges(pCode, toInsert.length, toUpdate.length)

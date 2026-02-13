@@ -25,17 +25,59 @@ const { data: floorPlanSummaries, status: summaryStatus } = await useAsyncData(
       return []
     }
 
-    const { data, error } = await supabase
-      .from('view_floor_plan_pricing_summary')
-      .select('*')
-      .eq('property_code', activeProperty.value)
-      .order('floor_plan_name')
+    // Parallel fetch: Summaries + Floor Plan Details (for SF sort)
+    const [summariesResult, floorPlansResult] = await Promise.all([
+      supabase
+        .from('view_floor_plan_pricing_summary')
+        .select('*')
+        .eq('property_code', activeProperty.value),
+      
+      supabase
+        .from('floor_plans')
+        .select('id, area_sqft')
+        .eq('property_code', activeProperty.value)
+    ])
 
-    if (error) {
-      console.error('[Floor Plans] Error fetching summaries:', error)
-      throw error
+    if (summariesResult.error) {
+      console.error('[Floor Plans] Error fetching summaries:', summariesResult.error)
+      throw summariesResult.error
     }
-    return data || []
+
+    if (floorPlansResult.error) {
+       console.warn('[Floor Plans] Could not fetch floor plan details:', floorPlansResult.error)
+       // Fallback: return summaries sorted by name if SF fetch fails
+       return (summariesResult.data || []).sort((a: any, b: any) => 
+         (a.floor_plan_name || '').localeCompare(b.floor_plan_name || '')
+       )
+    }
+    
+    const summariesData = summariesResult.data || []
+    const floorPlansData = floorPlansResult.data || []
+
+    // Create SF map
+    const sfMap = new Map<string, number>()
+    floorPlansData.forEach((fp: any) => {
+      if (fp.id) sfMap.set(fp.id, fp.area_sqft || 0)
+    })
+
+    // Attach SF and Sort
+    const sortedSummaries = summariesData.map((item: any) => ({
+      ...item,
+      area_sqft: item.floor_plan_id ? sfMap.get(item.floor_plan_id) : 0
+    })).sort((a: any, b: any) => {
+      const sfA = a.area_sqft || 0
+      const sfB = b.area_sqft || 0
+      
+      // Sort by SF Ascending (Smallest to Largest)
+      if (sfA !== sfB) return sfA - sfB
+      
+      // Fallback to name
+      return (a.floor_plan_name || '').localeCompare(b.floor_plan_name || '')
+    })
+
+    console.log('[Floor Plans] Sorted by SF:', sortedSummaries.map((s: any) => ({ name: s.floor_plan_name, sf: s.area_sqft })))
+
+    return sortedSummaries
   },
   {
     watch: [activeProperty],

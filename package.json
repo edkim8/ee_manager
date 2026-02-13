@@ -19,11 +19,13 @@
     "@nuxt/ui": "^4.3.0",
     "@nuxtjs/supabase": "^2.0.3",
     "browser-image-compression": "^2.0.2",
+    "chart.js": "^4.5.1",
     "date-fns": "^4.1.0",
     "exif-js": "^2.3.0",
     "nodemailer": "^7.0.13",
     "nuxt": "^4.2.2",
     "uuid": "^13.0.0",
+    "vue-chartjs": "^5.3.3",
     "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useSupabaseUser, useSupabaseClient, useRouter, useColorMode, navigateTo, useOverlay } from '#imports'
 import { usePropertyState } from '../composables/usePropertyState'
+import { useLayoutWidth } from '../composables/useLayoutWidth'
 import ConstantsModal from './modals/ConstantsModal.vue'
 
 const user = useSupabaseUser()
@@ -39,6 +40,9 @@ const isDark = computed({
 const toggleColorMode = () => {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
 }
+
+// Width toggle
+const { isWide, toggleWidth } = useLayoutWidth()
 
 // Compute user initials
 const userInitials = computed(() => {
@@ -192,6 +196,11 @@ const navigationItems = computed(() => {
         icon: 'i-heroicons-chart-bar',
         to: '/office/delinquencies',
       },
+      {
+        label: 'Renewals',
+        icon: 'i-heroicons-arrow-path-rounded-square',
+        to: '/office/renewals',
+      },
     ],
   })
 
@@ -302,6 +311,17 @@ const navigationItems = computed(() => {
             </div>
           </div>
 
+          <!-- Width Toggle (Desktop) -->
+          <div class="hidden lg:block">
+            <UButton
+              :icon="isWide ? 'i-heroicons-arrows-pointing-in' : 'i-heroicons-arrows-pointing-out'"
+              color="neutral"
+              variant="ghost"
+              @click="toggleWidth"
+              :title="isWide ? 'Switch to Standard Width' : 'Switch to Wide Width'"
+            />
+          </div>
+
           <!-- User Menu (Desktop) -->
           <div class="hidden lg:block sm:flex items-center">
             <UDropdownMenu
@@ -397,6 +417,15 @@ const navigationItems = computed(() => {
             variant="ghost"
             class="w-full justify-start"
             @click="toggleColorMode"
+          />
+
+          <UButton
+            :label="isWide ? 'Standard Width' : 'Wide Width'"
+            :icon="isWide ? 'i-heroicons-arrows-pointing-in' : 'i-heroicons-arrows-pointing-out'"
+            color="neutral"
+            variant="ghost"
+            class="w-full justify-start"
+            @click="toggleWidth"
           />
 
           <UButton
