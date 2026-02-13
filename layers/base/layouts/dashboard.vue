@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useLayoutWidth } from '../composables/useLayoutWidth'
+
+const { isWide } = useLayoutWidth()
 </script>
 
 <template>
@@ -6,7 +9,7 @@
     <AppNavigation />
 
     <main>
-      <UContainer class="py-6">
+      <UContainer :class="isWide ? 'max-w-none px-8' : ''" class="py-6">
         <slot />
       </UContainer>
     </main>
