@@ -744,7 +744,7 @@ export const useSolverEngine = () => {
                         // Fetch tenancy and resident data for renewal tracking
                         const { data: tenanciesData, error: tenancyError } = await supabase
                             .from('tenancies')
-                            .select('id, unit_id, units(name)')
+                            .select('id, unit_id, units(unit_name)')
                             .in('id', tenancyIds)
 
                         if (tenancyError) console.error('[Solver] Tenancy fetch error for renewals:', tenancyError)
@@ -825,7 +825,7 @@ export const useSolverEngine = () => {
                                     // Track renewal with resident and unit details
                                     const tenancyInfo = tenancyMap.get(existingLease.tenancy_id)
                                     const residentName = residentMap.get(existingLease.tenancy_id)
-                                    const unitName = tenancyInfo?.units?.name || 'Unit'
+                                    const unitName = tenancyInfo?.units?.unit_name || 'Unit'
                                     const unitId = tenancyInfo?.unit_id || null
 
                                     tracker.trackLeaseRenewal(pCode, {
@@ -904,6 +904,7 @@ export const useSolverEngine = () => {
                         // Auto-confirm renewal worksheet items when Solver detects renewals
                         if (renewalTenancyIds.size > 0) {
                             const tenancyIdsArray = Array.from(renewalTenancyIds)
+                            console.log(`[Solver] Detected ${renewalTenancyIds.size} renewal(s) for ${pCode}, checking for worksheet items...`)
 
                             // Query worksheet items for these tenancies
                             const { data: worksheetItems, error: worksheetQueryError } = await supabase
@@ -917,7 +918,11 @@ export const useSolverEngine = () => {
                                 console.error(`[Solver] Renewals worksheet query error ${pCode}:`, worksheetQueryError)
                             } else if (worksheetItems && worksheetItems.length > 0) {
                                 const today = new Date().toISOString().split('T')[0]
-                                const itemsToUpdate = worksheetItems.map(item => {
+                                let successCount = 0
+                                let errorCount = 0
+
+                                // Update each item individually to preserve per-item status
+                                for (const item of worksheetItems) {
                                     // Transition status based on current state
                                     let newStatus = item.status
                                     if (item.status === 'manually_accepted') {
@@ -929,27 +934,28 @@ export const useSolverEngine = () => {
                                         newStatus = 'pending'
                                     }
 
-                                    return {
-                                        id: item.id,
-                                        yardi_confirmed: true,
-                                        yardi_confirmed_date: today,
-                                        status: newStatus
-                                    }
-                                })
-
-                                // Batch update worksheet items
-                                for (let i = 0; i < itemsToUpdate.length; i += 1000) {
-                                    const chunk = itemsToUpdate.slice(i, i + 1000)
+                                    // Use UPDATE instead of UPSERT to avoid NOT NULL constraint issues
                                     const { error: updateError } = await supabase
                                         .from('renewal_worksheet_items')
-                                        .upsert(chunk)
+                                        .update({
+                                            yardi_confirmed: true,
+                                            yardi_confirmed_date: today,
+                                            status: newStatus
+                                        })
+                                        .eq('id', item.id)
 
                                     if (updateError) {
-                                        console.error(`[Solver] Renewals worksheet update error ${pCode}:`, updateError)
+                                        console.error(`[Solver] Failed to confirm worksheet item ${item.id} (tenancy ${item.tenancy_id}):`, updateError)
+                                        errorCount++
+                                    } else {
+                                        successCount++
                                     }
                                 }
 
-                                console.log(`[Solver] Updated ${itemsToUpdate.length} renewal worksheet items for ${pCode} (Yardi confirmed)`)
+                                console.log(`[Solver] Renewal worksheet confirmation for ${pCode}: ${successCount} confirmed, ${errorCount} failed`)
+                            } else {
+                                // Soft warning: No worksheets found (expected during testing phase)
+                                console.warn(`[Solver] No active worksheet items found for ${renewalTenancyIds.size} renewal(s) in ${pCode}. This is expected if renewals module is still in development/testing.`)
                             }
                         }
                         // END RENEWALS CONFIRMATION HOOK
