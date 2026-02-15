@@ -12,6 +12,15 @@
 | **SimpleTabs** | `layers/base/components/SimpleTabs.vue` | Slot-based tabs without lifecycle bugs. Replaces `UTabs`. | ✅ Stable |
 | **SimpleOverlay** | *(Planned)* | For slide-overs and notifications. | ⏳ Pending |
 
+## 2. The Dashboard System
+*Modular, customizable panels for real-time metrics.*
+
+| Component | Location | Description | Status |
+|-----------|----------|-------------|--------|
+| **DashboardHero** | `layers/base/components/DashboardHero.vue` | Premium greeting with animated glassmorphism backdrop. | ✅ Stable |
+| **SummaryWidget** | `layers/base/components/SummaryWidget.vue` | Wrapper for reorderable metrics with glassmorphism styling. | ✅ Stable |
+| **SortableGrid** | `layers/base/pages/index.vue` | Layout pattern using SortableJS & LocalStorage for persistent reordering. | ✅ Pattern |
+
 ## 2. The Table Engine (Data Grid)
 *A high-performance, customizable data table system.*
 
@@ -38,7 +47,17 @@
 | **Recursive Price Solver** | `layers/ops/utils/pricing-engine.ts` | Solves for a target rent by finding the optimal combination of amenities. | ✅ Beta |
 | **Smart Sync** | `layers/parsing/composables/useSolverEngine.ts` | Handles "Diff & Patch" logic for syncing external data sources without overwriting local overrides. | ✅ Stable |
 
-## 5. Future Extraction Plan
+## 5. The Image & Attachment System
+*Optimized media handling and enlargement.*
+
+| Module | Location | Description | Status |
+|--------|----------|-------------|--------|
+| **ImageGalleryItem** | `layers/base/components/ImageGalleryItem.vue` | Standardized thumbnail with hover actions and NuxtImg optimization. | ✅ Stable |
+| **ImageModal** | `layers/base/components/modals/ImageModal.vue` | Edge-to-edge photo enlargement modal (min-width: 800px). | ✅ Stable |
+| **useImageActions** | `layers/base/composables/useImageActions.ts` | Shared state for modal synchronization. | ✅ Stable |
+| **AttachmentManager** | `layers/base/components/AttachmentManager.vue` | UI for file uploads with compression and cloud sync. | ✅ Stable |
+
+## 6. Future Extraction Plan
 *How to move these to a new app.*
 
 1.  **Isolate**: Ensure the tool has no dependencies on the main app's global state (e.g., Pinia stores that aren't passed in).

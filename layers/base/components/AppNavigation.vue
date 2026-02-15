@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useSupabaseUser, useSupabaseClient, useRouter, useColorMode, navigateTo, useOverlay } from '#imports'
+import { useSupabaseUser, useSupabaseClient, useRouter, useRoute, useColorMode, navigateTo, useOverlay } from '#imports'
 import { usePropertyState } from '../composables/usePropertyState'
 import { useLayoutWidth } from '../composables/useLayoutWidth'
 import ConstantsModal from './modals/ConstantsModal.vue'
@@ -8,6 +8,7 @@ import ConstantsModal from './modals/ConstantsModal.vue'
 const user = useSupabaseUser()
 const supabase = useSupabaseClient()
 const router = useRouter()
+const route = useRoute()
 const colorMode = useColorMode()
 
 // Use shared property state
@@ -43,6 +44,29 @@ const toggleColorMode = () => {
 
 // Width toggle
 const { isWide, toggleWidth } = useLayoutWidth()
+
+// Force page reload on property change to clear stale data
+watch(active_property, (newVal, oldVal) => {
+  // Only reload if we actually changed from one valid property to another
+  if (oldVal && newVal && oldVal !== newVal) {
+    console.log(`[AppNavigation] Property changed from ${oldVal} to ${newVal}.`)
+    
+    // Check if we are on a detail page (has route params like :id or :date)
+    const hasParams = Object.keys(route.params).length > 0
+    
+    if (hasParams) {
+      // Navigate up one level to the list view to avoid invalid ID context
+      // e.g. /units/RS-123 -> /units
+      const parentPath = route.path.split('/').slice(0, -1).join('/') || '/'
+      console.log(`[AppNavigation] Detail page detected. Redirecting to parent: ${parentPath}`)
+      window.location.href = parentPath
+    } else {
+      // Standard reload for list pages/dashboard
+      console.log(`[AppNavigation] Standard page detected. Reloading...`)
+      window.location.reload()
+    }
+  }
+})
 
 // Compute user initials
 const userInitials = computed(() => {

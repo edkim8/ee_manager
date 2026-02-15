@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useSupabaseClient, useToast } from '#imports'
+import { DEPARTMENTS } from '../types/admin'
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 
@@ -11,11 +12,17 @@ const emit = defineEmits<{
   created: [userId: string]
 }>()
 
+const departmentOptions = DEPARTMENTS.map(d => ({
+  label: d,
+  value: d
+}))
+
 const schema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   first_name: z.string().optional(),
   last_name: z.string().optional(),
+  department: z.string().optional().nullable(),
   is_super_admin: z.boolean().default(false)
 })
 
@@ -26,6 +33,7 @@ const state = reactive<Schema>({
   password: '',
   first_name: '',
   last_name: '',
+  department: '',
   is_super_admin: false
 })
 
@@ -43,6 +51,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         data: {
           first_name: event.data.first_name || null,
           last_name: event.data.last_name || null,
+          department: event.data.department || null,
           is_super_admin: event.data.is_super_admin
         }
       }
@@ -60,6 +69,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       .update({
         first_name: event.data.first_name || null,
         last_name: event.data.last_name || null,
+        department: event.data.department || null,
         is_super_admin: event.data.is_super_admin
       })
       .eq('id', authData.user.id)
@@ -79,6 +89,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     state.password = ''
     state.first_name = ''
     state.last_name = ''
+    state.department = ''
     state.is_super_admin = false
 
     emit('created', authData.user.id)
@@ -163,6 +174,15 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               />
             </UFormField>
           </div>
+
+          <UFormField label="Department" name="department">
+            <USelectMenu
+              v-model="state.department"
+              :items="departmentOptions"
+              placeholder="Select department"
+              value-key="value"
+            />
+          </UFormField>
 
           <div class="mt-4 p-4 bg-primary-50/50 dark:bg-primary-950/20 border border-primary-100 dark:border-primary-900/30 rounded-xl flex items-center justify-between">
             <div class="space-y-0.5">

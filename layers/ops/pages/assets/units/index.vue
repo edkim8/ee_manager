@@ -250,7 +250,7 @@ const handleRowClick = (row: any) => {
           <UIcon name="i-heroicons-user" class="w-4 h-4 text-gray-400" />
           <CellsLinkCell
             :value="value"
-            :to="`/assets/residents/${row.resident_id}`"
+            :to="`/office/residents/${row.resident_id}`"
             class="text-gray-600 font-medium"
           />
         </div>

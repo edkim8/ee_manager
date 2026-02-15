@@ -164,11 +164,15 @@ const paymentColumns = [
               </div>
               <div>
                 <p class="text-[10px] font-black text-primary-600 dark:text-primary-500 uppercase tracking-widest mb-1">Start Date</p>
-                <p class="text-lg font-bold text-gray-900 dark:text-white">{{ new Date(activeLease.start_date).toLocaleDateString() }}</p>
+                <ClientOnly>
+                  <p class="text-lg font-bold text-gray-900 dark:text-white">{{ new Date(activeLease.start_date).toLocaleDateString() }}</p>
+                </ClientOnly>
               </div>
               <div>
                 <p class="text-[10px] font-black text-primary-600 dark:text-primary-500 uppercase tracking-widest mb-1">End Date</p>
-                <p class="text-lg font-bold text-gray-900 dark:text-white">{{ new Date(activeLease.end_date).toLocaleDateString() }}</p>
+                <ClientOnly>
+                  <p class="text-lg font-bold text-gray-900 dark:text-white">{{ new Date(activeLease.end_date).toLocaleDateString() }}</p>
+                </ClientOnly>
               </div>
             </div>
             <div class="mt-6 pt-6 border-t border-primary-100 dark:border-primary-800/50 flex justify-end">
@@ -287,12 +291,12 @@ const paymentColumns = [
                 </UButton>
             </div>
             
-            <div class="mt-8 pt-8 border-t border-white/10">
-              <p class="text-[10px] font-mono opacity-30 leading-relaxed italic">
-                Data synced from Yardi Voyager<br>
-                Latest update: {{ new Date().toLocaleDateString() }}
-              </p>
-            </div>
+              <ClientOnly>
+                <p class="text-[10px] font-mono opacity-30 leading-relaxed italic">
+                  Data synced from Yardi Voyager<br>
+                  Latest update: {{ new Date().toLocaleDateString() }}
+                </p>
+              </ClientOnly>
           </div>
 
           <div class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">

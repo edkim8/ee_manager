@@ -4,7 +4,10 @@ import { ref, watch } from 'vue'
 const props = defineProps<{
   modelValue: boolean
   title?: string
+  description?: string
   width?: string
+  seamless?: boolean
+  noPadding?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -24,10 +27,12 @@ const handleOverlayClick = (e: MouseEvent) => {
 
 // Prevent body scroll when modal is open
 watch(() => props.modelValue, (isOpen) => {
-  if (isOpen) {
-    document.body.style.overflow = 'hidden'
-  } else {
-    document.body.style.overflow = ''
+  if (import.meta.client) {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
   }
 })
 </script>
@@ -36,35 +41,54 @@ watch(() => props.modelValue, (isOpen) => {
   <Transition name="modal">
     <div
       v-if="modelValue"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm"
       @click="handleOverlayClick"
     >
       <div
+        v-if="!seamless"
         :class="[
-          'bg-white dark:bg-gray-900 rounded-2xl shadow-2xl',
+          'bg-white dark:bg-gray-900 rounded-3xl shadow-2xl',
           'max-h-[90vh] overflow-hidden flex flex-col',
           width || 'w-full max-w-4xl'
         ]"
         @click.stop
       >
         <!-- Header -->
-        <div v-if="title" class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ title }}</h2>
-          <button
-            type="button"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            @click="close"
-          >
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        <div v-if="title" class="px-8 py-6 border-b border-gray-100 dark:border-gray-800">
+          <div class="flex items-center justify-between mb-1">
+            <h2 class="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{{ title }}</h2>
+            <button
+              type="button"
+              class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              @click="close"
+            >
+              <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <p v-if="description" class="text-xs text-gray-500 font-medium">{{ description }}</p>
         </div>
 
         <!-- Content -->
-        <div class="overflow-y-auto flex-1">
+        <div 
+          :class="[
+            'overflow-y-auto flex-1',
+            noPadding ? 'p-0' : 'p-8'
+          ]"
+        >
           <slot />
         </div>
+
+        <!-- Footer -->
+        <div v-if="$slots.footer" class="px-8 py-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
+          <slot name="footer" />
+        </div>
+      </div>
+
+      <!-- Seamless content (no card wrapper) -->
+      <div v-else class="relative w-full h-full flex items-center justify-center" @click.stop>
+         <slot />
       </div>
     </div>
   </Transition>

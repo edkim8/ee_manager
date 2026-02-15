@@ -93,7 +93,10 @@ const tableRows = computed(() => {
   return users.value.map(user => ({
     id: user.id,
     email: user.email || '-',
+    first_name: user.first_name,
+    last_name: user.last_name,
     name: [user.first_name, user.last_name].filter(Boolean).join(' ') || '-',
+    department: user.department || '-',
     is_super_admin: user.is_super_admin,
     is_active: user.is_active,
     properties: user.propertyAccess || []
@@ -151,6 +154,7 @@ onMounted(() => {
                 <tr class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
                   <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Email</th>
                   <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Name</th>
+                  <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Department</th>
                   <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Role</th>
                   <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
                   <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Properties</th>
@@ -159,10 +163,10 @@ onMounted(() => {
               </thead>
               <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                 <tr v-if="loading" v-for="i in 3" :key="i" class="animate-pulse">
-                  <td colspan="6" class="px-6 py-4"><div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div></td>
+                  <td colspan="7" class="px-6 py-4"><div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div></td>
                 </tr>
                 <tr v-else-if="tableRows.length === 0">
-                  <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                  <td colspan="7" class="px-6 py-12 text-center text-gray-500">
                     <UIcon name="i-heroicons-users" class="w-12 h-12 mx-auto mb-2 opacity-20" />
                     <p>No users found</p>
                   </td>
@@ -175,6 +179,12 @@ onMounted(() => {
                 >
                   <td class="px-6 py-4 text-sm font-medium">{{ row.email }}</td>
                   <td class="px-6 py-4 text-sm">{{ row.name }}</td>
+                  <td class="px-6 py-4 text-sm">
+                    <UBadge v-if="row.department !== '-'" color="neutral" variant="subtle" size="sm">
+                      {{ row.department }}
+                    </UBadge>
+                    <span v-else class="text-gray-400">-</span>
+                  </td>
                   <td class="px-6 py-4 text-sm">
                     <span 
                       v-if="row.is_super_admin" 

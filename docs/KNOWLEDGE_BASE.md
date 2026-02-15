@@ -123,6 +123,25 @@ Outputs a `<picture>` tag with multiple `<source>` elements. Use this when you n
 
 ---
 
+## Image System (Enlargement & Modals)
+
+### The "WOW" Photo Experience
+To ensure a consistent, premium experience for image viewing, ALWAYS use the standardized Image System instead of custom `UModal` or `NuxtImg` logic for enlargement.
+
+### Core Architecture
+- **Thumbnails/Grid**: Use `ImageGalleryItem.vue`.
+- **Modal View**: Use `ImageModal.vue` (Standardizes a 800px min-width and glassmorphism overlay).
+- **State Management**: Use the `useImageActions.ts` composable to synchronize opening/closing across components.
+
+### Implementation Pattern (Standard Process)
+1. **Initialize State**: Call `const { isModalOpen, activeImage } = useImageActions()` on your page.
+2. **Gallery**: Use `<ImageGalleryItem :src="path" :alt="label" />`.
+3. **Modal**: Place a single `<ImageModal v-model="isModalOpen" :src="activeImage.src" :alt="activeImage.alt" />` at the page level.
+
+**Reference**: `layers/base/docs/IMAGE_SYSTEM_API.md`
+
+---
+
 ## TypeScript Patterns
 
 ### Vue Composable Type Inference

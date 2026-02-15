@@ -3,7 +3,10 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
 import ImageModal from '../../../../base/components/modals/ImageModal.vue'
+import ImageGalleryItem from '../../../../base/components/ImageGalleryItem.vue'
+import AttachmentManager from '../../../../base/components/AttachmentManager.vue'
 import type { TableColumn } from '../../../../table/types'
+import { useImageActions } from '../../../../base/composables/useImageActions'
 
 definePageMeta({
   layout: 'dashboard'
@@ -14,7 +17,7 @@ const router = useRouter()
 const supabase = useSupabaseClient()
 const unitId = route.params.id as string
 
-const showImageModal = ref(false)
+const { isModalOpen: showImageModal, activeImage, openImageModal } = useImageActions()
 
 // Fetch Unit Details
 const { data: unit, status, error } = await useAsyncData(`unit-${unitId}`, async () => {
@@ -181,6 +184,15 @@ const imageUrl = computed(() => {
   }
   return path
 })
+
+const floorPlanImageUrl = computed(() => {
+  const path = unit.value?.floor_plan_image_url
+  if (!path) return null
+  if (!path.startsWith('/') && !path.startsWith('http')) {
+    return `/${path}`
+  }
+  return path
+})
 </script>
 
 <template>
@@ -246,6 +258,15 @@ const imageUrl = computed(() => {
             <span v-else>{{ unit.building_name || '-' }}</span>
             &middot; Floor {{ unit.floor_number }}
           </p>
+
+          <!-- Mobile-only Attachment Manager -->
+          <div class="mt-8 md:hidden">
+            <AttachmentManager 
+              :record-id="unitId" 
+              record-type="unit" 
+              title="Photos & Files"
+            />
+          </div>
         </div>
         
         <div class="pb-2 flex gap-2">
@@ -257,131 +278,173 @@ const imageUrl = computed(() => {
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div class="md:col-span-2 space-y-8">
-          <div class="bg-white dark:bg-gray-900/80 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
-            <h3 class="text-xl font-bold mb-6 text-gray-900 dark:text-white">Details</h3>
-            <div class="grid grid-cols-2 gap-y-6">
-              <div>
-                <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">Floor Plan</p>
-                <p class="text-lg font-bold text-gray-900 dark:text-white">
-                  <NuxtLink 
-                    v-if="unit.floor_plan_id"
-                    :to="`/assets/floor-plans/${unit.floor_plan_id}`"
-                    class="text-primary-600 dark:text-primary-400 hover:text-primary-700 underline-offset-4 hover:underline transition-colors"
-                  >
-                    {{ unit.floor_plan_marketing_name }} ({{ unit.floor_plan_code }})
-                  </NuxtLink>
-                  <span v-else>{{ unit.floor_plan_marketing_name }} ({{ unit.floor_plan_code }})</span>
-                </p>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">Usage Type</p>
-                <p class="text-lg font-bold text-gray-900 dark:text-white uppercase">{{ unit.usage_type }}</p>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">Area (SF)</p>
-                <p class="text-lg text-gray-600 dark:text-gray-400">{{ unit.sf?.toLocaleString() || '-' }} sqft</p>
-              </div>
-              <div class="col-span-2 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">Description</p>
-                <p class="text-gray-600 dark:text-gray-400 leading-relaxed">{{ unit.description || 'No description provided.' }}</p>
+          <ClientOnly>
+            <div class="bg-white dark:bg-gray-900/80 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
+              <h3 class="text-xl font-bold mb-6 text-gray-900 dark:text-white">Details</h3>
+              <div class="grid grid-cols-2 gap-y-6">
+                <div>
+                  <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">Floor Plan</p>
+                  <p class="text-lg font-bold text-gray-900 dark:text-white">
+                    <NuxtLink 
+                      v-if="unit.floor_plan_id"
+                      :to="`/assets/floor-plans/${unit.floor_plan_id}`"
+                      class="text-primary-600 dark:text-primary-400 hover:text-primary-700 underline-offset-4 hover:underline transition-colors"
+                    >
+                      {{ unit.floor_plan_marketing_name }} ({{ unit.floor_plan_code }})
+                    </NuxtLink>
+                    <span v-else>{{ unit.floor_plan_marketing_name }} ({{ unit.floor_plan_code }})</span>
+                  </p>
+                </div>
+                <div>
+                  <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">Usage Type</p>
+                  <p class="text-lg font-bold text-gray-900 dark:text-white uppercase">{{ unit.usage_type }}</p>
+                </div>
+                <div>
+                  <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">Area (SF)</p>
+                  <p class="text-lg text-gray-600 dark:text-gray-400">{{ unit.sf?.toLocaleString() || '-' }} sqft</p>
+                </div>
+                <div class="col-span-2 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">Description</p>
+                  <p class="text-gray-600 dark:text-gray-400 leading-relaxed">{{ unit.description || 'No description provided.' }}</p>
+                </div>
               </div>
             </div>
-          </div>
+          </ClientOnly>
 
           <!-- Lease History -->
           <div class="bg-white dark:bg-gray-900/80 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
             <h3 class="text-xl font-bold mb-6 text-gray-900 dark:text-white">Lease History</h3>
-            <GenericDataTable
-              :data="leaseHistory || []"
-              :columns="leaseColumns"
-              :loading="leaseHistoryStatus === 'pending'"
-              row-key="id"
-              striped
-              clickable
-              @row-click="handleLeaseClick"
-            >
-              <template #cell-resident_name="{ value, row }">
-                <CellsLinkCell
-                  v-if="row.resident_id"
-                  :value="value"
-                  :to="`/office/residents/${row.resident_id}`"
-                />
-                <span v-else class="text-gray-900 dark:text-gray-100">{{ value || '-' }}</span>
-              </template>
-              <template #cell-start_date="{ value }">
-                <span class="text-sm text-gray-600 dark:text-gray-400">{{ value ? new Date(value).toLocaleDateString() : '-' }}</span>
-              </template>
-              <template #cell-end_date="{ value }">
-                <span class="text-sm text-gray-600 dark:text-gray-400">{{ value ? new Date(value).toLocaleDateString() : '-' }}</span>
-              </template>
-              <template #cell-lease_status="{ value, row }">
-                <UBadge size="sm" variant="subtle" :color="row.is_active ? 'primary' : (leaseStatusColors[value] || 'neutral')">
-                  {{ value }}
-                </UBadge>
-              </template>
-              <template #cell-rent_amount="{ value }">
-                <span class="font-bold text-primary-600 dark:text-primary-400">${{ value?.toLocaleString() || '0' }}</span>
-              </template>
-            </GenericDataTable>
+            <ClientOnly>
+              <GenericDataTable
+                :data="leaseHistory || []"
+                :columns="leaseColumns"
+                :loading="leaseHistoryStatus === 'pending'"
+                row-key="id"
+                striped
+                clickable
+                @row-click="handleLeaseClick"
+              >
+                <template #cell-resident_name="{ value, row }">
+                  <CellsLinkCell
+                    v-if="row.resident_id"
+                    :to="`/office/residents/${row.resident_id}`"
+                    :value="value"
+                  />
+                  <span v-else class="text-gray-900 dark:text-gray-100">{{ value || '-' }}</span>
+                </template>
+                <template #cell-start_date="{ value }">
+                  <span class="text-sm text-gray-600 dark:text-gray-400">{{ value ? new Date(value).toLocaleDateString() : '-' }}</span>
+                </template>
+                <template #cell-end_date="{ value }">
+                  <span class="text-sm text-gray-600 dark:text-gray-400">{{ value ? new Date(value).toLocaleDateString() : '-' }}</span>
+                </template>
+                <template #cell-lease_status="{ value, row }">
+                  <UBadge size="sm" variant="subtle" :color="row.is_active ? 'primary' : (leaseStatusColors[value] || 'neutral')">
+                    {{ value }}
+                  </UBadge>
+                </template>
+                <template #cell-rent_amount="{ value }">
+                  <span class="font-bold text-primary-600 dark:text-primary-400">${{ value?.toLocaleString() || '0' }}</span>
+                </template>
+              </GenericDataTable>
+            </ClientOnly>
           </div>
 
           <!-- Resident History -->
           <div class="bg-white dark:bg-gray-900/80 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
             <h3 class="text-xl font-bold mb-6 text-gray-900 dark:text-white">Resident History</h3>
-            <GenericDataTable
-              :data="residentHistory || []"
-              :columns="residentColumns"
-              :loading="residentHistoryStatus === 'pending'"
-              row-key="id"
-              striped
-              clickable
-              @row-click="handleResidentClick"
-            >
-              <template #cell-name="{ value, row }">
-                <CellsLinkCell
-                  :value="value"
-                  :to="`/office/residents/${row.id}`"
-                />
-              </template>
-              <template #cell-role="{ value }">
-                <UBadge size="sm" variant="subtle" :color="roleColors[value] || 'neutral'">
-                  {{ value }}
-                </UBadge>
-              </template>
-              <template #cell-tenancy_status="{ value }">
-                <UBadge size="sm" variant="subtle" :color="tenancyStatusColors[value] || 'neutral'">
-                  {{ value }}
-                </UBadge>
-              </template>
-              <template #cell-move_in_date="{ value }">
-                <span class="text-sm font-mono text-gray-600 dark:text-gray-400">{{ value ? new Date(value).toLocaleDateString() : '-' }}</span>
-              </template>
-              <template #cell-move_out_date="{ value }">
-                <span class="text-sm font-mono text-gray-600 dark:text-gray-400">{{ value ? new Date(value).toLocaleDateString() : '-' }}</span>
-              </template>
-            </GenericDataTable>
+            <ClientOnly>
+              <GenericDataTable
+                :data="residentHistory || []"
+                :columns="residentColumns"
+                :loading="residentHistoryStatus === 'pending'"
+                row-key="id"
+                striped
+                clickable
+                @row-click="handleResidentClick"
+              >
+                <template #cell-name="{ value, row }">
+                  <CellsLinkCell
+                    :to="`/office/residents/${row.id}`"
+                    :value="value"
+                  />
+                </template>
+                <template #cell-role="{ value }">
+                  <UBadge size="sm" variant="subtle" :color="roleColors[value] || 'neutral'">
+                    {{ value }}
+                  </UBadge>
+                </template>
+                <template #cell-tenancy_status="{ value }">
+                  <UBadge size="sm" variant="subtle" :color="tenancyStatusColors[value] || 'neutral'">
+                    {{ value }}
+                  </UBadge>
+                </template>
+                <template #cell-move_in_date="{ value }">
+                  <span class="text-sm font-mono text-gray-600 dark:text-gray-400">{{ value ? new Date(value).toLocaleDateString() : '-' }}</span>
+                </template>
+                <template #cell-move_out_date="{ value }">
+                  <span class="text-sm font-mono text-gray-600 dark:text-gray-400">{{ value ? new Date(value).toLocaleDateString() : '-' }}</span>
+                </template>
+              </GenericDataTable>
+            </ClientOnly>
           </div>
         </div>
 
         <div class="space-y-6">
-          <div 
-             v-if="imageUrl" 
-             class="rounded-3xl overflow-hidden border border-gray-200 dark:border-gray-800 cursor-zoom-in"
-             @click="showImageModal = true"
-          >
-            <NuxtImg :src="imageUrl" class="w-full h-auto object-cover hover:scale-105 transition-transform duration-500" placeholder />
+          <!-- Primary Unit Image -->
+          <div v-if="imageUrl" class="relative">
+            <ImageGalleryItem 
+              :src="imageUrl" 
+              :alt="unit.unit_name"
+            />
           </div>
 
-          <!-- Pricing & Amenities Breakdown -->
-          <div v-if="pricingBreakdown" class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
-            <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Pricing & Amenities</h3>
-            <AmenityPriceList
-              :base-rent="pricingBreakdown.baseRent"
-              :fixed-amenities="pricingBreakdown.fixedAmenities"
-              :market-rent="pricingBreakdown.marketRent"
-              :temp-amenities="pricingBreakdown.tempAmenities"
-              :offered-rent="pricingBreakdown.offeredRent"
+          <!-- Floor Plan Image -->
+          <div class="bg-white dark:bg-gray-900/80 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-gray-200/50 dark:shadow-none">
+            <h3 class="text-sm font-bold mb-4 px-2 text-gray-900 dark:text-white flex items-center gap-2">
+              <UIcon name="i-heroicons-map" class="text-gray-400" />
+              Floor Plan
+            </h3>
+            <div v-if="floorPlanImageUrl" class="relative">
+              <ImageGalleryItem 
+                :src="floorPlanImageUrl" 
+                :alt="unit.floor_plan_marketing_name || unit.floor_plan_code"
+                aspect-ratio="aspect-square p-4 bg-gray-50 dark:bg-gray-950 flex items-center justify-center rounded-2xl"
+              />
+            </div>
+            <div v-else class="aspect-square bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800">
+              <UIcon name="i-heroicons-photo" class="w-12 h-12 text-gray-300 mb-2" />
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">No Layout Asset</p>
+            </div>
+            
+            <div class="mt-4 px-2 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">
+               <span>
+                 {{ unit.sf?.toLocaleString() }} SF &middot; {{ unit.floor_plan_code }}
+               </span>
+            </div>
+          </div>
+
+          <!-- Unit Attachments (Photos & Files) - Desktop Sidebar -->
+          <div class="hidden md:block bg-white dark:bg-gray-900/80 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-gray-200/50 dark:shadow-none">
+            <AttachmentManager 
+              :record-id="unitId" 
+              record-type="unit" 
+              title="Unit Photos & Files"
             />
+          </div>
+
+          <!-- Amenities Breakdown -->
+          <div v-if="pricingBreakdown" class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Amenities</h3>
+            <ClientOnly>
+              <AmenitiesAmenityPriceList
+                :base-rent="pricingBreakdown.baseRent"
+                :fixed-amenities="pricingBreakdown.fixedAmenities"
+                :market-rent="pricingBreakdown.marketRent"
+                :temp-amenities="[]"
+                :offered-rent="pricingBreakdown.marketRent"
+              />
+            </ClientOnly>
           </div>
           
           <div class="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
@@ -399,8 +462,8 @@ const imageUrl = computed(() => {
     <ImageModal
       v-if="showImageModal"
       v-model="showImageModal"
-      :src="imageUrl"
-      :alt="unit?.unit_name"
+      :src="activeImage.src"
+      :alt="activeImage.alt"
     />
   </div>
 </template>

@@ -33,3 +33,7 @@ export interface UserPropertyAccess {
 export type UserPropertyRole = 'Owner' | 'Staff' | 'Manager' | 'RPM' | 'Asset'
 
 export const USER_ROLES: UserPropertyRole[] = ['Owner', 'Staff', 'Manager', 'RPM', 'Asset']
+
+export type Department = 'Leasing' | 'Maintenance' | 'Management'
+
+export const DEPARTMENTS: Department[] = ['Leasing', 'Maintenance', 'Management']

@@ -4,6 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
 import type { TableColumn } from '../../../../table/types'
 import ImageModal from '../../../../base/components/modals/ImageModal.vue'
+import ImageGalleryItem from '../../../../base/components/ImageGalleryItem.vue'
+import AttachmentManager from '../../../../base/components/AttachmentManager.vue'
+import { useImageActions } from '../../../../base/composables/useImageActions'
 
 definePageMeta({
   layout: 'dashboard'
@@ -14,7 +17,7 @@ const router = useRouter()
 const supabase = useSupabaseClient()
 const buildingId = route.params.id as string
 
-const showImageModal = ref(false)
+const { isModalOpen: showImageModal, activeImage, openImageModal } = useImageActions()
 
 // Fetch Building Details
 const { data: building, status, error } = await useAsyncData(`building-${buildingId}`, async () => {
@@ -112,12 +115,6 @@ const handleUnitClick = (row: any) => {
 const goBack = () => {
   router.push('/assets/buildings')
 }
-
-const openInNewTab = () => {
-  if (imageUrl.value) {
-    window.open(imageUrl.value, '_blank')
-  }
-}
 </script>
 
 <template>
@@ -174,6 +171,15 @@ const openInNewTab = () => {
           </div>
           <h1 class="text-4xl font-black text-gray-900 dark:text-white tracking-tight">{{ building.name }}</h1>
           <p class="text-xl text-gray-600 dark:text-gray-400 mt-2">{{ building.street_address }}</p>
+
+          <!-- Mobile-only Attachment Manager -->
+          <div class="mt-8 md:hidden">
+            <AttachmentManager 
+              :record-id="buildingId" 
+              record-type="building" 
+              title="Photos & Files"
+            />
+          </div>
         </div>
       </div>
 
@@ -231,27 +237,20 @@ const openInNewTab = () => {
         <div class="space-y-6">
           <!-- Building Photo Block -->
           <div v-if="imageUrl" class="bg-white dark:bg-gray-900/80 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
-            <div class="relative group cursor-zoom-in overflow-hidden rounded-2xl aspect-[4/3]" @click="showImageModal = true">
-              <NuxtImg 
-                :src="imageUrl" 
-                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                placeholder
-              />
-              <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                 <UIcon name="i-heroicons-magnifying-glass-plus" class="w-10 h-10 text-white" />
-              </div>
-            </div>
-            <div class="mt-4">
-              <UButton
-                color="neutral"
-                variant="ghost"
-                icon="i-heroicons-arrow-top-right-on-square"
-                label="Open Full Image"
-                block
-                class="font-bold text-gray-600 dark:text-gray-400"
-                @click="openInNewTab"
-              />
-            </div>
+            <ImageGalleryItem 
+              :src="imageUrl" 
+              :alt="building.name"
+              aspect-ratio="aspect-[4/3]"
+            />
+          </div>
+
+          <!-- Building Attachments - Desktop Sidebar -->
+          <div class="hidden md:block bg-white dark:bg-gray-900/80 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-gray-200/50 dark:shadow-none">
+            <AttachmentManager 
+              :record-id="buildingId" 
+              record-type="building" 
+              title="Building Photos & Files"
+            />
           </div>
 
           <div class="bg-primary-600 dark:bg-primary-700/80 rounded-3xl p-8 text-white shadow-xl shadow-primary-500/10">
@@ -282,8 +281,8 @@ const openInNewTab = () => {
     <ImageModal
       v-if="showImageModal"
       v-model="showImageModal"
-      :src="imageUrl"
-      :alt="building?.name"
+      :src="activeImage.src"
+      :alt="activeImage.alt"
     />
   </div>
 </template>

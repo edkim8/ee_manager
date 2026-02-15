@@ -4,6 +4,7 @@ import { useFetch } from '#imports'
 import { ROLES } from '../../constants/app-constants'
 import { usePropertyMutation } from '../../composables/mutations/usePropertyMutation'
 import { useConstantsMutation, type AppConstant } from '../../composables/mutations/useConstantsMutation'
+import SimpleModal from '../SimpleModal.vue'
 
 const props = defineProps<{
   title: string
@@ -229,117 +230,116 @@ const groupedConstants = computed(() => {
 </script>
 
 <template>
-  <UModal
+  <SimpleModal
+    :model-value="true"
     :title="props.title"
-    :close="{ onClick: () => { if (props.onClose) props.onClose(false); emit('close', false) } }"
     :description="props.category ? 'Manage rules and appearance' : 'System-wide constants and configurations'"
-    class="sm:max-w-3xl"
+    width="max-w-3xl"
+    @update:model-value="(val) => { if (!val) { if (props.onClose) props.onClose(false); emit('close', false) } }"
   >
-    <template #body>
-      <div class="h-[600px] overflow-y-auto pr-2">
-        <UTabs :items="tabs" class="w-full">
-          <!-- Properties Tab -->
-          <template #properties>
-            <div class="p-4">
-              <div v-if="loading" class="flex justify-center py-8">
-                <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin" />
-              </div>
-              <div v-else class="space-y-4">
-                <div v-for="prop in properties" :key="prop.id" class="flex items-end gap-2 p-2 border border-gray-100 dark:border-gray-800 rounded-lg">
-                   <UFormField label="Code" class="w-24">
-                     <UInput v-model="prop.code" />
-                   </UFormField>
-                   <UFormField label="Name" class="flex-1">
-                     <UInput v-model="prop.name" />
-                   </UFormField>
-                   <UButton 
-                     label="Save" 
-                     size="sm" 
-                     color="primary"
-                     :loading="prop.saving" 
-                     @click="handleSaveProperty(prop)"
-                     class="mb-1" 
-                   />
-                </div>
+    <div class="h-[600px] overflow-y-auto pr-2">
+      <UTabs :items="tabs" class="w-full">
+        <!-- Properties Tab -->
+        <template #properties>
+          <div class="p-4">
+            <div v-if="loading" class="flex justify-center py-8">
+              <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin" />
+            </div>
+            <div v-else class="space-y-4">
+              <div v-for="prop in properties" :key="prop.id" class="flex items-end gap-2 p-2 border border-gray-100 dark:border-gray-800 rounded-lg">
+                 <UFormField label="Code" class="w-24">
+                   <UInput v-model="prop.code" />
+                 </UFormField>
+                 <UFormField label="Name" class="flex-1">
+                   <UInput v-model="prop.name" />
+                 </UFormField>
+                 <UButton 
+                   label="Save" 
+                   size="sm" 
+                   color="primary"
+                   :loading="prop.saving" 
+                   @click="handleSaveProperty(prop)"
+                   class="mb-1" 
+                 />
               </div>
             </div>
-          </template>
+          </div>
+        </template>
 
-          <!-- Settings Tab -->
-          <template #settings>
-            <div class="p-4">
-              <div v-if="!props.propertyCode" class="mb-4">
-                <UFormField label="Select Property">
-                  <USelect 
-                    v-model="internalPropertyCode" 
-                    :options="properties.map(p => ({ label: p.name, value: p.code }))" 
-                    placeholder="Choose a property"
-                  />
-                </UFormField>
-              </div>
+        <!-- Settings Tab -->
+        <template #settings>
+          <div class="p-4">
+            <div v-if="!props.propertyCode" class="mb-4">
+              <UFormField label="Select Property">
+                <USelect 
+                  v-model="internalPropertyCode" 
+                  :options="properties.map(p => ({ label: p.name, value: p.code }))" 
+                  placeholder="Choose a property"
+                />
+              </UFormField>
+            </div>
 
-              <div v-if="constantsLoading" class="flex justify-center py-8">
-                <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin" />
-              </div>
-              <div v-else-if="propertyConstants.length === 0" class="text-center py-8 text-gray-500 italic">
-                No constants found.
-              </div>
-              <div v-else class="space-y-8">
-                <div v-for="(rows, catName) in groupedConstants" :key="catName">
-                  <h4 v-if="!props.category || catName.includes('Status')" class="text-sm font-bold uppercase tracking-wider text-primary-500 mb-4 border-b pb-1">
-                    {{ catName }}
-                  </h4>
-                  <div class="space-y-6">
-                    <div v-for="(row, idx) in rows" :key="idx">
-                      <!-- Paired Row Layout -->
-                      <div v-if="row.type === 'pair'" class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
-                        <div class="text-[10px] font-bold text-gray-400 mb-3 tracking-widest uppercase">{{ row.title }}</div>
-                        <div class="grid grid-cols-2 gap-8 items-start">
-                          <!-- Theme Column -->
-                          <div class="flex items-end gap-2">
-                             <UFormField :label="row.theme.label" :help="row.theme.help_text" class="flex-1">
-                               <UInput v-model="row.theme.displayValue" variant="outline" />
-                             </UFormField>
-                          </div>
-                          <!-- Rule Column -->
-                          <div class="flex items-end gap-2">
-                             <UFormField :label="row.rule.label" :help="row.rule.help_text" class="flex-1">
-                               <UInput v-model.number="row.rule.displayValue" type="number" variant="outline" />
-                             </UFormField>
-                          </div>
+            <div v-if="constantsLoading" class="flex justify-center py-8">
+              <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin" />
+            </div>
+            <div v-else-if="propertyConstants.length === 0" class="text-center py-8 text-gray-500 italic">
+              No constants found.
+            </div>
+            <div v-else class="space-y-8">
+              <div v-for="(rows, catName) in groupedConstants" :key="catName">
+                <h4 v-if="!props.category || catName.includes('Status')" class="text-sm font-bold uppercase tracking-wider text-primary-500 mb-4 border-b pb-1">
+                  {{ catName }}
+                </h4>
+                <div class="space-y-6">
+                  <div v-for="(row, idx) in rows" :key="idx">
+                    <!-- Paired Row Layout -->
+                    <div v-if="row.type === 'pair'" class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                      <div class="text-[10px] font-bold text-gray-400 mb-3 tracking-widest uppercase">{{ row.title }}</div>
+                      <div class="grid grid-cols-2 gap-8 items-start">
+                        <!-- Theme Column -->
+                        <div class="flex items-end gap-2">
+                           <UFormField :label="row.theme.label" :help="row.theme.help_text" class="flex-1">
+                             <UInput v-model="row.theme.displayValue" variant="outline" />
+                           </UFormField>
+                        </div>
+                        <!-- Rule Column -->
+                        <div class="flex items-end gap-2">
+                           <UFormField :label="row.rule.label" :help="row.rule.help_text" class="flex-1">
+                             <UInput v-model.number="row.rule.displayValue" type="number" variant="outline" />
+                           </UFormField>
                         </div>
                       </div>
+                    </div>
 
-                      <!-- Single Item Layout -->
-                      <div v-else class="flex items-end gap-2">
-                        <UFormField :label="row.item.label" :help="row.item.help_text" class="flex-1">
-                          <USwitch v-if="row.item.data_type === 'boolean'" v-model="row.item.displayValue" />
-                          <UInput v-else-if="row.item.data_type === 'number'" v-model.number="row.item.displayValue" type="number" :min="row.item.min_value" :max="row.item.max_value" />
-                          <UInput v-else v-model="row.item.displayValue" />
-                        </UFormField>
-                      </div>
+                    <!-- Single Item Layout -->
+                    <div v-else class="flex items-end gap-2">
+                      <UFormField :label="row.item.label" :help="row.item.help_text" class="flex-1">
+                        <USwitch v-if="row.item.data_type === 'boolean'" v-model="row.item.displayValue" />
+                        <UInput v-else-if="row.item.data_type === 'number'" v-model.number="row.item.displayValue" type="number" :min="row.item.min_value" :max="row.item.max_value" />
+                        <UInput v-else v-model="row.item.displayValue" />
+                      </UFormField>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </template>
-          
-          <!-- Roles Tab -->
-          <template #roles>
-            <div class="p-4 space-y-2">
-              <h4 class="text-sm font-medium mb-2">System Roles (Read Only)</h4>
-              <div class="grid grid-cols-1 gap-2">
-                <div v-for="role in ROLES" :key="role" class="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 flex items-center gap-2">
-                  <UIcon name="i-heroicons-check-badge" class="text-primary-500" />
-                  <span class="capitalize">{{ role }}</span>
-                </div>
+          </div>
+        </template>
+        
+        <!-- Roles Tab -->
+        <template #roles>
+          <div class="p-4 space-y-2">
+            <h4 class="text-sm font-medium mb-2">System Roles (Read Only)</h4>
+            <div class="grid grid-cols-1 gap-2">
+              <div v-for="role in ROLES" :key="role" class="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                <UIcon name="i-heroicons-check-badge" class="text-primary-500" />
+                <span class="capitalize">{{ role }}</span>
               </div>
             </div>
-          </template>
-        </UTabs>
-      </div>
-    </template>
+          </div>
+        </template>
+      </UTabs>
+    </div>
 
     <template #footer>
       <div class="flex justify-end gap-3 px-4 py-3">
@@ -358,5 +358,5 @@ const groupedConstants = computed(() => {
         />
       </div>
     </template>
-  </UModal>
+  </SimpleModal>
 </template>

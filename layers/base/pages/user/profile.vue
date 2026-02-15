@@ -22,6 +22,8 @@ const confirmPassword = ref('')
 const updatingPassword = ref(false)
 
 const profile = computed(() => userContext.value?.profile || {
+  first_name: '',
+  last_name: '',
   full_name: user.value?.email?.split('@')[0] || 'User',
   department: 'External'
 })
@@ -33,6 +35,9 @@ const access = computed(() => userContext.value?.access || {
 
 // Compute initials
 const userInitials = computed(() => {
+  if (profile.value.first_name && profile.value.last_name) {
+    return (profile.value.first_name.charAt(0) + profile.value.last_name.charAt(0)).toUpperCase()
+  }
   const parts = profile.value.full_name?.split(' ') || []
   if (parts.length >= 2) {
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
@@ -101,7 +106,12 @@ async function handlePasswordUpdate() {
       />
       <div>
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-          {{ profile.full_name }}
+          <template v-if="profile.first_name || profile.last_name">
+            {{ profile.first_name }} {{ profile.last_name }}
+          </template>
+          <template v-else>
+            {{ profile.full_name }}
+          </template>
         </h1>
         <div class="flex items-center gap-2 mt-1">
           <UBadge v-if="access.is_super_admin" color="primary" variant="subtle">Super Admin</UBadge>
@@ -144,23 +154,23 @@ async function handlePasswordUpdate() {
         </h2>
         <UCard>
           <form @submit.prevent="handlePasswordUpdate" class="space-y-4">
-            <UFormGroup label="New Password" help="At least 6 characters.">
+            <UFormField label="New Password" help="At least 6 characters.">
               <UInput
                 v-model="newPassword"
                 type="password"
                 placeholder="••••••••"
                 icon="i-heroicons-key"
               />
-            </UFormGroup>
+            </UFormField>
             
-            <UFormGroup label="Confirm Password">
+            <UFormField label="Confirm Password">
               <UInput
                 v-model="confirmPassword"
                 type="password"
                 placeholder="••••••••"
                 icon="i-heroicons-check-badge"
               />
-            </UFormGroup>
+            </UFormField>
 
             <UButton
               type="submit"

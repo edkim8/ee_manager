@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
 import ImageModal from '../../../../base/components/modals/ImageModal.vue'
+import ImageGalleryItem from '../../../../base/components/ImageGalleryItem.vue'
+import { useImageActions } from '../../../../base/composables/useImageActions'
 
 definePageMeta({
   layout: 'dashboard'
@@ -13,7 +15,7 @@ const router = useRouter()
 const supabase = useSupabaseClient()
 const availabilityId = route.params.id as string
 
-const showImageModal = ref(false)
+const { isModalOpen: showImageModal, activeImage, openImageModal } = useImageActions()
 
 // Fetch Availability details
 const { data: availability, status, error } = await useAsyncData(`availability-${availabilityId}`, async () => {
@@ -250,26 +252,28 @@ const handleSolve = async () => {
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2 space-y-8">
           <!-- Summary Metrics -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm text-center group transition-transform hover:-translate-y-1">
-              <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Vacancy</p>
-              <p class="text-3xl font-black text-gray-900 dark:text-white leading-none">{{ availability.vacant_days }}d</p>
+          <ClientOnly>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm text-center group transition-transform hover:-translate-y-1">
+                <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Vacancy</p>
+                <p class="text-3xl font-black text-gray-900 dark:text-white leading-none">{{ availability.vacant_days }}d</p>
+              </div>
+               <div class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm text-center group transition-transform hover:-translate-y-1">
+                <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Turnover</p>
+                <p class="text-3xl font-black text-gray-900 dark:text-white leading-none">{{ availability.turnover_days }}d</p>
+              </div>
+               <div class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm text-center group transition-transform hover:-translate-y-1">
+                <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Area (SF)</p>
+                <p class="text-3xl font-black text-gray-900 dark:text-white leading-none">{{ availability.sf?.toLocaleString() }}</p>
+              </div>
+               <div class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm text-center group transition-transform hover:-translate-y-1">
+                <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Available</p>
+                <p class="text-xl font-black text-primary-600 dark:text-primary-400 leading-none mt-1">
+                  {{ availability.available_date ? new Date(availability.available_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric'}) : 'Ready' }}
+                </p>
+              </div>
             </div>
-             <div class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm text-center group transition-transform hover:-translate-y-1">
-              <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Turnover</p>
-              <p class="text-3xl font-black text-gray-900 dark:text-white leading-none">{{ availability.turnover_days }}d</p>
-            </div>
-             <div class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm text-center group transition-transform hover:-translate-y-1">
-              <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Area (SF)</p>
-              <p class="text-3xl font-black text-gray-900 dark:text-white leading-none">{{ availability.sf?.toLocaleString() }}</p>
-            </div>
-             <div class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm text-center group transition-transform hover:-translate-y-1">
-              <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Available</p>
-              <p class="text-xl font-black text-primary-600 dark:text-primary-400 leading-none mt-1">
-                {{ availability.available_date ? new Date(availability.available_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric'}) : 'Ready' }}
-              </p>
-            </div>
-          </div>
+          </ClientOnly>
 
           <!-- Leasing Pipeline Progress -->
           <div class="bg-white dark:bg-gray-900/80 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
@@ -283,49 +287,41 @@ const handleSolve = async () => {
                 </UBadge>
              </div>
              
-             <div v-if="applications?.length" class="space-y-6">
-                <div v-for="(app, idx) in applications" :key="app.id" class="relative pl-8 pb-6 border-l-2 border-gray-100 dark:border-gray-800 last:pb-0">
-                   <!-- Timeline Bullet -->
-                   <div class="absolute left-[-9px] top-0 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900" :class="idx === 0 ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-700'"></div>
-                   
-                   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 group transition-colors hover:border-primary-500/50">
-                      <div>
-                         <p class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            {{ app.applicant_name }}
-                            <UBadge size="xs" :color="getAppStatusColor(app.status)" variant="soft">{{ app.status }}</UBadge>
-                         </p>
-                         <p class="text-xs text-gray-500 mt-1">Applied: {{ new Date(app.application_date).toLocaleDateString() }} &middot; Agent: {{ app.agent || 'Not assigned' }}</p>
-                      </div>
-                      <div v-if="app.is_overdue" class="flex items-center gap-1.5 px-3 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-lg text-xs font-bold">
-                         <UIcon name="i-heroicons-clock" class="w-4 h-4" />
-                         Overdue Task
-                      </div>
-                   </div>
-                </div>
-             </div>
-             <div v-else class="text-center py-12 bg-gray-50/50 dark:bg-gray-950/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
-                <UIcon name="i-heroicons-user-plus" class="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-                <p class="text-gray-500 dark:text-gray-400 font-medium">No active applications in the pipeline.</p>
-             </div>
+             <ClientOnly>
+               <div v-if="applications?.length" class="space-y-6">
+                  <div v-for="(app, idx) in applications" :key="app.id" class="relative pl-8 pb-6 border-l-2 border-gray-100 dark:border-gray-800 last:pb-0">
+                     <!-- Timeline Bullet -->
+                     <div class="absolute left-[-9px] top-0 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900" :class="idx === 0 ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-700'"></div>
+                     
+                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 group transition-colors hover:border-primary-500/50">
+                        <div>
+                           <p class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                              {{ app.applicant_name }}
+                              <UBadge size="xs" :color="getAppStatusColor(app.status)" variant="soft">{{ app.status }}</UBadge>
+                           </p>
+                           <p class="text-xs text-gray-500 mt-1">Applied: {{ new Date(app.application_date).toLocaleDateString() }} &middot; Agent: {{ app.agent || 'Not assigned' }}</p>
+                        </div>
+                        <div v-if="app.is_overdue" class="flex items-center gap-1.5 px-3 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-lg text-xs font-bold">
+                           <UIcon name="i-heroicons-clock" class="w-4 h-4" />
+                           Overdue Task
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div v-else class="text-center py-12 bg-gray-50/50 dark:bg-gray-950/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
+                  <UIcon name="i-heroicons-user-plus" class="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+                  <p class="text-gray-500 dark:text-gray-400 font-medium">No active applications in the pipeline.</p>
+               </div>
+             </ClientOnly>
           </div>
 
           <!-- Unit Layout / Floor Plan -->
-          <div v-if="imageUrl" class="bg-white dark:bg-gray-950 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden group cursor-zoom-in" @click="showImageModal = true">
-            <div class="aspect-video relative rounded-2xl overflow-hidden bg-gray-50 dark:bg-gray-900/30 flex items-center justify-center p-8">
-                <NuxtImg 
-                :src="imageUrl" 
-                class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-700" 
-                :alt="availability.floor_plan_name"
-                placeholder 
-                />
-                <div class="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-gray-900/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-end">
-                   <div>
-                      <p class="text-white text-lg font-black tracking-tight">{{ availability.floor_plan_name }}</p>
-                      <p class="text-white/60 text-xs font-bold uppercase tracking-widest">Layout View</p>
-                   </div>
-                   <UIcon name="i-heroicons-magnifying-glass-plus" class="text-white w-8 h-8" />
-                </div>
-            </div>
+          <div v-if="imageUrl" class="bg-white dark:bg-gray-950 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden group">
+            <ImageGalleryItem 
+              :src="imageUrl" 
+              :alt="availability.floor_plan_name"
+              aspect-ratio="aspect-video p-8 bg-gray-50 dark:bg-gray-900/30 flex items-center justify-center rounded-2xl"
+            />
           </div>
         </div>
 
@@ -375,141 +371,147 @@ const handleSolve = async () => {
             </div>
             
             <div class="mt-8 pt-8 border-t border-white/10">
-              <p class="text-[10px] font-mono opacity-30 leading-relaxed italic">
-                Inventory refreshed: {{ new Date().toLocaleDateString() }}<br>
-                Source: Yardi Availabilities
-              </p>
+              <ClientOnly>
+                <p class="text-[10px] font-mono opacity-30 leading-relaxed italic">
+                  Inventory refreshed: {{ new Date().toLocaleDateString() }}<br>
+                  Source: Yardi Availabilities
+                </p>
+              </ClientOnly>
             </div>
           </div>
 
-          <!-- Pricing & Amenities Breakdown -->
+          <!-- Amenities Breakdown -->
           <div v-if="pricingBreakdown" class="bg-white dark:bg-gray-900/80 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
-            <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Pricing & Amenities</h3>
-            <AmenityPriceList
-              :base-rent="pricingBreakdown.baseRent"
-              :fixed-amenities="pricingBreakdown.fixedAmenities"
-              :market-rent="pricingBreakdown.marketRent"
-              :temp-amenities="pricingBreakdown.tempAmenities"
-              :offered-rent="pricingBreakdown.offeredRent"
-            />
+            <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Amenities</h3>
+            <ClientOnly>
+              <AmenitiesAmenityPriceList
+                :base-rent="pricingBreakdown.baseRent"
+                :fixed-amenities="pricingBreakdown.fixedAmenities"
+                :market-rent="pricingBreakdown.marketRent"
+                :temp-amenities="[]"
+                :offered-rent="pricingBreakdown.marketRent"
+              />
+            </ClientOnly>
           </div>
 
           <!-- Lease Concessions -->
-          <div class="bg-emerald-50 dark:bg-emerald-900/10 p-8 rounded-3xl border border-emerald-100 dark:border-emerald-800/50">
-            <div class="flex items-center justify-between mb-6">
-              <div>
-                <h4 class="text-xs font-black text-emerald-900 dark:text-emerald-400 uppercase tracking-widest font-mono">Lease Concessions</h4>
-                <p class="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1 leading-tight uppercase font-bold">Track upfront deals & free rent</p>
+          <ClientOnly>
+            <div class="bg-emerald-50 dark:bg-emerald-900/10 p-8 rounded-3xl border border-emerald-100 dark:border-emerald-800/50">
+              <div class="flex items-center justify-between mb-6">
+                <div>
+                  <h4 class="text-xs font-black text-emerald-900 dark:text-emerald-400 uppercase tracking-widest font-mono">Lease Concessions</h4>
+                  <p class="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1 leading-tight uppercase font-bold">Track upfront deals & free rent</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-bold mb-1">Concession %</p>
+                  <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                    {{ concessionPercentages.display }}
+                  </p>
+                  <p class="text-[9px] text-emerald-600/60 dark:text-emerald-400/60 uppercase font-bold mt-0.5">
+                    C% / A% (Amortized)
+                  </p>
+                </div>
               </div>
-              <div class="text-right">
-                <p class="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-bold mb-1">Concession %</p>
-                <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                  {{ concessionPercentages.display }}
-                </p>
-                <p class="text-[9px] text-emerald-600/60 dark:text-emerald-400/60 uppercase font-bold mt-0.5">
-                  C% / A% (Amortized)
-                </p>
+  
+              <div class="space-y-4 mb-6">
+                <!-- Upfront Concession -->
+                <UFormGroup label="Upfront Concession ($)" help="One-time dollar concession (e.g., $500 off first month)">
+                  <UInput
+                    v-model="concessionUpfront"
+                    type="number"
+                    icon="i-heroicons-currency-dollar"
+                    size="lg"
+                    placeholder="0"
+                    :min="0"
+                  />
+                </UFormGroup>
+  
+                <!-- Free Rent Period -->
+                <UFormGroup
+                  label="Free Rent Period (days)"
+                  :help="`Currently: ${formatFreeDays(concessionFreeDays)} • Quick values: 7 days = 1 week, 14 days = 2 weeks, 30 days = 1 month`"
+                >
+                  <UInput
+                    v-model="concessionFreeDays"
+                    type="number"
+                    icon="i-heroicons-calendar-days"
+                    size="lg"
+                    placeholder="0"
+                    :min="0"
+                  />
+                </UFormGroup>
+  
+                <!-- Quick Preset Buttons -->
+                <div class="flex flex-wrap gap-2">
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    variant="outline"
+                    @click="concessionFreeDays = 7"
+                  >
+                    1 Week
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    variant="outline"
+                    @click="concessionFreeDays = 14"
+                  >
+                    2 Weeks
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    variant="outline"
+                    @click="concessionFreeDays = 30"
+                  >
+                    1 Month
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    variant="outline"
+                    @click="concessionFreeDays = 60"
+                  >
+                    2 Months
+                  </UButton>
+                </div>
               </div>
+  
+              <!-- Concession Breakdown -->
+              <div class="bg-white/50 dark:bg-gray-900/30 p-4 rounded-xl border border-emerald-200/50 dark:border-emerald-800/30 space-y-2 text-sm mb-4">
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600 dark:text-gray-400">Amenity Concessions (C%)</span>
+                  <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ concessionPercentages.amenityPct }}%</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600 dark:text-gray-400">Upfront (Monthly Amortized)</span>
+                  <span class="font-medium text-gray-900 dark:text-white">${{ (concessionUpfront / 12).toFixed(2) }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600 dark:text-gray-400">Free Rent (Monthly Value)</span>
+                  <span class="font-medium text-gray-900 dark:text-white">${{ availability?.rent_market ? ((availability.rent_market * concessionFreeDays / 365)).toFixed(2) : '0.00' }}</span>
+                </div>
+                <div class="flex justify-between items-center pt-2 border-t border-emerald-200/50 dark:border-emerald-800/30">
+                  <span class="font-bold text-gray-900 dark:text-white">Total Concessions (A%)</span>
+                  <span class="font-black text-emerald-600 dark:text-emerald-400">{{ concessionPercentages.totalPct }}%</span>
+                </div>
+              </div>
+  
+              <!-- Save Button -->
+              <UButton
+                block
+                color="emerald"
+                variant="solid"
+                label="Save Concessions"
+                icon="i-heroicons-check-circle"
+                size="lg"
+                :loading="isSavingConcession"
+                @click="saveConcessions"
+                class="font-bold rounded-2xl shadow-lg shadow-emerald-500/20"
+              />
             </div>
-
-            <div class="space-y-4 mb-6">
-              <!-- Upfront Concession -->
-              <UFormGroup label="Upfront Concession ($)" help="One-time dollar concession (e.g., $500 off first month)">
-                <UInput
-                  v-model="concessionUpfront"
-                  type="number"
-                  icon="i-heroicons-currency-dollar"
-                  size="lg"
-                  placeholder="0"
-                  :min="0"
-                />
-              </UFormGroup>
-
-              <!-- Free Rent Period -->
-              <UFormGroup
-                label="Free Rent Period (days)"
-                :help="`Currently: ${formatFreeDays(concessionFreeDays)} • Quick values: 7 days = 1 week, 14 days = 2 weeks, 30 days = 1 month`"
-              >
-                <UInput
-                  v-model="concessionFreeDays"
-                  type="number"
-                  icon="i-heroicons-calendar-days"
-                  size="lg"
-                  placeholder="0"
-                  :min="0"
-                />
-              </UFormGroup>
-
-              <!-- Quick Preset Buttons -->
-              <div class="flex flex-wrap gap-2">
-                <UButton
-                  size="xs"
-                  color="neutral"
-                  variant="outline"
-                  @click="concessionFreeDays = 7"
-                >
-                  1 Week
-                </UButton>
-                <UButton
-                  size="xs"
-                  color="neutral"
-                  variant="outline"
-                  @click="concessionFreeDays = 14"
-                >
-                  2 Weeks
-                </UButton>
-                <UButton
-                  size="xs"
-                  color="neutral"
-                  variant="outline"
-                  @click="concessionFreeDays = 30"
-                >
-                  1 Month
-                </UButton>
-                <UButton
-                  size="xs"
-                  color="neutral"
-                  variant="outline"
-                  @click="concessionFreeDays = 60"
-                >
-                  2 Months
-                </UButton>
-              </div>
-            </div>
-
-            <!-- Concession Breakdown -->
-            <div class="bg-white/50 dark:bg-gray-900/30 p-4 rounded-xl border border-emerald-200/50 dark:border-emerald-800/30 space-y-2 text-sm mb-4">
-              <div class="flex justify-between items-center">
-                <span class="text-gray-600 dark:text-gray-400">Amenity Concessions (C%)</span>
-                <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ concessionPercentages.amenityPct }}%</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-gray-600 dark:text-gray-400">Upfront (Monthly Amortized)</span>
-                <span class="font-medium text-gray-900 dark:text-white">${{ (concessionUpfront / 12).toFixed(2) }}</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-gray-600 dark:text-gray-400">Free Rent (Monthly Value)</span>
-                <span class="font-medium text-gray-900 dark:text-white">${{ availability?.rent_market ? ((availability.rent_market * concessionFreeDays / 365)).toFixed(2) : '0.00' }}</span>
-              </div>
-              <div class="flex justify-between items-center pt-2 border-t border-emerald-200/50 dark:border-emerald-800/30">
-                <span class="font-bold text-gray-900 dark:text-white">Total Concessions (A%)</span>
-                <span class="font-black text-emerald-600 dark:text-emerald-400">{{ concessionPercentages.totalPct }}%</span>
-              </div>
-            </div>
-
-            <!-- Save Button -->
-            <UButton
-              block
-              color="emerald"
-              variant="solid"
-              label="Save Concessions"
-              icon="i-heroicons-check-circle"
-              size="lg"
-              :loading="isSavingConcession"
-              @click="saveConcessions"
-              class="font-bold rounded-2xl shadow-lg shadow-emerald-500/20"
-            />
-          </div>
+          </ClientOnly>
 
           <!-- Rent Solver Assistant -->
           <div v-if="pricingBreakdown" class="bg-indigo-50 dark:bg-indigo-900/10 p-8 rounded-3xl border border-indigo-100 dark:border-indigo-800/50">
@@ -571,8 +573,8 @@ const handleSolve = async () => {
     <ImageModal
       v-if="showImageModal"
       v-model="showImageModal"
-      :src="imageUrl"
-      :alt="availability?.unit_name"
+      :src="activeImage.src"
+      :alt="activeImage.alt"
     />
   </div>
 </template>

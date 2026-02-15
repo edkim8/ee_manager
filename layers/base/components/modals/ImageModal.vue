@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import SimpleModal from '../SimpleModal.vue'
 
 const props = defineProps<{
   src?: string
@@ -18,38 +19,30 @@ const isOpen = computed({
 </script>
 
 <template>
-  <UModal v-model="isOpen" fullscreen>
-    <div class="h-full w-full bg-black/95 relative flex items-center justify-center p-4">
-      <!-- Close Button -->
-      <UButton
-        color="white"
-        variant="ghost"
-        icon="i-heroicons-x-mark"
-        size="xl"
-        class="absolute top-4 right-4 z-50 rounded-full hover:bg-white/10"
-        @click="isOpen = false"
-      />
-
-      <!-- Image -->
-      <div class="max-w-7xl max-h-full w-full h-full flex items-center justify-center overflow-auto p-4 md:p-12">
+  <SimpleModal 
+    v-model="isOpen" 
+    :title="alt || 'Image View'"
+    width="w-full max-w-[95vw] md:min-w-[800px] md:w-auto"
+    no-padding
+  >
+    <div class="relative flex items-center justify-center bg-gray-50 dark:bg-gray-950 overflow-hidden min-h-[400px]">
+      <!-- Optimized Image -->
+      <div class="relative z-[105] flex items-center justify-center p-0 w-full">
         <NuxtImg
           v-if="src"
           :src="src"
           :alt="alt || 'Enlarged view'"
-          class="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
+          format="webp"
+          quality="100"
+          loading="eager"
+          class="w-full md:w-auto md:min-w-[800px] max-w-full max-h-[80vh] object-contain shadow-sm animate-in zoom-in duration-300"
           placeholder
         />
-        <div v-else class="text-white flex flex-col items-center gap-4">
+        <div v-else class="p-24 text-gray-400 flex flex-col items-center gap-4">
           <UIcon name="i-heroicons-photo" class="w-16 h-16 opacity-50" />
           <p class="text-xl font-bold opacity-50 uppercase tracking-widest">Image Missing</p>
         </div>
       </div>
-
-      <!-- Backdrop Click to Close (optional overlay) -->
-      <div 
-        class="absolute inset-0 z-0" 
-        @click="isOpen = false"
-      />
     </div>
-  </UModal>
+  </SimpleModal>
 </template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
+import { useSupabaseClient, useAsyncData, definePageMeta, useState } from '#imports'
 // Import SimpleModal instead of UModal
 import SimpleModal from '../../../../base/components/SimpleModal.vue'
 // Fix relative paths: from layers/ops/pages/assets/locations/ to layers/ops/components/map/
@@ -24,7 +24,7 @@ const { activeProperty: globalActiveProperty } = usePropertyState()
 const showAddModal = ref(false)
 const showMapModal = ref(false)
 const showNotesModal = ref(false)
-const locations = ref<any[]>([])
+const locations = useState<any[]>('locations-list', () => [])
 
 // Fetch Properties for Selector (We need full details like Lat/Lng which might not be in the lightweight global options)
 const { data: properties } = await useAsyncData('locations-page-properties', async () => {
@@ -52,20 +52,21 @@ const selectedProperty = computed({
   }
 })
 
-// Fetch Locations when property changes
-const loadLocations = async () => {
-  if (!globalActiveProperty.value) return
-  try {
-    locations.value = await fetchLocations(globalActiveProperty.value)
-  } catch (e) {
-    console.error('Error fetching locations:', e)
-  }
-}
+// Use async data to fetch locations on SSR if we have an active property
+const { refresh: refreshLocations } = await useAsyncData('locations-fetch', async () => {
+    if (!globalActiveProperty.value) return []
+    const data = await fetchLocations(globalActiveProperty.value)
+    locations.value = data
+    return data
+}, {
+    watch: [globalActiveProperty],
+    immediate: true
+})
 
-// Watch global selection
-watch(globalActiveProperty, (newVal) => {
-  if (newVal) loadLocations()
-}, { immediate: true })
+// Update loadLocations to use refresh
+const loadLocations = async () => {
+    await refreshLocations()
+}
 
 // Prevent body scroll when fullscreen map modal is open
 watch(showMapModal, (isOpen) => {
@@ -99,7 +100,7 @@ const viewNotes = () => {
 
 const handleViewNotesFromMap = (locationId: string) => {
     // Find the location
-    const location = locations.value.find(loc => loc.id === locationId)
+    const location = locations.value.find((loc: any) => loc.id === locationId)
     if (location) {
         selectedLocation.value = location
         showMapModal.value = false
@@ -165,7 +166,7 @@ const getColorForType = (type: string) => {
 const categorySummary = computed(() => {
     const summary: Record<string, { count: number; label: string; color: string; icon: string }> = {}
 
-    locations.value.forEach(loc => {
+    locations.value.forEach((loc: any) => {
         const type = loc.icon_type
         if (!summary[type]) {
             summary[type] = {

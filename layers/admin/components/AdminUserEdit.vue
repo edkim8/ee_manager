@@ -4,8 +4,8 @@ import { useSupabaseClient, useToast } from '#imports'
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { PROPERTY_LIST, getPropertyName } from '../../base/constants/properties'
-import { USER_ROLES } from '../types/admin'
-import type { AdminUser, UserPropertyAccess, UserPropertyRole } from '../types/admin'
+import { USER_ROLES, DEPARTMENTS } from '../types/admin'
+import type { AdminUser, UserPropertyAccess, UserPropertyRole, Department } from '../types/admin'
 
 const supabase = useSupabaseClient()
 const toast = useToast()
@@ -29,6 +29,11 @@ const roleOptions = USER_ROLES.map(r => ({
   value: r
 }))
 
+const departmentOptions = DEPARTMENTS.map(d => ({
+  label: d,
+  value: d
+}))
+
 // State
 const state = reactive({
   isLoading: false,
@@ -44,6 +49,7 @@ const state = reactive({
 const editSchema = z.object({
   first_name: z.string().optional(),
   last_name: z.string().optional(),
+  department: z.string().optional().nullable(),
   is_super_admin: z.boolean().default(false)
 })
 
@@ -52,6 +58,7 @@ type EditSchema = z.output<typeof editSchema>
 const editForm = reactive<EditSchema>({
   first_name: '',
   last_name: '',
+  department: '',
   is_super_admin: false
 })
 
@@ -143,6 +150,7 @@ function selectUser(user: AdminUser) {
   state.selectedUser = user
   editForm.first_name = user.first_name || ''
   editForm.last_name = user.last_name || ''
+  editForm.department = user.department || ''
   editForm.is_super_admin = user.is_super_admin || false
   fetchPropertyAccess(user.id)
 }
@@ -177,6 +185,7 @@ async function onUpdateProfile(event: FormSubmitEvent<EditSchema>) {
       .update({
         first_name: event.data.first_name || null,
         last_name: event.data.last_name || null,
+        department: event.data.department || null,
         is_super_admin: event.data.is_super_admin
       })
       .eq('id', state.selectedUser.id)
@@ -340,6 +349,15 @@ const accessRows = computed(() => {
               />
             </UFormField>
           </div>
+
+          <UFormField label="Department" name="department">
+            <USelectMenu
+              v-model="editForm.department"
+              :items="departmentOptions"
+              placeholder="Select department"
+              value-key="value"
+            />
+          </UFormField>
 
           <div class="flex items-center justify-between p-4 bg-primary-50/50 dark:bg-primary-950/20 border border-primary-100 dark:border-primary-900/30 rounded-xl">
             <div class="space-y-0.5">

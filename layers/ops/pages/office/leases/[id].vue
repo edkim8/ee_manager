@@ -3,6 +3,9 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
 import type { TableColumn } from '../../../../table/types'
+import ImageModal from '../../../../base/components/modals/ImageModal.vue'
+import ImageGalleryItem from '../../../../base/components/ImageGalleryItem.vue'
+import { useImageActions } from '../../../../base/composables/useImageActions'
 
 definePageMeta({
   layout: 'dashboard'
@@ -12,6 +15,8 @@ const route = useRoute()
 const router = useRouter()
 const supabase = useSupabaseClient()
 const leaseId = route.params.id as string
+
+const { isModalOpen: showImageModal, activeImage, openImageModal } = useImageActions()
 
 // Fetch Lease Details (Main Record)
 const { data: lease, status, error } = await useAsyncData(`lease-${leaseId}`, async () => {
@@ -200,10 +205,14 @@ const leaseStatusColors: Record<string, string> = {
               striped
             >
               <template #cell-start_date="{ value }">
-                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ new Date(value).toLocaleDateString() }}</span>
+                <ClientOnly>
+                  <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ new Date(value).toLocaleDateString() }}</span>
+                </ClientOnly>
               </template>
               <template #cell-end_date="{ value }">
-                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ new Date(value).toLocaleDateString() }}</span>
+                <ClientOnly>
+                  <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ new Date(value).toLocaleDateString() }}</span>
+                </ClientOnly>
               </template>
               <template #cell-rent_amount="{ value }">
                 <span class="font-bold text-gray-900 dark:text-white">${{ value?.toLocaleString() }}</span>
@@ -222,8 +231,12 @@ const leaseStatusColors: Record<string, string> = {
           <div v-if="unitSummary" class="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-800">
             <h4 class="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6 font-mono">Unit Summary</h4>
             <div class="space-y-6">
-               <div v-if="unitSummary.primary_image_url" class="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 aspect-video bg-white dark:bg-gray-900">
-                  <NuxtImg :src="unitSummary.primary_image_url" class="w-full h-full object-cover" />
+               <div v-if="unitSummary.primary_image_url" class="relative">
+                 <ImageGalleryItem 
+                   :src="unitSummary.primary_image_url" 
+                   :alt="unitSummary.unit_name"
+                   aspect-ratio="aspect-video"
+                 />
                </div>
                <div class="grid grid-cols-2 gap-4">
                   <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
@@ -258,7 +271,9 @@ const leaseStatusColors: Record<string, string> = {
               </div>
               <div class="flex justify-between items-center py-2 border-b border-white/5 opacity-80">
                 <span>Created At</span>
-                <span>{{ lease.created_at ? new Date(lease.created_at).toLocaleDateString() : '-' }}</span>
+                <ClientOnly>
+                  <span>{{ lease.created_at ? new Date(lease.created_at).toLocaleDateString() : '-' }}</span>
+                </ClientOnly>
               </div>
             </div>
             <div class="mt-8 pt-8 border-t border-white/10 italic text-[10px] opacity-40">
@@ -268,5 +283,12 @@ const leaseStatusColors: Record<string, string> = {
         </div>
       </div>
     </div>
+    <!-- Reusable Image Modal -->
+    <ImageModal
+      v-if="showImageModal"
+      v-model="showImageModal"
+      :src="activeImage.src"
+      :alt="activeImage.alt"
+    />
   </div>
 </template>
