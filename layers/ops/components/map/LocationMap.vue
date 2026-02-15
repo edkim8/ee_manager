@@ -23,7 +23,9 @@ const emit = defineEmits<{
 
 const mapDiv = ref<HTMLElement | null>(null)
 let map: google.maps.Map | null = null
-let markers: google.maps.Marker[] = []
+let AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement | null = null
+let PinElement: typeof google.maps.marker.PinElement | null = null
+let markers: any[] = []
 
 const config = useRuntimeConfig()
 
@@ -51,51 +53,22 @@ const getIconConfig = (type: string) => {
   return configs[type] || configs.general
 }
 
-// Create custom SVG marker icon
-const createCustomIcon = (type: string): google.maps.Icon => {
+// Create custom PinElement for Advanced Markers
+const createCustomPin = (type: string) => {
+  if (!PinElement) return null
+  
   const config = getIconConfig(type)
-
-  // Create SVG with custom styling
-  const svg = `
-    <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <filter id="shadow-${type}" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
-          <feOffset dx="0" dy="2" result="offsetblur"/>
-          <feComponentTransfer>
-            <feFuncA type="linear" slope="0.3"/>
-          </feComponentTransfer>
-          <feMerge>
-            <feMergeNode/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-      <!-- Pin shape -->
-      <path d="M20 0 C 8.954 0 0 8.954 0 20 C 0 30 20 50 20 50 S 40 30 40 20 C 40 8.954 31.046 0 20 0 Z"
-            fill="${config.color}"
-            filter="url(#shadow-${type})"
-            stroke="#FFF"
-            stroke-width="2"/>
-      <!-- White circle for symbol -->
-      <circle cx="20" cy="18" r="10" fill="white" opacity="0.95"/>
-      <!-- Symbol text -->
-      <text x="20" y="24"
-            font-size="14"
-            text-anchor="middle"
-            fill="${config.color}"
-            font-weight="bold">${config.symbol}</text>
-    </svg>
-  `
-
-  // Convert SVG to data URL
-  const encodedSvg = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg)
-
-  return {
-    url: encodedSvg,
-    scaledSize: new google.maps.Size(40, 50),
-    anchor: new google.maps.Point(20, 50)
-  }
+  
+  // Advanced Markers use PinElement for easy styling or raw DOM elements
+  const pin = new PinElement({
+    background: config.color,
+    borderColor: '#FFF',
+    glyph: config.symbol,
+    glyphColor: 'white',
+    scale: 1.2
+  })
+  
+  return pin.element
 }
 
 const initMap = async () => {
@@ -120,7 +93,12 @@ const initMap = async () => {
   try {
     console.log('Importing maps library...')
     const { Map } = await importLibrary('maps') as google.maps.MapsLibrary
-    console.log('Maps library imported. Creating map...')
+    const markerLib = await importLibrary('marker') as google.maps.MarkerLibrary
+    
+    AdvancedMarkerElement = markerLib.AdvancedMarkerElement
+    PinElement = markerLib.PinElement
+
+    console.log('Libraries imported. Creating map...')
     
     // Default center: Prop provided > SF Default
     const defaultCenter = { lat: 37.7749, lng: -122.4194 }
@@ -159,10 +137,10 @@ const initMap = async () => {
 }
 
 const updateMarkers = () => {
-  if (!map) return
+  if (!map || !AdvancedMarkerElement) return
 
   // Clear existing
-  markers.forEach(m => m.setMap(null))
+  markers.forEach(m => { m.map = null })
   markers = []
 
   if (props.locations.length === 0) return
@@ -175,13 +153,28 @@ const updateMarkers = () => {
         lng: Number(loc.longitude)
     }
     const config = getIconConfig(loc.icon_type)
-    const marker = new google.maps.Marker({
+    
+    // Create Advanced Marker
+    const marker = new AdvancedMarkerElement!({
       position,
       map: map!,
       title: loc.description || config.label,
-      icon: createCustomIcon(loc.icon_type),
-      animation: google.maps.Animation.DROP
+      content: createCustomPin(loc.icon_type)
     })
+    
+    // Advanced Markers don't have animation: DROP. 
+    // We can add a simple CSS class to the content to animate if desired.
+    const markerContent = marker.content as HTMLElement | null
+    if (markerContent) {
+      markerContent.style.opacity = '0'
+      markerContent.style.transform = 'translateY(-20px)'
+      markerContent.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+      
+      setTimeout(() => {
+        markerContent.style.opacity = '1'
+        markerContent.style.transform = 'translateY(0)'
+      }, 50)
+    }
     
     // Add enhanced info window
     const infoContent = `
@@ -201,7 +194,7 @@ const updateMarkers = () => {
           </p>
         ` : ''}
         <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #E5E7EB; font-size: 11px; color: #9CA3AF;">
-          📍 ${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}
+          📍 ${Number(loc.latitude).toFixed(4)}, ${Number(loc.longitude).toFixed(4)}
         </div>
         <button
           id="view-notes-${loc.id}"
@@ -216,6 +209,7 @@ const updateMarkers = () => {
     const infoWindow = new google.maps.InfoWindow({
         content: infoContent
     })
+    
     marker.addListener('click', () => {
         infoWindow.open(map, marker)
 

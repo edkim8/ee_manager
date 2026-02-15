@@ -1,5 +1,5 @@
 import { useSupabaseClient } from '#imports'
-import { useImageCompression } from './useImageCompression'
+import { useImageCompression } from '../../base/composables/useImageCompression'
 
 export interface LocationNote {
   id: string

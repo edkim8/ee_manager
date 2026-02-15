@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     if (userId && userId !== 'undefined') {
       const { data, error } = await client
         .from('profiles')
-        .select('id, is_super_admin, full_name, first_name, last_name, department')
+        .select('*, full_name:profiles_full_name')
         .eq('id', userId)
         .maybeSingle()
       profile = data
@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
       console.log('[API /api/me] ID lookup failed, trying email lookup for:', userEmail)
       const { data, error } = await client
         .from('profiles')
-        .select('id, is_super_admin, full_name, first_name, last_name, department')
+        .select('*, full_name:profiles_full_name')
         .eq('email', userEmail)
         .maybeSingle()
       profile = data

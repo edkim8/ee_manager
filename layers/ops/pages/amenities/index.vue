@@ -4,6 +4,7 @@ import { usePropertyState } from '../../../base/composables/usePropertyState'
 import { usePricingEngine } from '../../utils/pricing-engine'
 import type { TableColumn } from '../../../table/types'
 import type { Database } from '~/types/supabase'
+import SimpleModal from '../../../base/components/SimpleModal.vue'
 
 definePageMeta({
   layout: 'dashboard'
@@ -213,17 +214,11 @@ const saveAmenity = async () => {
     </GenericDataTable>
 
     <!-- Edit Modal -->
-    <UModal v-model="isEditModalOpen">
-      <UCard :ui="{ divide: 'divide-y divide-gray-100 dark:divide-gray-800' }">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="text-base font-semibold leading-6 text-gray-900 dark:text-white">
-              Edit Amenity: {{ selectedAmenity?.yardi_name }}
-            </h3>
-            <UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" class="-my-1" @click="isEditModalOpen = false" />
-          </div>
-        </template>
-
+    <SimpleModal 
+      v-model="isEditModalOpen" 
+      :title="`Edit Amenity: ${selectedAmenity?.yardi_name}`"
+      width="max-w-lg"
+    >
         <div class="space-y-4 py-2">
           <UFormGroup label="Amount" help="Default monthly amount for this amenity.">
             <UInput v-model="selectedAmenity.amount" type="number" step="0.01" icon="i-heroicons-banknotes" />
@@ -241,18 +236,19 @@ const saveAmenity = async () => {
           </UFormGroup>
 
           <UFormGroup label="Status">
-            <UToggle v-model="selectedAmenity.active" />
-            <span class="ml-2 text-sm text-gray-500">{{ selectedAmenity.active ? 'Active' : 'Inactive' }}</span>
+            <div class="flex items-center gap-3">
+              <UToggle v-model="selectedAmenity.active" />
+              <span class="text-sm text-gray-500 font-medium">{{ selectedAmenity.active ? 'Active' : 'Inactive' }}</span>
+            </div>
           </UFormGroup>
         </div>
 
         <template #footer>
           <div class="flex justify-end gap-3">
-            <UButton color="gray" variant="ghost" @click="isEditModalOpen = false">Cancel</UButton>
+            <UButton color="neutral" variant="ghost" @click="isEditModalOpen = false">Cancel</UButton>
             <UButton color="primary" :loading="isSaving" @click="saveAmenity">Save Changes</UButton>
           </div>
         </template>
-      </UCard>
-    </UModal>
+    </SimpleModal>
   </div>
 </template>

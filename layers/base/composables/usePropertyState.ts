@@ -14,11 +14,7 @@ export const usePropertyState = () => {
 
   // 2. Runtime State - Initialize from cookie immediately
   const activeProperty = useState<string | null>('active-property', () => {
-    const initial = activePropertyCookie.value
-    if (initial) {
-      console.log('[usePropertyState] Initialized from cookie:', initial)
-    }
-    return initial
+    return activePropertyCookie.value
   })
   // 4. Sync state to cookie
   watch(activeProperty, (newVal: any) => {
@@ -71,7 +67,7 @@ export const usePropertyState = () => {
     if (newOptions.length > 0) {
       // Options are loaded, now validate and set property
       const currentVal = activeProperty.value || activePropertyCookie.value
-      const isValid = newOptions.some(o => o.value === currentVal)
+      const isValid = newOptions.some((o: any) => o.value === currentVal)
 
       if (!currentVal || !isValid) {
         // No valid property, select first option

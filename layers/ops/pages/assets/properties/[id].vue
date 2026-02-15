@@ -3,10 +3,13 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
 import ImageModal from '../../../../base/components/modals/ImageModal.vue'
+import ImageGalleryItem from '../../../../base/components/ImageGalleryItem.vue'
 import SimpleTabs from '../../../../base/components/SimpleTabs.vue'
 import LocationMap from '../../../components/map/LocationMap.vue'
 import LocationPicker from '../../../components/map/LocationPicker.vue'
+import AttachmentManager from '../../../../base/components/AttachmentManager.vue'
 import { useLocationService } from '../../../composables/useLocationService'
+import { useImageActions } from '../../../../base/composables/useImageActions'
 
 definePageMeta({
   layout: 'dashboard'
@@ -17,7 +20,7 @@ const router = useRouter()
 const supabase = useSupabaseClient()
 const propertyId = route.params.id as string
 
-const showImageModal = ref(false)
+const { isModalOpen: showImageModal, activeImage, openImageModal } = useImageActions()
 const activeTab = ref('overview')
 const { fetchLocations } = useLocationService()
 
@@ -175,30 +178,24 @@ const handleLocationSaved = async () => {
         </div>
         <h1 class="text-4xl font-black text-gray-900 dark:text-white tracking-tight">{{ property.name }}</h1>
         <p class="text-xl text-gray-600 dark:text-gray-400 mt-2">{{ property.street_address }}, {{ property.city }}, {{ property.state_code }} {{ property.postal_code }}</p>
+
+        <!-- Mobile-only Attachment Manager -->
+        <div class="mt-8 md:hidden">
+          <AttachmentManager 
+            :record-id="propertyId" 
+            record-type="property" 
+            title="Photos & Files"
+          />
+        </div>
       </div>
 
       <!-- Primary Property Image -->
-      <div 
-        v-if="imageUrl" 
-        class="relative h-[400px] w-full rounded-3xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-lg cursor-zoom-in group"
-        @click="showImageModal = true"
-      >
-        <NuxtImg 
+      <div v-if="imageUrl" class="relative">
+        <ImageGalleryItem 
           :src="imageUrl" 
-          class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-          placeholder
+          :alt="property.name"
+          aspect-ratio="h-[400px]"
         />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-        <div class="absolute bottom-6 right-6">
-           <UButton
-            icon="i-heroicons-magnifying-glass-plus"
-            color="white"
-            variant="solid"
-            size="sm"
-            class="rounded-full shadow-xl"
-            @click.stop="showImageModal = true"
-          />
-        </div>
       </div>
 
       <SimpleTabs v-model="activeTab" :items="tabs">
@@ -309,6 +306,15 @@ const handleLocationSaved = async () => {
                     </div>
                 </div>
 
+                <!-- Property Attachments - Desktop Sidebar -->
+                <div class="hidden md:block bg-white dark:bg-gray-900/80 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-gray-200/50 dark:shadow-none">
+                  <AttachmentManager 
+                    :record-id="propertyId" 
+                    record-type="property" 
+                    title="Property Photos & Files"
+                  />
+                </div>
+
                 <!-- Quick Actions/Notes -->
                 <div class="p-6 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-800">
                     <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-3 tracking-tight">Sync Status</h4>
@@ -316,7 +322,9 @@ const handleLocationSaved = async () => {
                         <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         <span class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px] font-black italic">Live & Synced</span>
                     </div>
-                    <p class="text-[9px] text-gray-500 dark:text-gray-500 uppercase font-black italic">Last Updated: {{ new Date().toLocaleDateString() }}</p>
+                    <ClientOnly>
+                      <p class="text-[9px] text-gray-500 dark:text-gray-500 uppercase font-black italic">Last Updated: {{ new Date().toLocaleDateString() }}</p>
+                    </ClientOnly>
                 </div>
                 </div>
             </div>
@@ -345,8 +353,8 @@ const handleLocationSaved = async () => {
     <ImageModal
       v-if="showImageModal"
       v-model="showImageModal"
-      :src="imageUrl"
-      :alt="property?.name"
+      :src="activeImage.src"
+      :alt="activeImage.alt"
     />
   </div>
 </template>

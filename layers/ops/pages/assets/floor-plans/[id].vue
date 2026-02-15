@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
 import type { TableColumn } from '../../../../table/types'
 import ImageModal from '../../../../base/components/modals/ImageModal.vue'
+import ImageGalleryItem from '../../../../base/components/ImageGalleryItem.vue'
+import { useImageActions } from '../../../../base/composables/useImageActions'
 
 definePageMeta({
   layout: 'dashboard'
@@ -14,7 +16,7 @@ const router = useRouter()
 const supabase = useSupabaseClient()
 const floorPlanId = route.params.id as string
 
-const showImageModal = ref(false)
+const { isModalOpen: showImageModal, activeImage, openImageModal } = useImageActions()
 
 // Fetch Floor Plan Details
 const { data: floorPlan, status, error } = await useAsyncData(`floor-plan-${floorPlanId}`, async () => {
@@ -235,19 +237,12 @@ const imageUrl = computed(() => {
         <div class="space-y-6">
           <!-- Floor Plan Image -->
           <div class="bg-white dark:bg-gray-900/80 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-gray-200/50 dark:shadow-none">
-            <div 
-              v-if="imageUrl" 
-              class="relative group cursor-zoom-in overflow-hidden rounded-2xl aspect-square bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4" 
-              @click="showImageModal = true"
-            >
-              <NuxtImg 
+            <div v-if="imageUrl" class="relative">
+              <ImageGalleryItem 
                 :src="imageUrl" 
-                class="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-110 drop-shadow-xl" 
-                placeholder
+                :alt="floorPlan.marketing_name || floorPlan.code"
+                aspect-ratio="aspect-square p-4 bg-gray-50 dark:bg-gray-950 flex items-center justify-center rounded-2xl"
               />
-              <div class="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                 <UIcon name="i-heroicons-magnifying-glass-plus" class="w-10 h-10 text-white" />
-              </div>
             </div>
             <div v-else class="aspect-square bg-gray-100 dark:bg-gray-900 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700">
               <UIcon name="i-heroicons-photo" class="w-12 h-12 text-gray-400 mb-2" />
@@ -256,17 +251,6 @@ const imageUrl = computed(() => {
             
             <div class="mt-4 px-2 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">
                <span>Layout Asset</span>
-               <UButton
-                v-if="imageUrl"
-                color="neutral"
-                variant="link"
-                icon="i-heroicons-arrow-top-right-on-square"
-                label="Full Res"
-                size="2xs"
-                :to="imageUrl"
-                target="_blank"
-                class="font-black"
-              />
             </div>
           </div>
 
@@ -291,7 +275,9 @@ const imageUrl = computed(() => {
               </div>
               <div class="flex justify-between items-center">
                 <span class="opacity-80 text-sm">Created</span>
-                <span class="font-bold">{{ new Date(floorPlan.created_at).toLocaleDateString() }}</span>
+                <ClientOnly>
+                  <span class="font-bold">{{ new Date(floorPlan.created_at).toLocaleDateString() }}</span>
+                </ClientOnly>
               </div>
             </div>
           </div>
@@ -310,8 +296,8 @@ const imageUrl = computed(() => {
     <ImageModal
       v-if="showImageModal"
       v-model="showImageModal"
-      :src="imageUrl"
-      :alt="floorPlan?.marketing_name"
+      :src="activeImage.src"
+      :alt="activeImage.alt"
     />
   </div>
 </template>
