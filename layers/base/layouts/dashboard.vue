@@ -21,5 +21,8 @@ const { isWide } = useLayoutWidth()
         </p>
       </UContainer>
     </footer>
+
+    <!-- Debug: Screen Size Indicator -->
+    <ScreenDebug />
   </div>
 </template>

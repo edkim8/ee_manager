@@ -2,10 +2,12 @@
 import { ref, computed } from 'vue'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
-import type { TableColumn } from '../../../../table/types'
+// ===== EXCEL-BASED TABLE CONFIGURATION =====
+import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/residents-complete.generated'
+import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
 
 const supabase = useSupabaseClient()
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
 
 definePageMeta({
   layout: 'dashboard'
@@ -40,81 +42,18 @@ const { data: residents, status, error } = await useAsyncData('residents-list', 
   watch: [activeProperty]
 })
 
-// Columns configuration
-const columns: TableColumn[] = [
-  {
-    key: 'name',
-    label: 'Resident',
-    sortable: true,
-    width: '200px'
-  },
-  {
-    key: 'building_name',
-    label: 'Building',
-    sortable: true,
-    width: '180px'
-  },
-  {
-    key: 'unit_name',
-    label: 'Unit',
-    sortable: true,
-    width: '100px',
-    align: 'center'
-  },
-  {
-    key: 'tenancy_status',
-    label: 'Tenancy',
-    sortable: true,
-    width: '120px',
-    align: 'center'
-  },
-  {
-    key: 'move_in_date',
-    label: 'Move In',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'move_out_date',
-    label: 'Move Out',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'lease_start_date',
-    label: 'Lease Start',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'lease_end_date',
-    label: 'Lease End',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'role',
-    label: 'Role',
-    sortable: true,
-    width: '120px'
-  },
-  {
-    key: 'email',
-    label: 'Email',
-    sortable: true,
-    width: '200px'
-  },
-  {
-    key: 'phone',
-    label: 'Phone',
-    sortable: true,
-    width: '150px'
-  }
-]
+// Columns from Excel configuration - Restricted by Role/Dept
+const columns = computed(() => {
+  return getAccessibleColumns(
+    allColumns,
+    filterGroups,
+    roleColumns,
+    departmentColumns,
+    'all', // Residents table currently uses 'all' as base
+    userContext.value,
+    activeProperty.value
+  )
+})
 
 // Status color mapping
 const tenancyStatusColors: Record<string, string> = {

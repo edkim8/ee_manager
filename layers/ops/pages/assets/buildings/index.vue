@@ -2,10 +2,13 @@
 import { ref, computed } from 'vue'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
-import type { TableColumn } from '../../../../table/types'
+
+// ===== EXCEL-BASED TABLE CONFIGURATION =====
+import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/buildings-complete.generated'
+import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
 
 const supabase = useSupabaseClient()
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
 
 definePageMeta({
   layout: 'dashboard'
@@ -68,39 +71,18 @@ const { data: buildings, status } = await useAsyncData('buildings-list', async (
   watch: [activeProperty]
 })
 
-// Columns
-const columns: TableColumn[] = [
-  {
-    key: 'name',
-    label: 'Building',
-    sortable: true,
-    width: '200px'
-  },
-  {
-    key: 'unit_count',
-    label: 'Units',
-    sortable: true,
-    width: '100px',
-    align: 'right'
-  },
-  {
-    key: 'floor_plans_data',
-    label: 'Floor Plans',
-    sortable: false
-  },
-  {
-    key: 'street_address',
-    label: 'Address',
-    sortable: false
-  },
-  {
-    key: 'floor_count',
-    label: 'Floors',
-    sortable: true,
-    width: '100px',
-    align: 'center'
-  }
-]
+// Columns from Excel configuration - Restricted by Role/Dept
+const columns = computed(() => {
+  return getAccessibleColumns(
+    allColumns,
+    filterGroups,
+    roleColumns,
+    departmentColumns,
+    'all',
+    userContext.value,
+    activeProperty.value
+  )
+})
 
 // Search filter
 const searchQuery = ref('')
@@ -172,13 +154,16 @@ const handleRowClick = (row: any) => {
 
       <!-- Floor plans with links -->
       <template #cell-floor_plans_data="{ value }">
-        <div class="flex flex-wrap gap-1">
-          <template v-for="(fp, idx) in value" :key="fp.id">
-            <CellsLinkCell
-              :value="fp.code"
-              :to="`/assets/floor-plans/${fp.id}`"
-            />
-            <span v-if="idx < value.length - 1" class="text-gray-400">,</span>
+        <div class="flex flex-wrap gap-1 py-1">
+          <template v-for="fp in value" :key="fp.id">
+            <NuxtLink :to="`/assets/floor-plans/${fp.id}`" class="inline-block" @click.stop>
+              <CellsBadgeCell
+                :text="fp.code"
+                color="primary"
+                variant="subtle"
+                class="hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+              />
+            </NuxtLink>
           </template>
           <span v-if="!value || value.length === 0" class="text-gray-400">-</span>
         </div>

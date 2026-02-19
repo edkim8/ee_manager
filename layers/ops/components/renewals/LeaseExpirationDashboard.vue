@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
+import { addMonths, format } from 'date-fns'
 import { Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -53,14 +54,15 @@ watch(
   { deep: true, immediate: true }
 )
 
-// Generate 24-month timeline
+// Generate 24-month timeline (using date-fns to avoid month-end shift bugs)
 const timeline = computed(() => {
   const months = []
+  const today = new Date()
+
   for (let i = 0; i < 24; i++) {
-    const d = new Date()
-    d.setMonth(d.getMonth() + i)
-    const monthKey = d.toISOString().substring(0, 7) // YYYY-MM
-    const label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    const d = addMonths(today, i)  // date-fns handles month-end correctly
+    const monthKey = format(d, 'yyyy-MM')  // YYYY-MM format
+    const label = format(d, 'MMM yyyy')     // "Jan 2026" format
     months.push({ label, key: monthKey })
   }
   return months

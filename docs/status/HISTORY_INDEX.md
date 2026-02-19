@@ -1,6 +1,6 @@
 # History Index: Technical Decision Log
 
-This file tracks key architectural decisions and completed milestones. Read this at the start of a session to "download" past wisdom without reading the full archives.
+This file tracks key architectural decisions and completed milestones. **Latest Update**: [2026-02-19] H-042: Inventory Life-Cycle System - Completed multi-tier inventory catalog with installations tracking, mobile-optimized searchable selectors, and photo-lifecycle integration. Read this at the start of a session to "download" past wisdom without reading the full archives.
 
 | ID | Module | Key Decisions | Archive Link |
 |----|--------|---------------|--------------|
@@ -42,3 +42,6 @@ This file tracks key architectural decisions and completed milestones. Read this
 | H-037 | Renewals Architecture | Resolved "Maximum recursive updates" loop by adopting the Separate Input/Output Refs pattern. Implemented localStorage draft system and SF-based sorting. | [COMPLETION_REPORT](../handovers/RENEWALS_COMPLETION_REPORT.md) |
 | H-038 | Claude Daily Audit | Fixed 3 critical bugs in `useSolverEngine.ts` confirmation hook (42703, 23502). Established Daily Audit protocol and Golden Prompt for forensic synchronization. | [AUDIT_FIXES](../fixes/RENEWALS_CONFIRMATION_HOOK_FIX.md) |
 | H-039 | Dashboard & Media | Launched Premium "Control Center" Landing Page with SortableJS grid. Standardized Image System with edge-to-edge modal enlargement law. | [SHIFT_ARCHIVE](../archive/SHIFT_2026_02_14_DASHBOARD_AND_AUDIT.md) |
+| H-040 | Renewals (CA) | Implemented CA rent control compliance (10% cap), batch status updates, and date-fns integration for forecasting. Fixed checkbox selection bug. | [LATEST_UPDATE](LATEST_UPDATE.md) |
+| H-041 | Excel Table System | Completed Excel-based configuration for all 11 tables with responsive breakpoints (P1-P5). Fixed Tailwind max-* variants, extended zebra stripes, and created ScreenDebug tool. Zero-code table updates via Excel. | [SESSION_SUMMARY](SESSION_2026_02_16_EXCEL_TABLES.md) |
+| H-042 | Inventory System | Implemented three-tier inventory model (Categories -> Items -> Installations). Built mobile-optimized `LocationSelector` for 392 units. Integrated photo capture and lifecycle health-status logic. | [SESSION_SUMMARY](SESSION_2026_02_19_INVENTORY_COMPLETE.md) |

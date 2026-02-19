@@ -545,7 +545,7 @@ const handleSyncModalClose = () => {
     </div>
 
     <!-- Available Units Table -->
-    <div v-if="activeFloorPlan && availableUnits.length > 0" class="mb-12">
+    <div v-if="activeFloorPlan" class="mb-12">
       <div class="mb-4 flex items-center gap-3">
         <h2 class="text-lg font-black text-gray-900 dark:text-white">Available Units</h2>
         <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ availableUnits.length }} units</span>
@@ -615,7 +615,7 @@ const handleSyncModalClose = () => {
     </div>
 
     <!-- Applicant/Future Units Table (History) -->
-    <div v-if="activeFloorPlan && applicantFutureUnits.length > 0" class="mb-8">
+    <div v-if="activeFloorPlan" class="mb-8">
       <div class="mb-4 flex items-center gap-3">
         <h2 class="text-lg font-black text-gray-900 dark:text-white">Applicant/Future Units</h2>
         <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ applicantFutureUnits.length }} units (Read-Only)</span>
@@ -667,7 +667,7 @@ const handleSyncModalClose = () => {
       </GenericDataTable>
     </div>
 
-    <div v-else-if="summaryStatus !== 'pending'" class="py-20 text-center bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100">
+    <div v-if="summaryStatus !== 'pending' && (!floorPlanSummaries || floorPlanSummaries.length === 0)" class="py-20 text-center bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100">
         <UIcon name="i-heroicons-building-office-2" class="text-4xl text-gray-300 mb-2" />
         <p class="text-gray-500 font-medium">No floor plans found for this property.</p>
     </div>

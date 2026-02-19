@@ -84,42 +84,35 @@ const imageUrl = computed(() => {
   return path
 })
 
-// --- Concession State ---
-const { data: concessionData, refresh: refreshConcession } = await useAsyncData(`avail-concession-${availabilityId}`, async () => {
-  if (!availability.value?.unit_id) return null
-  const { data } = await supabase
-    .from('view_concession_analysis')
-    .select('*')
-    .eq('unit_id', availability.value.unit_id)
-    .single()
-  return data
-}, { watch: [availability] })
-
+// Initial concession values for editing
 const concessionUpfront = ref<number>(0)
 const concessionFreeDays = ref<number>(0)
 const isSavingConcession = ref(false)
 
-// Initialize concession values when data loads
-watch(concessionData, (data) => {
+// Initialize values when main availability data loads
+watch(availability, (data) => {
   if (data) {
     concessionUpfront.value = data.concession_upfront_amount || 0
     concessionFreeDays.value = data.concession_free_rent_days || 0
   }
 }, { immediate: true })
 
-// Calculate concession percentages dynamically
+// Map concession data from the master view for display or calculate for local edits
 const concessionPercentages = computed(() => {
-  if (!availability.value?.rent_market || availability.value.rent_market === 0) {
+  // If editing, calculate dynamically to provide instant feedback
+  if (!availability.value?.market_base_rent || availability.value.market_base_rent === 0) {
     return { amenityPct: 0, totalPct: 0, display: '0%/0%' }
   }
 
-  const rentMarket = availability.value.rent_market
-  const amenityMonthly = concessionData.value?.amenity_concession_monthly || 0
+  const marketBaseRent = availability.value.market_base_rent
+  
+  // Use current edited values for internal math to show preview
+  const amenityMonthly = availability.value.amenity_concession_monthly || 0
   const upfrontMonthly = concessionUpfront.value / 12
-  const freeRentMonthly = rentMarket * (concessionFreeDays.value / 365)
+  const freeRentMonthly = marketBaseRent * (concessionFreeDays.value / 365)
 
-  const amenityPct = Math.round((amenityMonthly / rentMarket) * 100 * 10) / 10
-  const totalPct = Math.round(((amenityMonthly + upfrontMonthly + freeRentMonthly) / rentMarket) * 100 * 10) / 10
+  const amenityPct = Math.round((amenityMonthly / marketBaseRent) * 100 * 10) / 10
+  const totalPct = Math.round(((amenityMonthly + upfrontMonthly + freeRentMonthly) / marketBaseRent) * 100 * 10) / 10
 
   return {
     amenityPct,
@@ -151,7 +144,7 @@ const saveConcessions = async () => {
 
     if (error) throw error
 
-    await refreshConcession()
+    await refreshNuxtData(`availability-${availabilityId}`)
     // Show success notification (you can add toast notification here)
   } catch (err) {
     console.error('Error saving concessions:', err)
@@ -490,7 +483,7 @@ const handleSolve = async () => {
                 </div>
                 <div class="flex justify-between items-center">
                   <span class="text-gray-600 dark:text-gray-400">Free Rent (Monthly Value)</span>
-                  <span class="font-medium text-gray-900 dark:text-white">${{ availability?.rent_market ? ((availability.rent_market * concessionFreeDays / 365)).toFixed(2) : '0.00' }}</span>
+                  <span class="font-medium text-gray-900 dark:text-white">${{ availability?.market_base_rent ? ((availability.market_base_rent * concessionFreeDays / 365)).toFixed(2) : '0.00' }}</span>
                 </div>
                 <div class="flex justify-between items-center pt-2 border-t border-emerald-200/50 dark:border-emerald-800/30">
                   <span class="font-bold text-gray-900 dark:text-white">Total Concessions (A%)</span>

@@ -86,27 +86,30 @@ export default defineEventHandler(async (event) => {
 
     console.log(`[API /api/me] Total properties found (DB + fallback): ${allProperties.length}`)
 
-    // 3. Fetch Access
-    let allowedCodes: string[] = []
+    // 3. Fetch Access & Roles
+    const propertyRoles: Record<string, string> = {}
     const isSuperAdmin = !!(profile as any)?.is_super_admin
 
     if (isSuperAdmin) {
       console.log('[API /api/me] AUTH: Super Admin access detected')
-      allowedCodes = allProperties.map((p: any) => p.code)
+      allProperties.forEach((p: any) => propertyRoles[p.code] = 'Owner')
     } else {
       console.log('[API /api/me] AUTH: Regular user access check')
       const { data: accessData, error: accessError } = await client
         .from('user_property_access' as any)
-        .select('property_code')
+        .select('property_code, role')
         .eq('user_id', userId)
       
       if (accessError) {
         console.error('[API /api/me] Access fetch error:', accessError)
       }
-      allowedCodes = (accessData || []).map((a: any) => a.property_code)
+      
+      (accessData || []).forEach((a: any) => {
+        propertyRoles[a.property_code] = a.role || 'Staff'
+      })
     }
 
-    console.log('[API /api/me] Final allowed codes:', allowedCodes)
+    console.log('[API /api/me] Final property roles:', propertyRoles)
 
     return {
       user: {
@@ -116,7 +119,7 @@ export default defineEventHandler(async (event) => {
       },
       access: {
         is_super_admin: isSuperAdmin,
-        allowed_codes: allowedCodes
+        property_roles: propertyRoles
       },
       properties: allProperties
     }

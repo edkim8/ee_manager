@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
 import type { Tables } from '@/types/supabase'
-import type { TableColumn } from '../../../../table/types'
+
+// ===== EXCEL-BASED TABLE CONFIGURATION =====
+import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/properties-complete.generated'
+import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
 
 const supabase = useSupabaseClient()
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
 
 definePageMeta({
   layout: 'dashboard'
@@ -18,65 +21,50 @@ const { data: properties, status } = await useAsyncData('properties-list', async
     .from('properties')
     .select('*')
     .order('name')
-  
+
   if (error) throw error
   return data as Tables<'properties'>[]
 })
 
-// Columns
-const columns: TableColumn[] = [
-  {
-    key: 'code',
-    label: 'Code',
-    sortable: true,
-    width: '100px'
-  },
-  {
-    key: 'name',
-    label: 'Name',
-    sortable: true,
-    width: '200px'
-  },
-  {
-    key: 'street_address',
-    label: 'Address',
-    sortable: true
-  },
-  {
-    key: 'city',
-    label: 'City',
-    sortable: true,
-    width: '150px'
-  },
-  {
-    key: 'state_code',
-    label: 'ST',
-    sortable: true,
-    width: '60px',
-    align: 'center'
-  },
-  {
-    key: 'total_unit_count',
-    label: 'Units',
-    sortable: true,
-    width: '100px',
-    align: 'right'
-  },
-  {
-    key: 'website_url',
-    label: 'Website',
-    sortable: false,
-    width: '120px',
-    align: 'center'
-  },
-  {
-    key: 'year_built',
-    label: 'Year',
-    sortable: true,
-    width: '80px',
-    align: 'right'
-  }
-]
+// Columns from Excel configuration - Restricted by Role/Dept
+const columns = computed(() => {
+  return getAccessibleColumns(
+    allColumns,
+    filterGroups,
+    roleColumns,
+    departmentColumns,
+    'all',
+    userContext.value,
+    activeProperty.value
+  )
+})
+
+// DEBUG: Log column classes on mount
+onMounted(() => {
+  console.log('🔍 DEBUG: Properties Table Columns')
+  console.log('Total columns:', allColumns.length)
+  allColumns.forEach((col, idx) => {
+    console.log(`Column ${idx + 1}: ${col.key}`, {
+      label: col.label,
+      class: col.class || '(none - always visible)',
+      headerClass: col.headerClass || '(none)'
+    })
+  })
+
+  // Check actual DOM elements after a short delay
+  setTimeout(() => {
+    console.log('\n🔍 DEBUG: Actual DOM Classes')
+    const headers = document.querySelectorAll('th')
+    headers.forEach((th, idx) => {
+      console.log(`Header ${idx}:`, {
+        text: th.textContent?.trim(),
+        classes: th.className,
+        computedDisplay: window.getComputedStyle(th).display,
+        isVisible: window.getComputedStyle(th).display !== 'none'
+      })
+    })
+  }, 1000)
+})
 
 // Search filter
 const searchQuery = ref('')

@@ -2,7 +2,10 @@
 -- 1. Drop existing column
 ALTER TABLE public.profiles DROP COLUMN IF EXISTS full_name;
 
--- 2. Add computed column function
+-- 2. Drop existing function if parameter signature changed
+DROP FUNCTION IF EXISTS public.profiles_full_name(public.profiles);
+
+-- 3. Add computed column function
 -- When named as table_column, it acts as a computed column in PostgREST
 CREATE OR REPLACE FUNCTION public.profiles_full_name(profile_row public.profiles)
 RETURNS text
@@ -12,7 +15,7 @@ AS $$
   SELECT trim(coalesce(profile_row.first_name, '') || ' ' || coalesce(profile_row.last_name, ''));
 $$;
 
--- 3. Update handle_new_user trigger to parse names from metadata
+-- 4. Update handle_new_user trigger to parse names from metadata
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql

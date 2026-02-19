@@ -135,14 +135,14 @@ const handleSignOut = async () => {
   }
 }
 
-const overlay = useOverlay()
-const modal = overlay.create(ConstantsModal)
+const showConstantsModal = ref(false)
 const openConstantsModal = () => {
   console.log('[AppNavigation] Opening Global Constants Modal')
-  modal.open({ 
-    title: 'System Constants',
-    propertyCode: active_property.value
-  })
+  showConstantsModal.value = true
+}
+
+const handleConstantsClose = () => {
+  showConstantsModal.value = false
 }
 
 // Navigation items
@@ -466,5 +466,13 @@ const navigationItems = computed(() => {
         </div>
       </template>
     </USlideover>
+
+    <ConstantsModal
+      v-if="showConstantsModal"
+      title="System Constants"
+      :property-code="active_property"
+      :on-close="handleConstantsClose"
+      @close="handleConstantsClose"
+    />
   </header>
 </template>

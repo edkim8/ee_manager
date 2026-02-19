@@ -2,10 +2,12 @@
 import { ref, computed } from 'vue'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
-import type { TableColumn } from '../../../../table/types'
+// ===== EXCEL-BASED TABLE CONFIGURATION =====
+import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/floor_plans-complete.generated'
+import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
 
 const supabase = useSupabaseClient()
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
 
 definePageMeta({
   layout: 'dashboard'
@@ -30,60 +32,39 @@ const { data: floorPlans, status } = await useAsyncData('floor-plans-list', asyn
 
   const { data, error } = await supabase
     .from('floor_plans')
-    .select('*')
+    .select(`
+      *,
+      units(id)
+    `)
     .eq('property_code', activeProperty.value)
     .order('area_sqft', { ascending: true })
     .order('code', { ascending: true })
   
   if (error) throw error
-  return data
+
+  // Map database fields to the keys expected by the Excel-generated table config
+  return (data as any[]).map(fp => ({
+    ...fp,
+    sf: fp.area_sqft,
+    base_rent: fp.market_base_rent,
+    unit_count: fp.units?.length || 0
+  }))
 }, {
   watch: [activeProperty]
 })
 
-// Columns
-const columns: TableColumn[] = [
-  {
-    key: 'code',
-    label: 'Code',
-    sortable: true,
-    width: '120px'
-  },
-  {
-    key: 'marketing_name',
-    label: 'Marketing Name',
-    sortable: true,
-    width: '200px'
-  },
-  {
-    key: 'bedroom_count',
-    label: 'Beds',
-    sortable: true,
-    width: '80px',
-    align: 'center'
-  },
-  {
-    key: 'bathroom_count',
-    label: 'Baths',
-    sortable: true,
-    width: '80px',
-    align: 'center'
-  },
-  {
-    key: 'area_sqft',
-    label: 'Sqft',
-    sortable: true,
-    width: '100px',
-    align: 'right'
-  },
-  {
-    key: 'market_base_rent',
-    label: 'Base Rent',
-    sortable: true,
-    width: '120px',
-    align: 'right'
-  }
-]
+// Columns from Excel configuration - Restricted by Role/Dept
+const columns = computed(() => {
+  return getAccessibleColumns(
+    allColumns,
+    filterGroups,
+    roleColumns,
+    departmentColumns,
+    'all',
+    userContext.value,
+    activeProperty.value
+  )
+})
 
 // Search filter
 const searchQuery = ref('')
@@ -155,7 +136,7 @@ const handleRowClick = (row: any) => {
       </template>
 
       <!-- Base Rent with currency formatting -->
-      <template #cell-market_base_rent="{ value }">
+      <template #cell-base_rent="{ value }">
         <CellsCurrencyCell :value="value" />
       </template>
     </GenericDataTable>

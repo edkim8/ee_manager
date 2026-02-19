@@ -33,6 +33,12 @@ export interface TableColumn {
   align?: 'left' | 'center' | 'right'
   /** Header-specific CSS classes */
   headerClass?: string
+  /** Allowed roles for viewing this column (OR logic). Use ['all'] for no restriction. */
+  roles?: string[]
+  /** Allowed departments for viewing this column (OR logic). Use ['all'] for no restriction. */
+  departments?: string[]
+  /** Filter groups this column appears in (OR logic). Use ['all'] to show in all filters. */
+  filterGroups?: string[]
 }
 
 /**

@@ -4,11 +4,15 @@ import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { usePropertyState, useSupabaseClient, useAsyncData, definePageMeta, navigateTo } from '#imports'
 import { useRenewalsWorksheet, useFloorPlanAnalytics } from '../../../composables/useRenewalsWorksheet'
 import { useRenewalsMailMerger } from '../../../composables/useRenewalsMailMerger'
-import type { TableColumn } from '../../../../table/types'
+import { useTableSelection } from '../../../../table/composables/useTableSelection'
 import SimpleTabs from '../../../../base/components/SimpleTabs.vue'
 import SimpleModal from '../../../../base/components/SimpleModal.vue'
 import GenericDataTable from '../../../../table/components/GenericDataTable.vue'
 import BadgeCell from '../../../../table/components/cells/BadgeCell.vue'
+import UpdateStatusModal from '../../../components/renewals/UpdateStatusModal.vue'
+// ===== EXCEL-BASED TABLE CONFIGURATION =====
+import { allColumns as standardColumnsGenerated } from '../../../../../configs/table-configs/renewal_items_standard-complete.generated'
+import { allColumns as mtmColumnsGenerated } from '../../../../../configs/table-configs/renewal_items_mtm-complete.generated'
 
 definePageMeta({
   layout: 'dashboard'
@@ -21,6 +25,12 @@ const { activeProperty } = usePropertyState()
 
 const worksheetId = route.params.id as string
 const isNewWorksheet = computed(() => worksheetId === 'new')
+
+// CA Property Check: CV, WO, OB use MTM Max % instead of MTM Fee ($)
+const CA_PROPERTIES = ['CV', 'WO', 'OB'] as const
+const isCAProperty = computed(() => {
+  return CA_PROPERTIES.includes(activeProperty.value?.toUpperCase() as any)
+})
 
 // State
 const selectedFloorPlanId = ref<string | null>(null)
@@ -60,6 +70,9 @@ const showBackWarningModal = ref(false)
 const showManualAcceptModal = ref(false)
 const manualAcceptItem = ref<any>(null)
 const selectedAcceptTerm = ref<number | null>(null)
+
+// Update Status modal state
+const showUpdateStatusModal = ref(false)
 
 // Fetch worksheet data
 const { data: worksheet, pending: worksheetPending, refresh: refreshWorksheet } = await useAsyncData(
@@ -315,41 +328,15 @@ const displayedItems = computed(() => {
   })
 })
 
-// Table columns for standard renewals (Option A: Multiple clickable rent columns)
-const standardColumns: TableColumn[] = [
-  { key: 'unit_name', label: 'Unit', sortable: true },
-  { key: 'resident_name', label: 'Resident', sortable: true },
-  { key: 'lease_to_date', label: 'Expires', sortable: true },
-  // Rent context columns
-  { key: 'market_rent', label: 'Market', align: 'right', sortable: true },
-  { key: 'current_rent', label: 'Current', align: 'right', sortable: true },
-  // Clickable rent option columns
-  { key: 'ltl_rent', label: 'LTL %', align: 'right', sortable: false },
-  { key: 'max_rent', label: 'Max %', align: 'right', sortable: false },
-  { key: 'manual_rent', label: 'Manual $Δ', align: 'right', sortable: false },
-  // Result columns
-  { key: 'final_rent', label: 'Final Rent', align: 'right', sortable: true },
-  { key: 'increase', label: 'Increase', align: 'right', sortable: false },
-  // Status columns
-  { key: 'status', label: 'Status', sortable: true },
-  { key: 'approved', label: 'Approved', align: 'center', sortable: true },
-  { key: 'actions', label: '', align: 'right', sortable: false }
-]
+// Table selection for batch operations
+const { selectedRows, selectedCount, isSelected, toggleRow, selectAll, clearSelection, allSelected, someSelected, toggleSelectAll } = useTableSelection(
+  displayedItems,
+  'id'
+)
 
-// MTM columns (matching standard table structure)
-const mtmColumns: TableColumn[] = [
-  { key: 'unit_name', label: 'Unit', sortable: true },
-  { key: 'resident_name', label: 'Resident', sortable: true },
-  { key: 'lease_to_date', label: 'Expires', sortable: true },
-  { key: 'market_rent', label: 'Market', align: 'right', sortable: true },
-  { key: 'current_rent', label: 'Current', align: 'right', sortable: true },
-  { key: 'mtm_rent', label: 'MTM Rent', align: 'right', sortable: true },
-  { key: 'final_rent', label: 'Offered Rent', align: 'right', sortable: true },
-  { key: 'last_mtm_offer_date', label: 'Last Offered', sortable: true },
-  { key: 'status', label: 'Status', sortable: true },
-  { key: 'approved', label: 'Offered', align: 'center', sortable: true },
-  { key: 'actions', label: '', align: 'right', sortable: false }
-]
+// Table columns from Excel configurations
+const standardColumns = computed(() => standardColumnsGenerated)
+const mtmColumns = computed(() => mtmColumnsGenerated)
 
 // Format helpers (timezone-safe)
 const formatDate = (dateStr: string | null) => {
@@ -840,6 +827,24 @@ function updateTermGoal(termLength: number, goal: number | null) {
   }
 }
 
+// Update Status modal handlers
+function openUpdateStatusModal() {
+  if (selectedCount.value === 0) {
+    alert('Please select at least one renewal item')
+    return
+  }
+  showUpdateStatusModal.value = true
+}
+
+async function handleUpdateStatusModalClose(saved: boolean) {
+  showUpdateStatusModal.value = false
+  if (saved) {
+    console.log('[Renewals] Status updated, refreshing items...')
+    await refreshItems()
+    clearSelection()
+  }
+}
+
 // Watch for unsaved changes before navigation
 onBeforeRouteLeave((to, from, next) => {
   if (isDirty.value || configChanged.value) {
@@ -942,14 +947,20 @@ onBeforeRouteLeave((to, from, next) => {
         </div>
 
         <div>
-          <label class="block text-sm font-medium mb-1">MTM Fee ($)</label>
+          <label class="block text-sm font-medium mb-1">
+            {{ isCAProperty ? 'MTM Max %' : 'MTM Fee ($)' }}
+          </label>
           <input
             v-model.number="mtm_fee"
             type="number"
-            step="1"
+            :step="isCAProperty ? '0.1' : '1'"
             class="w-full px-3 py-2 border rounded-md"
             :disabled="isFinalized"
+            :placeholder="isCAProperty ? 'e.g., 10 (for 10%)' : 'e.g., 300'"
           />
+          <p v-if="isCAProperty" class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+            ⚖️ CA Rent Control: Max % increase over any 12-month period
+          </p>
         </div>
 
         <!-- Term Configuration Button -->
@@ -972,6 +983,22 @@ onBeforeRouteLeave((to, from, next) => {
 
         <div v-if="isFinalized" class="col-span-3 text-sm text-gray-500 italic">
           ℹ️ This worksheet is finalized and cannot be edited
+        </div>
+
+        <!-- CA Compliance Info Banner -->
+        <div v-if="isCAProperty && !isFinalized" class="col-span-3 mt-2">
+          <div class="p-3 rounded-lg border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+            <div class="flex items-start gap-2 text-sm">
+              <UIcon name="i-heroicons-information-circle" class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div class="text-blue-900 dark:text-blue-100">
+                <div class="font-semibold">CA Rent Control Active ({{ activeProperty }})</div>
+                <div class="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                  MTM increases are limited to <strong>{{ mtm_fee }}%</strong> over any rolling 12-month period.
+                  The system will check against both MTM history and lease renewals to ensure compliance.
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1099,12 +1126,29 @@ onBeforeRouteLeave((to, from, next) => {
             <div class="flex justify-between items-center mb-4">
               <h3 class="text-lg font-semibold">Standard Renewals</h3>
 
-              <UButton
-                size="sm"
-                :label="allApproved ? 'Disapprove All' : 'Approve All'"
-                :color="allApproved ? 'neutral' : 'primary'"
-                @click="setAllApprovals(!allApproved)"
-              />
+              <div class="flex items-center gap-2">
+                <UButton
+                  v-if="!isFinalized"
+                  icon="i-heroicons-pencil-square"
+                  label="Update Status"
+                  size="sm"
+                  color="primary"
+                  variant="outline"
+                  :disabled="selectedCount === 0"
+                  @click="openUpdateStatusModal"
+                >
+                  <template v-if="selectedCount > 0" #trailing>
+                    <UBadge :label="String(selectedCount)" color="primary" size="xs" />
+                  </template>
+                </UButton>
+
+                <UButton
+                  size="sm"
+                  :label="allApproved ? 'Disapprove All' : 'Approve All'"
+                  :color="allApproved ? 'neutral' : 'primary'"
+                  @click="setAllApprovals(!allApproved)"
+                />
+              </div>
             </div>
 
             <GenericDataTable
@@ -1116,6 +1160,31 @@ onBeforeRouteLeave((to, from, next) => {
               enable-export
               export-filename="standard-renewals"
             >
+              <!-- Selection Checkbox Header -->
+              <template #header-selection>
+                <input
+                  v-if="!isFinalized"
+                  type="checkbox"
+                  :checked="allSelected"
+                  :indeterminate.prop="someSelected && !allSelected"
+                  class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  @click.stop
+                  @change="toggleSelectAll"
+                />
+              </template>
+
+              <!-- Selection Checkbox Cell -->
+              <template #cell-selection="{ row }">
+                <input
+                  v-if="!isFinalized"
+                  type="checkbox"
+                  :checked="isSelected(row)"
+                  class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  @click.stop
+                  @change="(e) => { console.log('Toggle row:', row.id, 'checked:', e.target.checked); toggleRow(row); }"
+                />
+              </template>
+
               <template #cell-unit_name="{ row }">
                 {{ row.units?.unit_name || row.unit_name || 'N/A' }}
               </template>
@@ -1777,6 +1846,19 @@ onBeforeRouteLeave((to, from, next) => {
           />
         </div>
       </form>
+    </SimpleModal>
+
+    <!-- Update Status Modal -->
+    <SimpleModal
+      v-model="showUpdateStatusModal"
+      title="Update Renewal Status"
+      width="max-w-2xl"
+    >
+      <UpdateStatusModal
+        v-if="showUpdateStatusModal"
+        :selected-items="selectedRows"
+        :on-close="handleUpdateStatusModalClose"
+      />
     </SimpleModal>
   </div>
   </ClientOnly>

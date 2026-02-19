@@ -2,10 +2,12 @@
 import { ref, computed } from 'vue'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
-import type { TableColumn } from '../../../../table/types'
+// ===== EXCEL-BASED TABLE CONFIGURATION =====
+import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/units-complete.generated'
+import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
 
 const supabase = useSupabaseClient()
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
 
 definePageMeta({
   layout: 'dashboard'
@@ -40,68 +42,18 @@ const { data: units, status, error } = await useAsyncData('units-list', async ()
   watch: [activeProperty]
 })
 
-// Columns
-const columns: TableColumn[] = [
-  {
-    key: 'unit_name',
-    label: 'Unit',
-    sortable: true,
-    width: '120px'
-  },
-  {
-    key: 'building_name',
-    label: 'Building',
-    sortable: true,
-    width: '180px'
-  },
-  {
-    key: 'resident_name',
-    label: 'Resident',
-    sortable: true,
-    width: '180px'
-  },
-  {
-    key: 'floor_plan_marketing_name',
-    label: 'Floor Plan',
-    sortable: true,
-    width: '180px'
-  },
-  {
-    key: 'sf',
-    label: 'SF',
-    sortable: true,
-    width: '80px',
-    align: 'right'
-  },
-  {
-    key: 'tenancy_status',
-    label: 'Tenancy',
-    sortable: true,
-    width: '120px',
-    align: 'center'
-  },
-  {
-    key: 'move_in_date',
-    label: 'In',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'move_out_date',
-    label: 'Out',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'floor_number',
-    label: 'Floor',
-    sortable: true,
-    width: '80px',
-    align: 'center'
-  }
-]
+// Columns from Excel configuration - Restricted by Role/Dept
+const columns = computed(() => {
+  return getAccessibleColumns(
+    allColumns,
+    filterGroups,
+    roleColumns,
+    departmentColumns,
+    'all',
+    userContext.value,
+    activeProperty.value
+  )
+})
 
 // Status color mapping
 const statusColors: Record<string, string> = {

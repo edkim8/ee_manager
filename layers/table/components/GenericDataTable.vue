@@ -210,46 +210,47 @@ const exportMenuItems = computed(() => [[
 </script>
 
 <template>
-  <div class="generic-data-table">
-    <!--
-      TOOLBAR SLOT + ACTIONS SLOT + EXPORT BUTTON
-      ============================================
-      Layout: [Toolbar (flex-1)] [Actions] [Spacer (flex-1)] [Export]
-      - #toolbar: Search inputs, filter dropdowns (grows to fill space)
-      - #toolbar-actions: Custom action buttons (centered via spacers)
-      - Spacer: Pushes export button to the right
-      - Export button: Appears on far right if enableExport is true
-    -->
-    <div v-if="$slots.toolbar || $slots['toolbar-actions'] || enableExport" class="mb-4 flex items-center gap-4">
-      <div class="flex-1">
-        <slot name="toolbar" />
-      </div>
-      <div v-if="$slots['toolbar-actions']" class="flex-shrink-0">
-        <slot name="toolbar-actions" />
-      </div>
-      <!-- Spacer to push export button to the right -->
-      <div class="flex-1"></div>
-      <div v-if="enableExport" class="flex-shrink-0">
-        <UDropdownMenu :items="exportMenuItems">
-          <UButton
-            icon="i-heroicons-arrow-down-tray-20-solid"
-            color="neutral"
-            variant="outline"
-            size="sm"
-            label="Export"
-          />
-        </UDropdownMenu>
-      </div>
-    </div>
-
     <!--
       TABLE CONTAINER
       ===============
-      Overflow wrapper enables horizontal scroll on narrow screens.
-      Border and rounded corners applied here for consistent styling.
+      Main container with border and rounded corners.
+      Toolbar and Table are now both inside this container for a cohesive "Pro" look.
     -->
-    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+    <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900">
+      <!--
+        TOOLBAR SLOT + ACTIONS SLOT + EXPORT BUTTON
+        ============================================
+        Rendered inside the container, separated by a border-bottom.
+      -->
+      <div v-if="$slots.toolbar || $slots['toolbar-actions'] || enableExport" class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4 bg-gray-50/50 dark:bg-gray-800/50">
+        <div class="flex-1">
+          <slot name="toolbar" />
+        </div>
+        <div v-if="$slots['toolbar-actions']" class="flex-shrink-0">
+          <slot name="toolbar-actions" />
+        </div>
+        <!-- Spacer to push export button to the right -->
+        <div class="flex-1"></div>
+        <div v-if="enableExport" class="flex-shrink-0">
+          <UDropdownMenu :items="exportMenuItems">
+            <UButton
+              icon="i-heroicons-arrow-down-tray-20-solid"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              label="Export"
+            />
+          </UDropdownMenu>
+        </div>
+      </div>
+
+      <!--
+        OVERFLOW WRAPPER
+        ================
+        Enables horizontal scroll on narrow screens.
+      -->
+      <div class="overflow-x-auto">
+        <table class="w-full divide-y divide-gray-200 dark:divide-gray-700 zebra-table">
         <!--
           COLGROUP
           ========
@@ -387,7 +388,7 @@ const exportMenuItems = computed(() => [[
             <td
               v-for="column in columns"
               :key="`${row[rowKey]}-${column.key}`"
-              class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
+              class="px-4 py-4 text-sm text-gray-900 dark:text-gray-100"
               :class="column.class"
               :style="{ textAlign: column.align || 'left' }"
             >
@@ -509,3 +510,34 @@ const exportMenuItems = computed(() => [[
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Make the last visible column expand to fill remaining space */
+.zebra-table {
+  /* Ensure table uses full width of container */
+  table-layout: auto;
+}
+
+.zebra-table th:last-child,
+.zebra-table td:last-child {
+  /* Last column expands to fill remaining space */
+  width: auto !important;
+}
+
+/* Extend header row background to fill container */
+.zebra-table thead tr::after {
+  content: '';
+  display: table-cell;
+  width: 100%;
+  /* Inherit the header background color */
+  background-color: inherit;
+}
+
+/* Extend body row backgrounds to fill container (zebra stripes) */
+.zebra-table tbody tr::after {
+  content: '';
+  display: table-cell;
+  width: 100%;
+  /* Inherits the row's background color including stripes */
+}
+</style>
