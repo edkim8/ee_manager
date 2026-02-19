@@ -53,7 +53,7 @@ export const usePropertyState = () => {
     if (!me.value) return []
     const access = me.value.access
     const allProps = me.value.properties
-    const filtered = (allProps || []).filter((p: any) => access.allowed_codes.includes(p.code))
+    const filtered = (allProps || []).filter((p: any) => !!access.property_roles[p.code])
     
     return filtered.map((p: any) => ({
       label: `${p.code} - ${p.name}`,

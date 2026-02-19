@@ -4,10 +4,12 @@ import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta, useOverlay, refreshNuxtData } from '#imports'
 import { useConstantsMutation, type AppConstant } from '../../../../base/composables/mutations/useConstantsMutation'
 import ConstantsModal from '../../../../base/components/modals/ConstantsModal.vue'
-import type { TableColumn } from '../../../../table/types'
+// ===== EXCEL-BASED TABLE CONFIGURATION =====
+import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/availabilities-complete.generated'
+import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
 
 const supabase = useSupabaseClient()
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
 
 definePageMeta({
   layout: 'dashboard'
@@ -42,284 +44,33 @@ const defaultSortDirection = computed(() => {
   return 'asc'
 })
 
-// Fetch Leasing Pipeline Data and Pricing Analysis in parallel
+// Fetch Leasing Pipeline Data (Consolidated master source)
 const { data: availabilities, status, error, refresh: refreshAvailabilities } = await useAsyncData('availabilities-list', async () => {
   if (!activeProperty.value) return []
 
-  // 1. Fetch Pipeline data
-  const { data: pipelineData, error: pipelineError } = await supabase
+  const { data, error } = await supabase
     .from('view_leasing_pipeline')
     .select('*')
     .eq('property_code', activeProperty.value)
     .order(defaultSortField.value, { ascending: defaultSortDirection.value === 'asc' })
 
-  if (pipelineError) throw pipelineError
-
-  // 2. Fetch Pricing Analysis data
-  const { data: pricingData } = await supabase
-    .from('view_unit_pricing_analysis')
-    .select('*')
-    .eq('property_code', activeProperty.value)
-
-  // 3. Fetch Concession Analysis data
-  const { data: concessionData } = await supabase
-    .from('view_concession_analysis')
-    .select('*')
-    .eq('property_code', activeProperty.value)
-
-  // 4. Join logic
-  const pricingMap = new Map()
-  pricingData?.forEach((p: any) => pricingMap.set(p.unit_id, p))
-
-  const concessionMap = new Map()
-  concessionData?.forEach((c: any) => concessionMap.set(c.unit_id, c))
-
-  return pipelineData.map((item: any) => {
-    const calculated = pricingMap.get(item.unit_id)?.calculated_offered_rent || 0
-    const offered = Number(item.rent_offered || 0)
-    const matches = Math.abs(offered - calculated) < 0.01
-
-    const concession = concessionMap.get(item.unit_id)
-
-    return {
-      ...item,
-      calculated_offered_rent: calculated,
-      sync_alerts: !matches
-        ? [`Yardi Rent ($${offered.toLocaleString()}) does not match internal calculation ($${calculated.toLocaleString()})`]
-        : [],
-      // Concession data
-      concession_display: concession?.concession_display || '0%/0%',
-      concession_amenity_pct: concession?.concession_amenity_pct || 0,
-      concession_total_pct: concession?.concession_total_pct || 0,
-      concession_upfront_amount: concession?.concession_upfront_amount || 0,
-      concession_free_rent_days: concession?.concession_free_rent_days || 0
-    }
-  })
+  if (error) throw error
+  return data
 }, {
-  watch: [activeProperty, displayFilter]  // Re-fetch when filter changes to apply new sort
+  watch: [activeProperty, displayFilter]
 })
 
-// Base columns (always visible)
-const baseColumns: TableColumn[] = [
-  {
-    key: 'unit_name',
-    label: 'Unit',
-    sortable: true,
-    width: '90px',
-    align: 'center'
-  },
-  {
-    key: 'sync_alerts',
-    label: 'Sync',
-    sortable: true,
-    width: '80px',
-    align: 'center'
-  },
-  {
-    key: 'building_name',
-    label: 'Building',
-    sortable: true,
-    width: '150px'
-  },
-  {
-    key: 'floor_plan_name',
-    label: 'Floor Plan',
-    sortable: true,
-    width: '130px'
-  },
-  {
-    key: 'sf',
-    label: 'SF',
-    sortable: true,
-    width: '80px',
-    align: 'right'
-  },
-  {
-    key: 'bedroom_count',
-    label: 'Beds',
-    sortable: true,
-    width: '70px',
-    align: 'center'
-  }
-]
-
-// Status-specific columns
-const availableColumns: TableColumn[] = [
-  {
-    key: 'rent_offered',
-    label: 'Rent',
-    sortable: true,
-    width: '100px',
-    align: 'right'
-  },
-  {
-    key: 'available_date',
-    label: 'Available',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'vacant_days',
-    label: 'Vacant',
-    sortable: true,
-    width: '80px',
-    align: 'center'
-  },
-  {
-    key: 'move_out_date',
-    label: 'Move Out',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  }
-]
-
-const appliedColumns: TableColumn[] = [
-  {
-    key: 'resident_name',
-    label: 'Applicant',
-    sortable: true,
-    width: '160px'
-  },
-  {
-    key: 'resident_email',
-    label: 'Email',
-    sortable: true,
-    width: '200px'
-  },
-  {
-    key: 'application_date',
-    label: 'Applied',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'screening_result',
-    label: 'Screening',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'move_in_date',
-    label: 'Target Move-In',
-    sortable: true,
-    width: '130px',
-    align: 'center'
-  },
-  {
-    key: 'concession_display',
-    label: '% Concession',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'leasing_agent',
-    label: 'Agent',
-    sortable: true,
-    width: '120px'
-  }
-]
-
-const leasedColumns: TableColumn[] = [
-  {
-    key: 'resident_name',
-    label: 'Resident',
-    sortable: true,
-    width: '160px'
-  },
-  {
-    key: 'resident_email',
-    label: 'Email',
-    sortable: true,
-    width: '200px'
-  },
-  {
-    key: 'lease_start_date',
-    label: 'Lease Start',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'lease_end_date',
-    label: 'Lease End',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  },
-  {
-    key: 'lease_rent_amount',
-    label: 'Rent',
-    sortable: true,
-    width: '100px',
-    align: 'right'
-  },
-  {
-    key: 'concession_display',
-    label: '% Concession',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  }
-]
-
-// Dynamic columns based on filter
+// Dynamic columns from Excel configuration based on filter + role/dept access
 const columns = computed(() => {
-  const base = [...baseColumns]
-
-  // Add status column
-  base.push({
-    key: 'status',
-    label: 'Status',
-    sortable: true,
-    width: '110px',
-    align: 'center'
-  })
-
-  // Add status-specific columns based on filter
-  if (displayFilter.value === 'Available') {
-    return [...base, ...availableColumns]
-  } else if (displayFilter.value === 'Applied') {
-    return [...base, ...appliedColumns]
-  } else if (displayFilter.value === 'Leased') {
-    return [...base, ...leasedColumns]
-  } else {
-    // 'All' - show a mixed set of most useful columns
-    return [
-      ...base,
-      {
-        key: 'resident_name',
-        label: 'Resident',
-        sortable: true,
-        width: '160px'
-      },
-      {
-        key: 'available_date',
-        label: 'Available',
-        sortable: true,
-        width: '110px',
-        align: 'center'
-      },
-      {
-        key: 'move_in_date',
-        label: 'Move-In',
-        sortable: true,
-        width: '110px',
-        align: 'center'
-      },
-      {
-        key: 'rent_offered',
-        label: 'Rent',
-        sortable: true,
-        width: '100px',
-        align: 'right'
-      }
-    ]
-  }
+  return getAccessibleColumns(
+    allColumns,
+    filterGroups,
+    roleColumns,
+    departmentColumns,
+    displayFilter.value,
+    userContext.value,
+    activeProperty.value
+  )
 })
 
 // Status color mapping
@@ -448,27 +199,17 @@ const handleRowClick = (row: any) => {
   }
 }
 
-const overlay = useOverlay()
+const showConfig = ref(false)
 const openConfig = () => {
-  const modal = overlay.create(ConstantsModal)
-  modal.open({ 
-    title: 'Availability Rules',
-    category: 'available_status_rules',
-    propertyCode: activeProperty.value,
-    onClose: async (saved: boolean) => {
-      // 1. Close modal immediately to avoid "stuck" UI
-      modal.close()
-      
-      console.log(`[Availabilities] Modal closed with saved=${saved}`)
-      
-      if (saved) {
-        console.log('[Availabilities] Reloading all page data...')
-        // 2. Use Nuxt's global refresh to ensure everything (inventory + config) updates
-        await refreshNuxtData()
-        console.log('[Availabilities] Page data reloaded.')
-      }
-    }
-  })
+  showConfig.value = true
+}
+
+const handleConfigClose = async (saved: boolean) => {
+  showConfig.value = false
+  if (saved) {
+    console.log('[Availabilities] Settings saved, reloading data...')
+    await refreshNuxtData()
+  }
 }
 </script>
 
@@ -502,6 +243,7 @@ const openConfig = () => {
     </div>
 
     <GenericDataTable
+      :key="displayFilter"
       :data="filteredData"
       :columns="columns"
       :loading="status === 'pending'"
@@ -709,7 +451,7 @@ const openConfig = () => {
         <CellsBadgeCell
           v-if="value"
           :text="value"
-          :color="value === 'Approved' ? 'success' : value === 'Denied' ? 'error' : 'warning'"
+          :color="value === 'Accepted' || value === 'Approved' ? 'primary' : value === 'Conditional' ? 'warning' : value === 'Denied' || value === 'Rejected' ? 'error' : 'neutral'"
           variant="subtle"
           size="sm"
         />
@@ -721,5 +463,14 @@ const openConfig = () => {
         <CellsAlertCell :alerts="value" />
       </template>
     </GenericDataTable>
+
+    <ConstantsModal
+      v-if="showConfig"
+      title="Availability Rules"
+      category="available_status_rules"
+      :property-code="activeProperty"
+      :on-close="handleConfigClose"
+      @close="handleConfigClose"
+    />
   </div>
 </template>

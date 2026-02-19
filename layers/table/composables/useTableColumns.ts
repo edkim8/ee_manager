@@ -11,6 +11,91 @@ export interface ColumnGroup {
   columns: string[]
 }
 
+// ============================================================
+// Role and Department-Based Column Filtering
+// ============================================================
+
+/**
+ * Check if a column should be visible based on role and department
+ *
+ * Logic:
+ * - Items within roles[] are OR (any match passes)
+ * - Items within departments[] are OR (any match passes)
+ * - roles AND departments are AND (must pass both)
+ *
+ * Column visible IF:
+ *   (user.role IN column.roles OR 'all' IN column.roles)
+ *   AND
+ *   (user.department IN column.departments OR 'all' IN column.departments)
+ */
+export function canShowColumn(
+  column: TableColumn,
+  userRole?: string,
+  userDepartment?: string,
+  isSuperAdmin = false
+): boolean {
+  // Super admin bypasses all restrictions
+  if (isSuperAdmin) return true
+
+  // Get column restrictions (default to 'all' if not specified)
+  const allowedRoles = column.roles || ['all']
+  const allowedDepts = column.departments || ['all']
+
+  // Check role restriction (OR logic within array)
+  const roleCheck =
+    allowedRoles.includes('all') ||
+    (userRole && allowedRoles.includes(userRole))
+
+  // Check department restriction (OR logic within array)
+  const deptCheck =
+    allowedDepts.includes('all') ||
+    (userDepartment && allowedDepts.includes(userDepartment))
+
+  // Must pass BOTH checks (AND logic between role and department)
+  return roleCheck && deptCheck
+}
+
+/**
+ * Filter columns based on role, department, and optional filter group
+ *
+ * @example
+ * const filteredColumns = filterColumnsByAccess(allColumns, {
+ *   userRole: 'Manager',
+ *   userDepartment: 'Leasing',
+ *   isSuperAdmin: false,
+ *   filterGroup: 'current' // Optional
+ * })
+ */
+export function filterColumnsByAccess(
+  columns: TableColumn[],
+  options: {
+    userRole?: string
+    userDepartment?: string
+    isSuperAdmin?: boolean
+    filterGroup?: string
+  } = {}
+): TableColumn[] {
+  const { userRole, userDepartment, isSuperAdmin, filterGroup } = options
+
+  return columns.filter((column) => {
+    // 1. Check role and department restrictions
+    if (!canShowColumn(column, userRole, userDepartment, isSuperAdmin)) {
+      return false
+    }
+
+    // 2. Check filter group (if specified)
+    if (filterGroup && column.filterGroups) {
+      const allowedGroups = column.filterGroups || ['all']
+      const groupCheck =
+        allowedGroups.includes('all') || allowedGroups.includes(filterGroup)
+
+      if (!groupCheck) return false
+    }
+
+    return true
+  })
+}
+
 /**
  * useTableColumns - Composable for managing column visibility and presets
  *

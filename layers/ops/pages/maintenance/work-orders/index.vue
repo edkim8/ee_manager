@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { definePageMeta, usePropertyState, useSupabaseClient, useAsyncData } from '#imports'
+// ===== EXCEL-BASED TABLE CONFIGURATION =====
+import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/work_orders-complete.generated'
+import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
 
 definePageMeta({
   layout: 'dashboard'
 })
 
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
 const supabase = useSupabaseClient()
 
 // ============================================================
@@ -150,20 +153,19 @@ const filteredWorkOrders = computed(() => {
 })
 
 // ============================================================
-// TABLE CONFIGURATION
+// TABLE CONFIGURATION - From Excel
 // ============================================================
-const columns = [
-  { key: 'yardi_work_order_id', label: 'WO ID', sortable: true, width: '120px' },
-  { key: 'status', label: 'Status', sortable: true, width: '120px', align: 'center' },
-  { key: 'unit_name', label: 'Unit', sortable: true, width: '100px' },
-  { key: 'building_name', label: 'Building', sortable: true, width: '150px' },
-  { key: 'category', label: 'Category', sortable: true, width: '150px' },
-  { key: 'description', label: 'Description', sortable: false, width: '250px' },
-  { key: 'resident', label: 'Resident', sortable: true, width: '150px' },
-  { key: 'call_date', label: 'Call Date', sortable: true, width: '110px', align: 'center' },
-  { key: 'completion_date', label: 'Completed', sortable: true, width: '110px', align: 'center' },
-  { key: 'days_open', label: 'Days Open', sortable: true, width: '100px', align: 'center' }
-]
+const columns = computed(() => {
+  return getAccessibleColumns(
+    allColumns,
+    filterGroups,
+    roleColumns,
+    departmentColumns,
+    'all',
+    userContext.value,
+    activeProperty.value
+  )
+})
 
 // Calculate days open for each work order
 const enhancedWorkOrders = computed(() => {

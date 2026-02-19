@@ -426,12 +426,21 @@ const floorPlanImageUrl = computed(() => {
 
           <!-- Unit Attachments (Photos & Files) - Desktop Sidebar -->
           <div class="hidden md:block bg-white dark:bg-gray-900/80 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-gray-200/50 dark:shadow-none">
-            <AttachmentManager 
-              :record-id="unitId" 
-              record-type="unit" 
+            <AttachmentManager
+              :record-id="unitId"
+              record-type="unit"
               title="Unit Photos & Files"
             />
           </div>
+
+          <!-- Unit Assets (Inventory) -->
+          <ClientOnly>
+            <InventoryLocationAssetsWidget
+              location-type="unit"
+              :location-id="unitId"
+              title="Unit Assets"
+            />
+          </ClientOnly>
 
           <!-- Amenities Breakdown -->
           <div v-if="pricingBreakdown" class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">

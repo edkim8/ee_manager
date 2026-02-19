@@ -1,12 +1,20 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  extends: ['./layers/base', './layers/ops', './layers/admin', './layers/table', './layers/parsing'],
+  extends: ['./layers/base', './layers/ops', './layers/admin', './layers/table', './layers/parsing', './layers/inventory'],
 
   modules: ['@nuxtjs/supabase', '@nuxt/image'],
 
   devtools: { enabled: true },
 
   compatibilityDate: '2025-01-19',
+
+  tailwindcss: {
+    config: {
+      content: [
+        './configs/table-configs/**/*.generated.ts'
+      ]
+    }
+  },
 
   devServer: {
     port: 3001

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { definePageMeta, usePropertyState, useSupabaseClient, useAsyncData } from '#imports'
+// ===== EXCEL-BASED TABLE CONFIGURATION =====
+import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/alerts-complete.generated'
+import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
 
 definePageMeta({
   layout: 'dashboard'
 })
 
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
 const supabase = useSupabaseClient()
 
 // ============================================================
@@ -74,20 +77,19 @@ const displayedAlerts = computed(() => {
 })
 
 // ============================================================
-// TABLE CONFIGURATION
+// TABLE CONFIGURATION - From Excel
 // ============================================================
-const columns = [
-  { key: 'source', label: 'Source', sortable: true, width: '90px', align: 'center' },
-  { key: 'severity', label: 'Severity', sortable: true, width: '100px', align: 'center' },
-  { key: 'unit_name', label: 'Unit', sortable: true, width: '100px' },
-  { key: 'building_name', label: 'Building', sortable: true, width: '150px' },
-  { key: 'title', label: 'Alert', sortable: true, width: '250px' },
-  { key: 'message', label: 'Details', sortable: false, width: '200px' },
-  { key: 'resident', label: 'Resident', sortable: true, width: '150px' },
-  { key: 'days_open', label: 'Days Open', sortable: true, width: '100px', align: 'center' },
-  { key: 'created_at', label: 'Created', sortable: true, width: '110px', align: 'center' },
-  { key: 'actions', label: 'Actions', sortable: false, width: '120px', align: 'center' }
-]
+const columns = computed(() => {
+  return getAccessibleColumns(
+    allColumns,
+    filterGroups,
+    roleColumns,
+    departmentColumns,
+    'all',
+    userContext.value,
+    activeProperty.value
+  )
+})
 
 // ============================================================
 // ACTIONS: RESOLVE & DEACTIVATE
