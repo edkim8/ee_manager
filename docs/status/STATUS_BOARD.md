@@ -2,7 +2,7 @@
 
 ## Overview
 **Current Phase**: Table Standardization & UX Polish
-**Latest Update**: [2026-02-19] Inventory Life-Cycle System Complete - Three-tier asset tracking (Catalog + Installations) with mobile-optimized search, photo capture, and health status indicators.
+**Latest Update**: [2026-02-19] Table & Pricing Refinement - Normalized pricing schema, added concession metrics to Floor Plan UI, and implemented a collapsible ScreenDebug tool.
 
 ## Feature Tracker
 
@@ -26,6 +26,7 @@
 | F-022 | Renewals Worksheet & Modeling | Ops | **COMPLETED** | Antigravity |
 | F-023 | Excel Table Configuration System | Table | **COMPLETED** | Claude |
 | F-024 | Inventory Life-Cycle Module | Ops | **COMPLETED** | Claude |
+| F-025 | Table & Pricing Polish | Table/Leasing | **COMPLETED** | Gemini |
 
 
 > **F-010 Note:** Stable Core Layer - Open for Extension. See `layers/table/AI_USAGE_GUIDE.md`.
@@ -72,6 +73,7 @@
 - [x] Implement Batch Status Update System (Renewals)
 - [x] Excel Table Configuration System (11 tables converted)
 - [x] Inventory Life-Cycle Module (Catalog + Installations)
+- [x] Table & Pricing Refinement (Normalization & Floor Plan UI)
 - [ ] **Next Step**: Content refinement using Excel system (column labels, widths, priorities)
 
 ## Recent Audit & Improvements (2026-02-09)

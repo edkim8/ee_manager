@@ -1,17 +1,29 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 
 const screenWidth = ref(0)
 const screenHeight = ref(0)
+const isExpanded = ref(true)
 
 const updateSize = () => {
   screenWidth.value = window.innerWidth
   screenHeight.value = window.innerHeight
 }
 
+const toggleExpanded = () => {
+  isExpanded.value = !isExpanded.value
+  localStorage.setItem('ee-debug-expanded', String(isExpanded.value))
+}
+
 onMounted(() => {
   updateSize()
   window.addEventListener('resize', updateSize)
+  
+  // Load preference from localStorage
+  const saved = localStorage.getItem('ee-debug-expanded')
+  if (saved !== null) {
+    isExpanded.value = saved === 'true'
+  }
 })
 
 onUnmounted(() => {
@@ -40,10 +52,34 @@ const expectedColumns = computed(() => {
 </script>
 
 <template>
-  <div class="fixed bottom-4 right-4 z-50 bg-gray-900/95 text-white p-4 rounded-lg shadow-2xl border-2 border-blue-500 font-mono text-xs max-w-xs">
-    <div class="font-bold text-sm mb-2 text-blue-400">🔍 Screen Debug</div>
+  <div 
+    class="fixed bottom-4 right-4 z-50 transition-all duration-300 pointer-events-auto"
+    :class="[
+      isExpanded 
+        ? 'bg-gray-900/95 text-white p-4 rounded-lg shadow-2xl border-2 border-blue-500 max-w-xs' 
+        : 'bg-transparent'
+    ]"
+  >
+    <!-- Toggle Button (Floating when collapsed, header when expanded) -->
+    <div 
+      class="flex items-center justify-between gap-4"
+      :class="{ 'mb-2': isExpanded }"
+    >
+      <div v-if="isExpanded" class="font-bold text-sm text-blue-400">🔍 Screen Debug</div>
+      
+      <UButton
+        :icon="isExpanded ? 'i-heroicons-chevron-down' : 'i-heroicons-adjustments-horizontal'"
+        color="primary"
+        variant="solid"
+        size="xs"
+        class="shadow-xl"
+        :class="{ 'p-2 rounded-full h-10 w-10': !isExpanded }"
+        @click="toggleExpanded"
+      />
+    </div>
 
-    <div class="space-y-1">
+    <!-- Content Panel -->
+    <div v-if="isExpanded" class="space-y-1 font-mono text-xs">
       <div class="flex justify-between gap-4">
         <span class="text-gray-400">Width:</span>
         <span class="font-bold text-green-400">{{ screenWidth }}px</span>

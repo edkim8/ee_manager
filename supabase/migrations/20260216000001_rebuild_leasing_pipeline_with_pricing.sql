@@ -36,6 +36,7 @@ SELECT
     u.id as unit_id,
     u.unit_name,
     u.property_code,
+    u.floor_plan_id,
     COALESCE(fp.market_base_rent, 0) as base_rent,
     COALESCE(asm.total_fixed_amenities, 0) as fixed_amenities_total,
     (COALESCE(fp.market_base_rent, 0) + COALESCE(asm.total_fixed_amenities, 0)) as calculated_market_rent,
@@ -207,10 +208,12 @@ SELECT
   -- Bedroom x Bathroom concatenation
   CASE
     WHEN fp.bedroom_count IS NOT NULL AND fp.bathroom_count IS NOT NULL THEN
-      CONCAT(fp.bedroom_count, 'x', fp.bathroom_count)
+      CONCAT(fp.bedroom_count::INTEGER, 'x', fp.bathroom_count::INTEGER)
     ELSE NULL
   END AS b_b,
-  vupa.calculated_market_rent AS market_base_rent,
+  vupa.base_rent,
+  vupa.fixed_amenities_total,
+  vupa.calculated_market_rent,
   -- Vacancy metrics
   CASE
     WHEN a.status = 'Available'::text THEN COALESCE(a.available_date - CURRENT_DATE, 0)
@@ -335,10 +338,12 @@ SELECT
   -- Bedroom x Bathroom concatenation
   CASE
     WHEN fp.bedroom_count IS NOT NULL AND fp.bathroom_count IS NOT NULL THEN
-      CONCAT(fp.bedroom_count, 'x', fp.bathroom_count)
+      CONCAT(fp.bedroom_count::INTEGER, 'x', fp.bathroom_count::INTEGER)
     ELSE NULL
   END AS b_b,
-  vupa.calculated_market_rent AS market_base_rent,
+  vupa.base_rent,
+  vupa.fixed_amenities_total,
+  vupa.calculated_market_rent,
   0 AS vacant_days,
   0 AS turnover_days,
   l.start_date AS lease_start_date,
@@ -542,7 +547,9 @@ SELECT
   a.move_in_date,
   a.amenities,
   a.rent_offered,
-  vupa.calculated_market_rent AS market_base_rent,
+  vupa.base_rent,
+  vupa.fixed_amenities_total,
+  vupa.calculated_market_rent,
   
   -- Concession fields for detail pages
   COALESCE(vca.concession_amenity_pct, 0) AS concession_amenity_pct,
@@ -561,7 +568,7 @@ SELECT
   -- Bedroom x Bathroom concatenation
   CASE
     WHEN fp.bedroom_count IS NOT NULL AND fp.bathroom_count IS NOT NULL THEN
-      CONCAT(fp.bedroom_count, 'x', fp.bathroom_count)
+      CONCAT(fp.bedroom_count::INTEGER, 'x', fp.bathroom_count::INTEGER)
     ELSE NULL
   END AS b_b,
 

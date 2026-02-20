@@ -169,15 +169,7 @@ const { data: units, status: unitsStatus, refresh: refreshUnits } = await useAsy
         return []
     }
 
-    // 2. Fetch Pricing Analysis data
-    console.log('[DEBUG] Fetching pricing data...')
-    const { data: pricingData, error: pricingError } = await supabase
-        .from('view_unit_pricing_analysis')
-        .select('*')
-        .eq('floor_plan_id', selectedFloorPlanId.value)
-    console.log('[DEBUG] Pricing data:', { count: pricingData?.length, error: pricingError })
-
-    // 3. Build leases map from pipeline data (already has rent info)
+    // 2. Build leases map from pipeline data (already has rent info)
     const unitIds = pipelineData.map((p: any) => p.unit_id)
     const leasesMap = new Map()
     pipelineData.forEach((p: any) => {
@@ -187,34 +179,24 @@ const { data: units, status: unitsStatus, refresh: refreshUnits } = await useAsy
         }
     })
 
-    // 4. Fetch Application dates (filter by units in this floor plan)
-    console.log('[DEBUG] Fetching applications for unit IDs:', unitIds)
+    // 3. Fetch application_date overrides if missing from pipeline
+    // (Pipeline should have it, but we keep this as a robust fallback/override source)
     const { data: applicationsData, error: appsError } = await supabase
         .from('applications')
         .select('unit_id, application_date')
         .in('unit_id', unitIds)
         .order('application_date', { ascending: true })
-    console.log('[DEBUG] Applications data:', { count: applicationsData?.length, error: appsError })
 
-    // 5. Fetch unit_amenities with amenity details for sync comparison
-    console.log('[DEBUG] Fetching unit amenities...')
+    // 4. Fetch unit_amenities with amenity details for sync comparison
     const { data: unitAmenitiesData, error: amenError } = await supabase
         .from('unit_amenities')
         .select('unit_id, amenities(yardi_amenity, yardi_name, yardi_code)')
         .in('unit_id', unitIds)
         .eq('active', true)
-    console.log('[DEBUG] Unit amenities data:', { count: unitAmenitiesData?.length, error: amenError })
-
-    const pricingMap = new Map()
-    pricingData?.forEach((p: any) => pricingMap.set(p.unit_id, p))
 
     const applicationsMap = new Map()
     applicationsData?.forEach((a: any) => applicationsMap.set(a.unit_id, a.application_date))
 
-    // Build map of unit_id -> array of amenity identifiers from database
-    // Store all three possible identifiers (yardi_amenity, yardi_code, yardi_name)
-    // since Yardi reports may use any of these fields
-    console.log('[DEBUG] Building amenities map...')
     const unitAmenitiesMap = new Map<string, string[]>()
     unitAmenitiesData?.forEach((ua: any) => {
         if (!ua.amenities) return
@@ -222,101 +204,62 @@ const { data: units, status: unitsStatus, refresh: refreshUnits } = await useAsy
         if (!unitAmenitiesMap.has(unitId)) {
             unitAmenitiesMap.set(unitId, [])
         }
-        // Add all three possible identifiers to handle any Yardi format
         const amenityIds = [
             ua.amenities.yardi_amenity,
             ua.amenities.yardi_code,
             ua.amenities.yardi_name
-        ].filter(Boolean) // Remove any null/undefined values
-
+        ].filter(Boolean)
         unitAmenitiesMap.get(unitId)?.push(...amenityIds)
     })
-    console.log('[DEBUG] Amenities map built, size:', unitAmenitiesMap.size)
-
-    console.log('[DEBUG] Starting to enrich units...')
 
     try {
-        const enrichedUnits = pipelineData.map((item: any, index: number) => {
-            console.log(`[DEBUG] Enriching unit ${index + 1}/${pipelineData.length}:`, item.unit_name)
-
-            const pricing = pricingMap.get(item.unit_id)
-            const calculated = pricing?.calculated_offered_rent || 0
+        const enrichedUnits = pipelineData.map((item: any) => {
+            const calculated = item.calculated_offered_rent || 0
             const offered = Number(item.rent_offered || 0)
             const rentMatches = Math.abs(offered - calculated) < 0.01
             const leasedRent = leasesMap.get(item.unit_id)
-            const applicationDate = applicationsMap.get(item.unit_id)
+            // Use pipeline date with map fallback
+            const applicationDate = item.application_date || applicationsMap.get(item.unit_id)
 
-            // Parse Yardi amenities - handle different formats
             let yardiAmenities: string[] = []
             if (item.amenities) {
                 if (typeof item.amenities === 'string') {
-                    // String format: "Washer/Dryer<br>Balcony"
                     yardiAmenities = item.amenities.split('<br>').map((a: string) => a.trim()).filter(Boolean)
                 } else if (Array.isArray(item.amenities)) {
-                    // Already an array
                     yardiAmenities = item.amenities
-                } else {
-                    // Unknown format, log and skip
-                    console.warn('[DEBUG] Unknown amenities format:', typeof item.amenities, item.amenities)
-                    yardiAmenities = []
                 }
             }
 
-            // Get database amenities
             const dbAmenities = unitAmenitiesMap.get(item.unit_id) || []
-
-            // Compare amenities
             const missingInDb = yardiAmenities.filter((ya: string) => !dbAmenities.includes(ya))
             const extraInDb = dbAmenities.filter((da: string) => !yardiAmenities.includes(da))
 
-            // Build sync alerts with severity levels
-            // CRITICAL: Rent mismatch (RED alert)
-            // INFO: Amenity differences when rent matches (informational only)
             const criticalAlerts = []
             const infoAlerts = []
 
             if (!rentMatches) {
-                // CRITICAL: Rent doesn't match!
                 criticalAlerts.push(`💰 Rent Mismatch: Yardi $${offered.toLocaleString()} ≠ Calculated $${calculated.toLocaleString()} (Δ $${Math.abs(offered - calculated).toLocaleString()})`)
             }
 
-            // Amenity differences are only informational if rent matches
             if (missingInDb.length > 0) {
                 const alert = `⚠️ Missing in DB: ${missingInDb.join(', ')}`
-                if (rentMatches) {
-                    infoAlerts.push(alert)
-                } else {
-                    criticalAlerts.push(alert)
-                }
+                if (rentMatches) infoAlerts.push(alert)
+                else criticalAlerts.push(alert)
             }
             if (extraInDb.length > 0) {
                 const alert = `➕ Extra in DB: ${extraInDb.join(', ')}`
-                if (rentMatches) {
-                    infoAlerts.push(alert)
-                } else {
-                    criticalAlerts.push(alert)
-                }
+                if (rentMatches) infoAlerts.push(alert)
+                else criticalAlerts.push(alert)
             }
 
-            const enriched = {
+            return {
                 ...item,
-                ...pricing, // Spread pricing analysis (base_rent, fixed_amenities_total, etc)
                 leased_rent: leasedRent || 0,
                 application_date: applicationDate,
-                sync_alerts: criticalAlerts,        // Only show critical alerts in red
-                sync_info: infoAlerts,              // Informational alerts (green/blue)
+                sync_alerts: criticalAlerts,
+                sync_info: infoAlerts,
                 sync_status: criticalAlerts.length === 0 ? 'synced' : 'error'
             }
-
-            console.log(`[DEBUG] Unit ${item.unit_name} enriched successfully`)
-            return enriched
-        })
-
-        console.log('[DEBUG] All units enriched successfully, count:', enrichedUnits.length)
-        console.log('[DEBUG] Returning units data:', {
-            count: enrichedUnits.length,
-            sample: enrichedUnits[0],
-            statuses: enrichedUnits.map((u: any) => u.status)
         })
         return enrichedUnits
     } catch (error) {
@@ -344,7 +287,7 @@ const availableUnits = computed(() => {
 })
 
 const applicantFutureUnits = computed(() => {
-    const filtered = units.value?.filter((u: any) => ['Applied', 'Future'].includes(u.status))
+    const filtered = units.value?.filter((u: any) => ['Applied', 'Leased'].includes(u.status))
         .sort((a: any, b: any) => {
             // Sort by application_date ascending
             if (!a.application_date) return 1
@@ -362,6 +305,7 @@ const availableUnitsMetrics = computed(() => {
             avgMarket: 0,
             avgOffered: 0,
             concessions: 0,
+            concessionPct: 0,
             count: 0
         }
     }
@@ -374,6 +318,7 @@ const availableUnitsMetrics = computed(() => {
         avgMarket: totalMarket / count,
         avgOffered: totalOffered / count,
         concessions: (totalOffered - totalMarket) / count,
+        concessionPct: totalMarket > 0 ? (((totalOffered - totalMarket) / totalMarket) * 100) : 0,
         count
     }
 })
@@ -397,7 +342,8 @@ const applicantFutureColumns: TableColumn[] = [
   { key: 'application_date', label: 'Application Date', sortable: true, align: 'center' },
   { key: 'base_rent', label: 'Base', sortable: true, align: 'right' },
   { key: 'calculated_market_rent', label: 'Market', sortable: true, align: 'right' },
-  { key: 'leased_rent', label: 'Leased Rent', sortable: true, align: 'right' }
+  { key: 'leased_rent', label: 'Leased Rent', sortable: true, align: 'right' },
+  { key: 'concession_percent', label: '% Concession', sortable: true, align: 'right' }
 ]
 
 const formatCurrency = (val: number) => {
@@ -509,6 +455,9 @@ const handleSyncModalClose = () => {
               :class="activeFloorPlan.rent_discrepancy > 0 ? 'text-green-600' : activeFloorPlan.rent_discrepancy < 0 ? 'text-red-600' : ''"
             >
               {{ activeFloorPlan.rent_discrepancy > 0 ? '+' : '' }}{{ formatCurrency(activeFloorPlan.rent_discrepancy) }}
+              <span class="text-xs font-bold opacity-70 ml-1">
+                ({{ activeFloorPlan.avg_market_rent > 0 ? ((activeFloorPlan.rent_discrepancy / activeFloorPlan.avg_market_rent) * 100).toFixed(1) : '0.0' }}%)
+              </span>
             </p>
           </UCard>
         </div>
@@ -538,6 +487,9 @@ const handleSyncModalClose = () => {
               :class="availableUnitsMetrics.concessions > 0 ? 'text-green-600' : availableUnitsMetrics.concessions < 0 ? 'text-red-600' : ''"
             >
               {{ availableUnitsMetrics.concessions > 0 ? '+' : '' }}{{ formatCurrency(availableUnitsMetrics.concessions) }}
+              <span class="text-xs font-bold opacity-70 ml-1">
+                ({{ availableUnitsMetrics.concessionPct.toFixed(1) }}%)
+              </span>
             </p>
           </UCard>
         </div>
@@ -639,7 +591,7 @@ const handleSyncModalClose = () => {
           <template #cell-status="{ value }">
               <CellsBadgeCell
                   :text="value"
-                  :color="value === 'Applied' ? 'warning' : value === 'Future' ? 'success' : 'neutral'"
+                  :color="value === 'Applied' ? 'warning' : value === 'Leased' ? 'success' : 'neutral'"
                   variant="subtle"
               />
           </template>
@@ -651,9 +603,17 @@ const handleSyncModalClose = () => {
               </span>
           </template>
 
-          <!-- Rent Columns -->
           <template #cell-base_rent="{ value }">
               <span class="text-sm text-gray-400 font-mono">{{ formatCurrency(value) }}</span>
+          </template>
+
+          <template #cell-concession_percent="{ row }">
+              <span
+                  class="text-sm font-bold font-mono"
+                  :class="(row.leased_rent - row.calculated_market_rent) > 0 ? 'text-green-600' : (row.leased_rent - row.calculated_market_rent) < 0 ? 'text-red-600' : 'text-gray-500'"
+              >
+                  {{ row.calculated_market_rent > 0 ? (((row.leased_rent - row.calculated_market_rent) / row.calculated_market_rent) * 100).toFixed(1) : '0.0' }}%
+              </span>
           </template>
 
           <template #cell-calculated_market_rent="{ value }">
@@ -667,9 +627,10 @@ const handleSyncModalClose = () => {
       </GenericDataTable>
     </div>
 
-    <div v-if="summaryStatus !== 'pending' && (!floorPlanSummaries || floorPlanSummaries.length === 0)" class="py-20 text-center bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100">
+    <div v-if="summaryStatus !== 'pending' && (!floorPlanSummaries || floorPlanSummaries.length === 0) && !activeFloorPlan" class="py-20 text-center bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100">
         <UIcon name="i-heroicons-building-office-2" class="text-4xl text-gray-300 mb-2" />
-        <p class="text-gray-500 font-medium">No floor plans found for this property.</p>
+        <p v-if="!activeProperty" class="text-gray-500 font-medium">Please select a property from the sidebar.</p>
+        <p v-else class="text-gray-500 font-medium">No floor plans found for this property.</p>
     </div>
 
     <!-- Pricing Modal -->

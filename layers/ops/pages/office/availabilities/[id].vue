@@ -100,11 +100,11 @@ watch(availability, (data) => {
 // Map concession data from the master view for display or calculate for local edits
 const concessionPercentages = computed(() => {
   // If editing, calculate dynamically to provide instant feedback
-  if (!availability.value?.market_base_rent || availability.value.market_base_rent === 0) {
+  if (!availability.value?.calculated_market_rent || availability.value.calculated_market_rent === 0) {
     return { amenityPct: 0, totalPct: 0, display: '0%/0%' }
   }
 
-  const marketBaseRent = availability.value.market_base_rent
+  const marketBaseRent = availability.value.calculated_market_rent
   
   // Use current edited values for internal math to show preview
   const amenityMonthly = availability.value.amenity_concession_monthly || 0
@@ -483,7 +483,7 @@ const handleSolve = async () => {
                 </div>
                 <div class="flex justify-between items-center">
                   <span class="text-gray-600 dark:text-gray-400">Free Rent (Monthly Value)</span>
-                  <span class="font-medium text-gray-900 dark:text-white">${{ availability?.market_base_rent ? ((availability.market_base_rent * concessionFreeDays / 365)).toFixed(2) : '0.00' }}</span>
+                  <span class="font-medium text-gray-900 dark:text-white">${{ availability?.calculated_market_rent ? ((availability.calculated_market_rent * concessionFreeDays / 365)).toFixed(2) : '0.00' }}</span>
                 </div>
                 <div class="flex justify-between items-center pt-2 border-t border-emerald-200/50 dark:border-emerald-800/30">
                   <span class="font-bold text-gray-900 dark:text-white">Total Concessions (A%)</span>

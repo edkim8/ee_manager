@@ -1,6 +1,6 @@
 # History Index: Technical Decision Log
 
-This file tracks key architectural decisions and completed milestones. **Latest Update**: [2026-02-19] H-042: Inventory Life-Cycle System - Completed multi-tier inventory catalog with installations tracking, mobile-optimized searchable selectors, and photo-lifecycle integration. Read this at the start of a session to "download" past wisdom without reading the full archives.
+This file tracks key architectural decisions and completed milestones. **Latest Update**: [2026-02-19] H-043: Table & Pricing Refinement - Normalized pricing schema, added concession metrics to Floor Plan UI, and implemented a collapsible ScreenDebug tool. Read this at the start of a session to "download" past wisdom without reading the full archives.
 
 | ID | Module | Key Decisions | Archive Link |
 |----|--------|---------------|--------------|
@@ -45,3 +45,4 @@ This file tracks key architectural decisions and completed milestones. **Latest 
 | H-040 | Renewals (CA) | Implemented CA rent control compliance (10% cap), batch status updates, and date-fns integration for forecasting. Fixed checkbox selection bug. | [LATEST_UPDATE](LATEST_UPDATE.md) |
 | H-041 | Excel Table System | Completed Excel-based configuration for all 11 tables with responsive breakpoints (P1-P5). Fixed Tailwind max-* variants, extended zebra stripes, and created ScreenDebug tool. Zero-code table updates via Excel. | [SESSION_SUMMARY](SESSION_2026_02_16_EXCEL_TABLES.md) |
 | H-042 | Inventory System | Implemented three-tier inventory model (Categories -> Items -> Installations). Built mobile-optimized `LocationSelector` for 392 units. Integrated photo capture and lifecycle health-status logic. | [SESSION_SUMMARY](SESSION_2026_02_19_INVENTORY_COMPLETE.md) |
+| H-043 | Table & Pricing | Normalized pricing fields across leasing layers. Enhanced Floor Plan UI with concession metrics and average cards. Implemented collapsible persistent Debug Tool. | [LATEST_UPDATE](LATEST_UPDATE.md) |
