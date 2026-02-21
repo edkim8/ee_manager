@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useSupabaseUser, useSupabaseClient, useRouter, useRoute, useColorMode, navigateTo, useOverlay } from '#imports'
 import { usePropertyState } from '../composables/usePropertyState'
 import { useLayoutWidth } from '../composables/useLayoutWidth'
+import { useTheme } from '../composables/useTheme'
 import ConstantsModal from './modals/ConstantsModal.vue'
 
 const user = useSupabaseUser()
@@ -44,6 +45,9 @@ const toggleColorMode = () => {
 
 // Width toggle
 const { isWide, toggleWidth } = useLayoutWidth()
+
+// Color theme
+const { THEMES, currentThemeId, setTheme } = useTheme()
 
 // Force page reload on property change to clear stale data
 watch(active_property, (newVal, oldVal) => {
@@ -104,6 +108,13 @@ const userMenuItems = computed(() => [
       onSelect: () => {
         toggleColorMode()
       }
+    },
+  ],
+  [
+    {
+      label: 'Color Theme',
+      slot: 'theme',
+      disabled: true,
     },
   ],
   [
@@ -380,6 +391,31 @@ const navigationItems = computed(() => {
                   </p>
                 </div>
               </template>
+
+              <template #theme>
+                <div class="px-1 py-0.5">
+                  <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Color Theme</p>
+                  <div class="grid grid-cols-6 gap-1.5">
+                    <UTooltip
+                      v-for="theme in THEMES"
+                      :key="theme.id"
+                      :text="theme.label"
+                      :delay-duration="200"
+                    >
+                      <button
+                        class="w-5 h-5 rounded-full transition-transform hover:scale-110 focus:outline-none"
+                        :class="currentThemeId === theme.id
+                          ? 'ring-2 ring-offset-1 ring-gray-500 dark:ring-gray-300 scale-110'
+                          : ''"
+                        :style="theme.swatch2
+                          ? `background: linear-gradient(135deg, ${theme.swatch} 50%, ${theme.swatch2} 50%)`
+                          : `background-color: ${theme.swatch}`"
+                        @click.stop="setTheme(theme.id)"
+                      />
+                    </UTooltip>
+                  </div>
+                </div>
+              </template>
             </UDropdownMenu>
           </div>
 
@@ -461,6 +497,30 @@ const navigationItems = computed(() => {
             class="w-full justify-start"
             @click="toggleWidth"
           />
+
+          <!-- Color Theme (Mobile) -->
+          <div class="px-2 pt-1 pb-0.5">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Color Theme</p>
+            <div class="flex flex-wrap gap-2">
+              <UTooltip
+                v-for="theme in THEMES"
+                :key="theme.id"
+                :text="theme.label"
+                :delay-duration="200"
+              >
+                <button
+                  class="w-6 h-6 rounded-full transition-transform hover:scale-110 focus:outline-none"
+                  :class="currentThemeId === theme.id
+                    ? 'ring-2 ring-offset-1 ring-gray-500 dark:ring-gray-300 scale-110'
+                    : ''"
+                  :style="theme.swatch2
+                    ? `background: linear-gradient(135deg, ${theme.swatch} 50%, ${theme.swatch2} 50%)`
+                    : `background-color: ${theme.swatch}`"
+                  @click="setTheme(theme.id)"
+                />
+              </UTooltip>
+            </div>
+          </div>
 
           <UButton
             label="Sign Out"

@@ -2,7 +2,7 @@
 
 ## Overview
 **Current Phase**: Table Standardization & UX Polish
-**Latest Update**: [2026-02-20] H-044: Context Helper System & Maintenance Expansion - Implemented LazyContextHelper across 8 modules and enabled cross-module navigation for Locations.
+**Latest Update**: [2026-02-21] H-045/H-046: Availables Audit Tool & Color Theme System — Read-only Yardi compare tool on Availabilities page + 12-theme persistent color switcher.
 
 ## Feature Tracker
 
@@ -27,6 +27,8 @@
 | F-023 | Excel Table Configuration System | Table | **COMPLETED** | Claude |
 | F-024 | Inventory Life-Cycle Module | Ops | **COMPLETED** | Claude |
 | F-025 | Table & Pricing Polish | Table/Leasing | **COMPLETED** | Gemini |
+| F-026 | Availables Audit Tool | Ops/Parsing | **COMPLETED** | Claude |
+| F-027 | Color Theme System | Base | **COMPLETED** | Claude |
 
 
 > **F-010 Note:** Stable Core Layer - Open for Extension. See `layers/table/AI_USAGE_GUIDE.md`.
@@ -76,6 +78,8 @@
 - [x] Table & Pricing Refinement (Normalization & Floor Plan UI)
 - [x] Implement Context Helper System (Office & Maintenance)
 - [x] Enable Cross-Module Navigation for Locations
+- [x] Availables Audit — Compare with Yardi (H-045)
+- [x] Color Theme System — 12 themes, persistent (H-046)
 - [ ] **Next Step**: Content refinement using Excel system (column labels, widths, priorities)
 
 ## Recent Audit & Improvements (2026-02-09)

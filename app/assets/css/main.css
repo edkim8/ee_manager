@@ -1,2 +1,61 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/* ============================================================
+   Custom Color Palettes — EE Manager Themes
+   Used by useTheme.ts via appConfig.ui.colors.primary
+   ============================================================ */
+
+@theme {
+  /* Padres — Gold (#FFC425) primary, Brown (#2F241D) at 950 */
+  --color-padres-50:  #FFFBEB;
+  --color-padres-100: #FFF3C4;
+  --color-padres-200: #FFE680;
+  --color-padres-300: #FFD43B;
+  --color-padres-400: #FFCA2E;
+  --color-padres-500: #FFC425;
+  --color-padres-600: #D4A01E;
+  --color-padres-700: #A97D17;
+  --color-padres-800: #7E5C11;
+  --color-padres-900: #52390A;
+  --color-padres-950: #2F241D;
+
+  /* DiamondBacks — Sedona Red (#A71930) primary, Sand (#E3D4AD) at 50 */
+  --color-diamondbacks-50:  #FFF1F3;
+  --color-diamondbacks-100: #FFE0E5;
+  --color-diamondbacks-200: #FFC1CA;
+  --color-diamondbacks-300: #FF8D9C;
+  --color-diamondbacks-400: #F55A70;
+  --color-diamondbacks-500: #DE3050;
+  --color-diamondbacks-600: #A71930;
+  --color-diamondbacks-700: #8C1527;
+  --color-diamondbacks-800: #721221;
+  --color-diamondbacks-900: #5C0E1A;
+  --color-diamondbacks-950: #3D0810;
+
+  /* Lilywhites — Navy (#132257) primary */
+  --color-lilywhites-50:  #EEF1F9;
+  --color-lilywhites-100: #D5DBF0;
+  --color-lilywhites-200: #AAB6E0;
+  --color-lilywhites-300: #7F91D0;
+  --color-lilywhites-400: #546DBF;
+  --color-lilywhites-500: #3A52A9;
+  --color-lilywhites-600: #2E4394;
+  --color-lilywhites-700: #213379;
+  --color-lilywhites-800: #132257;
+  --color-lilywhites-900: #0E1B46;
+  --color-lilywhites-950: #070E24;
+
+  /* Messi — Hot Pink (#EF3B5D) primary, Blush (#f7b5cd) at 200 */
+  --color-messi-50:  #FFF0F5;
+  --color-messi-100: #FFD9E9;
+  --color-messi-200: #F7B5CD;
+  --color-messi-300: #F385AE;
+  --color-messi-400: #F05F8C;
+  --color-messi-500: #EF3B5D;
+  --color-messi-600: #D42B4A;
+  --color-messi-700: #B01E39;
+  --color-messi-800: #8C152B;
+  --color-messi-900: #6A0E1F;
+  --color-messi-950: #231F20;
+}

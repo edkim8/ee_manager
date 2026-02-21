@@ -4,6 +4,11 @@ import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta, useOverlay, refreshNuxtData } from '#imports'
 import { useConstantsMutation, type AppConstant } from '../../../../base/composables/mutations/useConstantsMutation'
 import ConstantsModal from '../../../../base/components/modals/ConstantsModal.vue'
+import SimpleModal from '../../../../base/components/SimpleModal.vue'
+import SyncDiscrepanciesModal from '../../../components/modals/SyncDiscrepanciesModal.vue'
+import AmenityComparisonModal from '../../../components/modals/AmenityComparisonModal.vue'
+import type { ComparisonRow } from '../../../components/modals/AmenityComparisonModal.vue'
+import { useParseAvailablesAudit, AVAILABLES_AUDIT_REQUIRED_HEADERS } from '../../../../parsing/composables/parsers/useParseAvailablesAudit'
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
 import { allColumns } from '../../../../../configs/table-configs/availabilities-complete.generated'
 import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
@@ -208,26 +213,269 @@ const handleConfigClose = async (saved: boolean) => {
     await refreshNuxtData()
   }
 }
+
+// ===== EXPORT SYNC =====
+const showSyncModal = ref(false)
+
+const handleExportSync = () => {
+  showSyncModal.value = true
+}
+
+const handleSyncModalClose = () => {
+  showSyncModal.value = false
+}
+
+// ===== COMPARE AMENITIES (Upload) =====
+const showCompareModal = ref(false)
+const comparisonRows = ref<ComparisonRow[]>([])
+const missingUnits = ref<string[]>([])
+const totalFileRows = ref(0)
+const isProcessingFile = ref(false)
+const parseErrorMessage = ref<string | null>(null)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const handleCompareClick = () => {
+  parseErrorMessage.value = null
+  fileInputRef.value?.click()
+}
+
+const handleCompareModalClose = () => {
+  showCompareModal.value = false
+  comparisonRows.value = []
+  missingUnits.value = []
+  totalFileRows.value = 0
+}
+
+const handleFileUpload = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  isProcessingFile.value = true
+  parseErrorMessage.value = null
+
+  try {
+    // ── Step 1: Parse the file ──────────────────────────────────────────────
+    // useParseAvailablesAudit accepts any filename but validates by headers.
+    // Errors here mean wrong file format.
+    const parseResult = await useParseAvailablesAudit(file)
+
+    if (parseResult.errors.length > 0) {
+      // Header mismatch or parse failure — not an Availables file
+      const expected = AVAILABLES_AUDIT_REQUIRED_HEADERS.join(', ')
+      parseErrorMessage.value = `Cannot read file: ${parseResult.errors[0]}. Expected columns: ${expected}`
+      return
+    }
+
+    const parsedRows = parseResult.data
+    totalFileRows.value = parseResult.meta.totalRows
+    console.log(`[Compare Amenities] Parsed ${parsedRows.length} rows from ${parseResult.meta.totalRows} total rows`)
+
+    // ── Step 2: Inject property_code from active property ──────────────────
+    const propCode = activeProperty.value
+    if (!propCode) {
+      parseErrorMessage.value = 'No property selected. Please select a property first.'
+      return
+    }
+    parsedRows.forEach(row => { row.property_code = propCode })
+
+    // ── Step 3: Build DB lookup map from already-loaded availabilities ──────
+    // availabilities.value contains view_leasing_pipeline data for the active property
+    const dbMap = new Map<string, any>()
+    ;(availabilities.value || []).forEach((a: any) => {
+      const key = (a.unit_name || '').toLowerCase()
+      if (key) dbMap.set(key, a)
+    })
+
+    console.log(`[Compare Amenities] DB has ${dbMap.size} units loaded for property ${propCode}`)
+
+    // ── Step 4: Separate matched vs missing units ──────────────────────────
+    const matchedRows: typeof parsedRows = []
+    const unmatchedNames: string[] = []
+
+    for (const row of parsedRows) {
+      const key = (row.unit_name || '').toLowerCase()
+      if (dbMap.has(key)) {
+        matchedRows.push(row)
+      } else {
+        unmatchedNames.push(row.unit_name || '?')
+      }
+    }
+
+    missingUnits.value = unmatchedNames
+    console.log(`[Compare Amenities] Matched: ${matchedRows.length}, Missing: ${unmatchedNames.length}`)
+
+    // ── Step 5: Fetch unit_amenities for matched units ─────────────────────
+    const matchedUnitIds = matchedRows
+      .map(r => dbMap.get((r.unit_name || '').toLowerCase())?.unit_id)
+      .filter((id: any): id is string => !!id)
+
+    const { data: unitAmenitiesData } = matchedUnitIds.length > 0
+      ? await supabase
+          .from('unit_amenities')
+          .select('unit_id, amenities(yardi_amenity, yardi_name, yardi_code)')
+          .in('unit_id', matchedUnitIds)
+          .eq('active', true)
+      : { data: [] }
+
+    // Build map: unit_id → amenity entries [{display, identifiers}]
+    const dbAmenitiesMap = new Map<string, Array<{ display: string; identifiers: string[] }>>()
+    ;(unitAmenitiesData || []).forEach((ua: any) => {
+      if (!ua.amenities) return
+      const uid = ua.unit_id
+      if (!dbAmenitiesMap.has(uid)) dbAmenitiesMap.set(uid, [])
+
+      const display = ua.amenities.yardi_amenity || ua.amenities.yardi_name || ua.amenities.yardi_code || ''
+      const identifiers = [ua.amenities.yardi_amenity, ua.amenities.yardi_code, ua.amenities.yardi_name]
+        .filter(Boolean) as string[]
+
+      dbAmenitiesMap.get(uid)!.push({ display, identifiers })
+    })
+
+    // ── Step 6: Build comparison rows ──────────────────────────────────────
+    comparisonRows.value = matchedRows.map(r => {
+      const dbRow = dbMap.get((r.unit_name || '').toLowerCase())
+      const unitId: string | null = dbRow?.unit_id || null
+
+      // ── Rent comparison ──
+      const fileRent = r.offered_rent ?? null
+      const dbRent = dbRow?.rent_offered !== undefined ? Number(dbRow.rent_offered) : null
+      const rentMatch = fileRent !== null && dbRent !== null && Math.abs(fileRent - dbRent) < 0.01
+
+      // ── Date comparison ──
+      const fileDate = r.available_date ?? null
+      const dbDate = dbRow?.available_date ?? null
+      const dateMatch = fileDate !== null && dbDate !== null && fileDate === dbDate
+
+      // ── Amenity comparison ──
+      const dbEntries = unitId ? (dbAmenitiesMap.get(unitId) || []) : []
+
+      // File amenities: split by newline, <br>, comma, or semicolon
+      const rawAmenities = r.amenities || ''
+      const fileAmenities = rawAmenities
+        .split(/[\n\r]|<br\s*\/?>|,|;/)
+        .map((a: string) => a.trim())
+        .filter(Boolean)
+
+      // Multi-field matching (yardi_amenity OR yardi_code OR yardi_name)
+      const missingInDb = fileAmenities.filter(fa =>
+        !dbEntries.some(entry => entry.identifiers.includes(fa))
+      )
+      const extraInDb = dbEntries
+        .filter(entry => !fileAmenities.some(fa => entry.identifiers.includes(fa)))
+        .map(entry => entry.display)
+        .filter(Boolean)
+
+      const dbAmenities = dbEntries.map(e => e.display).filter(Boolean)
+      const amenityMatch = missingInDb.length === 0 && extraInDb.length === 0
+
+      // Occ. match: only flag as mismatch when DB status is Applied or Leased
+      // (a unit appearing in the Availables file should be Available in DB)
+      const dbStatus = dbRow?.status ?? null
+      const occMatch = !['Applied', 'Leased'].includes(dbStatus || '')
+
+      const isFullMatch = rentMatch && dateMatch && amenityMatch && occMatch
+
+      return {
+        unit_name: r.unit_name || '',
+        unit_id: unitId,
+        // Rent
+        file_rent: fileRent,
+        db_rent: dbRent,
+        rent_match: rentMatch,
+        // Date
+        file_date: fileDate,
+        db_date: dbDate,
+        date_match: dateMatch,
+        // Status / Occ
+        file_occ: r.status ?? null,
+        db_status: dbStatus,
+        occ_match: occMatch,
+        // Amenities
+        db_amenities: dbAmenities,
+        file_amenities: fileAmenities,
+        missing_in_db: missingInDb,
+        extra_in_db: extraInDb,
+        amenity_match: amenityMatch,
+        // Overall
+        is_full_match: isFullMatch
+      } satisfies ComparisonRow
+    })
+
+    showCompareModal.value = true
+  } catch (err: any) {
+    console.error('[Compare Amenities] Error processing file:', err)
+    parseErrorMessage.value = `Error processing file: ${err?.message || 'Unknown error'}`
+  } finally {
+    isProcessingFile.value = false
+    // Reset so same file can be re-selected
+    if (fileInputRef.value) fileInputRef.value.value = ''
+  }
+}
 </script>
 
 <template>
   <div class="p-6">
-    <div class="mb-6 flex items-baseline gap-3">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-        Availabilities
-      </h1>
-      <span v-if="activePropertyRecord?.name" class="text-lg text-gray-500 font-medium">
-        &middot; {{ activePropertyRecord.name }}
-      </span>
-      <UButton
-        to="/office/pricing/floor-plans"
-        label="Floor Plan Details"
-        icon="i-heroicons-chart-bar"
-        color="primary"
-        variant="soft"
-        size="sm"
-        class="ml-4"
-      />
+    <div class="mb-6 flex justify-between items-center">
+      <div class="flex items-baseline gap-3">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+          Availabilities
+        </h1>
+        <span v-if="activePropertyRecord?.name" class="text-lg text-gray-500 font-medium">
+          &middot; {{ activePropertyRecord.name }}
+        </span>
+        <UButton
+          to="/office/pricing/floor-plans"
+          label="Floor Plan Details"
+          icon="i-heroicons-chart-bar"
+          color="primary"
+          variant="soft"
+          size="sm"
+          class="ml-4"
+        />
+      </div>
+
+      <div class="flex items-center gap-2">
+        <UButton
+          label="Export Sync"
+          variant="outline"
+          icon="i-heroicons-arrow-down-tray"
+          @click="handleExportSync"
+        />
+        <UTooltip text="Upload the 'Available Units' report from Yardi">
+          <UButton
+            label="Compare Amenities"
+            variant="outline"
+            icon="i-heroicons-document-magnifying-glass"
+            :loading="isProcessingFile"
+            @click="handleCompareClick"
+          />
+        </UTooltip>
+        <!-- Hidden file input — expects Yardi "Available Units" export -->
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          class="hidden"
+          @change="handleFileUpload"
+        />
+      </div>
+    </div>
+
+    <!-- Parse Error Banner -->
+    <div v-if="parseErrorMessage" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+      <UIcon name="i-heroicons-exclamation-circle" class="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+      <div>
+        <p class="text-sm font-bold text-red-700">Upload Error</p>
+        <p class="text-xs text-red-600 mt-0.5">{{ parseErrorMessage }}</p>
+        <p class="text-xs text-red-500 mt-1.5">
+          Please upload the <strong>"Available Units"</strong> report downloaded from Yardi.
+          In Yardi, go to <strong>Leasing &rarr; Available Units</strong>, export the report, and upload that file here.
+        </p>
+      </div>
+      <button class="ml-auto text-red-400 hover:text-red-600 shrink-0" @click="parseErrorMessage = null">
+        <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+      </button>
     </div>
 
     <!-- Error State -->
@@ -469,6 +717,37 @@ const handleConfigClose = async (saved: boolean) => {
       :on-close="handleConfigClose"
       @close="handleConfigClose"
     />
+
+    <!-- Export Sync Modal -->
+    <SimpleModal
+      v-model="showSyncModal"
+      title="Sync Discrepancies Report"
+      width="max-w-4xl"
+    >
+      <SyncDiscrepanciesModal
+        v-if="showSyncModal && filteredData"
+        :units="filteredData"
+        :floor-plan-name="activePropertyRecord?.name || 'Availabilities'"
+        :on-close="handleSyncModalClose"
+      />
+    </SimpleModal>
+
+    <!-- Amenity Comparison Modal -->
+    <SimpleModal
+      v-model="showCompareModal"
+      title="Amenity Comparison — Yardi vs Database"
+      description="Read-only audit. No changes are made to the database."
+      width="max-w-6xl"
+    >
+      <AmenityComparisonModal
+        v-if="showCompareModal"
+        :rows="comparisonRows"
+        :missing-units="missingUnits"
+        :total-file-rows="totalFileRows"
+        :property-name="activePropertyRecord?.name || activeProperty || 'Property'"
+        :on-close="handleCompareModalClose"
+      />
+    </SimpleModal>
 
     <!-- Context Helper (Lazy Loaded) -->
     <LazyContextHelper 
