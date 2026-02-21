@@ -746,5 +746,52 @@ const statusColors: Record<string, string> = {
         </div>
       </div>
     </SimpleModal>
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Renewal Manager" 
+      description="Lease Expiration Forecasting & Processing"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Renewal Strategy</h3>
+          <p>
+            The Renewal Manager optimizes the lease expiration curve by facilitating proactive resident outreach:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>Lease Forecast:</strong> The 24-month chart identifies upcoming expiration cliffs to prioritize marketing and occupancy efforts.</li>
+            <li><strong>60-89 Day Window:</strong> Processing renewals exactly during this window ensures compliance with notice requirements while capturing market rent adjustments.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Worksheet Lifecycle</h3>
+          <p>
+            Renewals are managed in batches called <strong>Worksheets</strong>:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong class="text-neutral-600">Draft:</strong> Active worksheets where you can adjust offered rent and LTL percentages.</li>
+            <li><strong class="text-success-600">Final (Locked):</strong> Once approved, worksheets are locked to generate mailing labels and official offer letters.</li>
+            <li><strong>Archived:</strong> Completed periods moved out of the active pipeline for cleaner auditing.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Status Distinctions</h3>
+          <div class="space-y-2">
+            <p>
+              Success is measured by two separate data signals:
+            </p>
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong class="text-yellow-600">Manual Status:</strong> Real-time signals from staff interactions (e.g., resident verbally confirmed).</li>
+              <li><strong class="text-green-600">Yardi Confirmed:</strong> Official status captured from the last nightly Yardi sync.</li>
+            </ul>
+          </div>
+          <div class="mt-2 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-100 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-300">
+            <strong>Pro Tip:</strong> Ensure all "Manual" acceptances align with the signed lease documents uploaded to Yardi to avoid audit discrepancies.
+          </div>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>

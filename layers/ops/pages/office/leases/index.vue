@@ -3,8 +3,8 @@ import { ref, computed } from 'vue'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
-import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/leases-complete.generated'
-import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
+import { allColumns } from '../../../../../configs/table-configs/leases-complete.generated'
+import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
 
 const supabase = useSupabaseClient()
 const { activeProperty, userContext } = usePropertyState()
@@ -44,15 +44,12 @@ const { data: leases, status, error } = await useAsyncData('leases-list', async 
 
 // Columns from Excel configuration - Restricted by Role/Dept
 const columns = computed(() => {
-  return getAccessibleColumns(
-    allColumns,
-    filterGroups,
-    roleColumns,
-    departmentColumns,
-    'all',
-    userContext.value,
-    activeProperty.value
-  )
+  return filterColumnsByAccess(allColumns, {
+    userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+    userDepartment: userContext.value?.profile?.department,
+    isSuperAdmin: !!userContext.value?.access?.is_super_admin,
+    filterGroup: 'all'
+  })
 })
 
 // Status color mapping
@@ -254,5 +251,42 @@ const handleRowClick = (row: any) => {
         </div>
       </template>
     </GenericDataTable>
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Lease Manager" 
+      description="Active Leases & Contractual Auditing"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Lease Status</h3>
+          <p>
+            The Lease Manager provides a centralized view of all contractual agreements:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong class="text-primary-600">Active:</strong> Leases currently in effect with residents in possession.</li>
+            <li><strong class="text-warning-600">Pending:</strong> New leases or renewals that have been created but are not yet effective.</li>
+            <li><strong>Notice:</strong> Active leases where the resident has confirmed they will not be renewing.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Month-to-Month (MTM)</h3>
+          <p>
+            Leases that have surpassed their original end date without a renewal or move-out are flagged as <strong>Month-to-Month</strong>.
+          </p>
+          <div class="mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-100 dark:border-red-800 text-xs text-red-800 dark:text-red-300">
+            <strong>Action Required:</strong> MTM leases are indicated by a pulsing <UIcon name="i-heroicons-calendar-days" class="inline-block w-4 h-4 align-text-bottom" /> icon. These typically require immediate renewal processing.
+          </div>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Auditing Details</h3>
+          <p>
+            Click any row to navigate to the detailed lease record for a full audit of rent history, recurring charges, and resident household data.
+          </p>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>

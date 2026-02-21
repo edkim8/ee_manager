@@ -1,4 +1,8 @@
-import type { TableColumn } from '../../layers/table/types'
+// ============================================================
+// AUTO-GENERATED from units.xlsx
+// Generated: 2026-02-20
+// DO NOT EDIT MANUALLY - Edit Excel and regenerate
+// ============================================================
 
 const allColumns: TableColumn[] = [
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -97,15 +101,5 @@ const allColumns: TableColumn[] = [
   },
 ]
 
-// Filter Groups
-const filterGroups = {
-  all: ['unit_name', 'b_b', 'sf', 'floor_plan_marketing_name', 'floor_number', 'resident_name', 'tenancy_status', 'move_in_date', 'move_out_date', 'building_name']
-}
 
-// Role-based column visibility
-const roleColumns = {}
-
-// Department-based column visibility
-const departmentColumns = {}
-
-export { allColumns, filterGroups, roleColumns, departmentColumns }
+export { allColumns }

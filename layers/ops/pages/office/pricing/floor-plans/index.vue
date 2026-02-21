@@ -659,5 +659,59 @@ const handleSyncModalClose = () => {
         :on-close="handleSyncModalClose"
       />
     </SimpleModal>
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Floor Plan Pricing Manager" 
+      description="Unit Inventory & Dynamic Pricing Logic"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Pricing Components</h3>
+          <p>
+            Understanding the calculation stack for unit pricing:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>Base Rent:</strong> The baseline contractual rent defined at the floor plan level.</li>
+            <li><strong>Market Rent:</strong> The sum of Base Rent and all active individual unit amenities (e.g., floor levels, views, renovations).</li>
+            <li><strong class="text-primary-600">Offered Rent:</strong> The final amount displayed to applicants, including any active concessions or strategic overrides.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Sync Monitoring</h3>
+          <div class="space-y-2">
+            <p>
+              The <strong>Sync</strong> column provides a real-time audit between the App database and Yardi:
+            </p>
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong class="text-red-600 uppercase italic">Rent Mismatch:</strong> Indicates the Yardi "Offered Rent" does not match the App's calculated total.</li>
+              <li><strong class="text-orange-600 uppercase italic">Amenity Discrepancy:</strong> Flags units where Yardi's listed amenities differ from our database configuration.</li>
+            </ul>
+          </div>
+          <div class="mt-2 bg-purple-50 dark:bg-purple-900/20 p-2 rounded border border-purple-100 dark:border-purple-800 text-xs text-purple-800 dark:text-purple-300">
+            <strong>Pro Tip:</strong> Use the <strong>Export Sync</strong> button in the header to view a detailed report of all discrepancies across the selected floor plan.
+          </div>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Metric Definitions</h3>
+          <p>
+            Dashboards are split into two views to facilitate different management strategies:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>All Units:</strong> Historical and current benchmarks across the entire unit inventory.</li>
+            <li><strong>Available Units:</strong> Critical averages specifically for the units currently seeking new applicants, which are most sensitive to pricing adjustments.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Manual Overrides</h3>
+          <p>
+            Click the <UIcon name="i-heroicons-pencil-square" class="inline-block w-3 h-3 align-text-bottom" /> icon on any available unit row to apply granular amenity adjustments or strategic pricing overrides.
+          </p>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>

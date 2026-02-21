@@ -18,7 +18,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'view-notes': [locationId: string]
+  'view-notes': [locationId: string],
+  'share-location': [locationId: string]
 }>()
 
 const mapDiv = ref<HTMLElement | null>(null)
@@ -63,12 +64,13 @@ const createCustomPin = (type: string) => {
   const pin = new PinElement({
     background: config.color,
     borderColor: '#FFF',
-    glyph: config.symbol,
+    // @ts-ignore - glyphText is the new standard but types may be outdated
+    glyphText: config.symbol,
     glyphColor: 'white',
     scale: 1.2
   })
   
-  return pin.element
+  return pin
 }
 
 const initMap = async () => {
@@ -164,7 +166,7 @@ const updateMarkers = () => {
     
     // Advanced Markers don't have animation: DROP. 
     // We can add a simple CSS class to the content to animate if desired.
-    const markerContent = marker.content as HTMLElement | null
+    const markerContent = marker.element
     if (markerContent) {
       markerContent.style.opacity = '0'
       markerContent.style.transform = 'translateY(-20px)'
@@ -196,31 +198,57 @@ const updateMarkers = () => {
         <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #E5E7EB; font-size: 11px; color: #9CA3AF;">
           📍 ${Number(loc.latitude).toFixed(4)}, ${Number(loc.longitude).toFixed(4)}
         </div>
-        <button
-          id="view-notes-${loc.id}"
-          style="margin-top: 12px; width: 100%; background-color: #3B82F6; color: white; padding: 8px 12px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 0.2s;"
-          onmouseover="this.style.backgroundColor='#2563EB'"
-          onmouseout="this.style.backgroundColor='#3B82F6'"
+
+        <div style="display: flex; gap: 8px; margin-top: 12px;">
+          <button
+            id="view-notes-${loc.id}"
+            style="flex: 1; background-color: #3B82F6; color: white; padding: 8px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; display: flex; align-items: center; justify-content: center; gap: 4px;"
+            onmouseover="this.style.backgroundColor='#2563EB'"
+            onmouseout="this.style.backgroundColor='#3B82F6'"
+          >
+            📝 Notes
+          </button>
+          <button
+            id="share-location-${loc.id}"
+            style="flex: 1; background-color: #10B981; color: white; padding: 8px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; display: flex; align-items: center; justify-content: center; gap: 4px;"
+            onmouseover="this.style.backgroundColor='#059669'"
+            onmouseout="this.style.backgroundColor='#10B981'"
+          >
+            🔗 Share
+          </button>
+        </div>
+        
+        <a 
+          href="https://www.google.com/maps/search/?api=1&query=${loc.latitude},${loc.longitude}" 
+          target="_blank"
+          style="display: block; margin-top: 8px; text-align: center; color: #3B82F6; font-size: 11px; text-decoration: none; font-weight: 500;"
         >
-          📝 View Notes
-        </button>
+          🌐 Open in Google Maps
+        </a>
       </div>
     `
     const infoWindow = new google.maps.InfoWindow({
         content: infoContent
     })
     
-    marker.addListener('click', () => {
+    marker.addListener('gmp-click', () => {
         infoWindow.open(map, marker)
 
-        // Add click listener to the View Notes button after info window opens
+        // Add click listeners to buttons after info window opens
         setTimeout(() => {
           const notesButton = document.getElementById(`view-notes-${loc.id}`)
           if (notesButton) {
-            notesButton.addEventListener('click', () => {
+            notesButton.onclick = () => {
               emit('view-notes', loc.id)
               infoWindow.close()
-            })
+            }
+          }
+
+          const shareButton = document.getElementById(`share-location-${loc.id}`)
+          if (shareButton) {
+            shareButton.onclick = () => {
+              emit('share-location', loc.id)
+            }
           }
         }, 100)
     })

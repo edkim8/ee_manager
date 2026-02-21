@@ -2,8 +2,8 @@
 import { ref, computed, watch } from 'vue'
 import { definePageMeta, usePropertyState, useSupabaseClient, useAsyncData } from '#imports'
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
-import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/work_orders-complete.generated'
-import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
+import { allColumns } from '../../../../../configs/table-configs/work_orders-complete.generated'
+import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
 
 definePageMeta({
   layout: 'dashboard'
@@ -156,15 +156,12 @@ const filteredWorkOrders = computed(() => {
 // TABLE CONFIGURATION - From Excel
 // ============================================================
 const columns = computed(() => {
-  return getAccessibleColumns(
-    allColumns,
-    filterGroups,
-    roleColumns,
-    departmentColumns,
-    'all',
-    userContext.value,
-    activeProperty.value
-  )
+  return filterColumnsByAccess(allColumns, {
+    userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+    userDepartment: userContext.value?.profile?.department,
+    isSuperAdmin: !!userContext.value?.access?.is_super_admin,
+    filterGroup: 'all'
+  })
 })
 
 // Calculate days open for each work order
@@ -430,5 +427,55 @@ const isLoading = computed(() => status.value === 'pending')
         </template>
       </GenericDataTable>
     </UCard>
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Work Orders" 
+      description="Maintenance Lifecycle & Service Metrics"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Work Order Lifecycle</h3>
+          <p>
+            The system tracks work orders through four distinct states:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong class="text-orange-600 uppercase italic">Open:</strong> New ticket received. Awaiting assignment or initial review.</li>
+            <li><strong class="text-blue-600 uppercase italic">In Progress:</strong> Technician has been assigned and work has commenced.</li>
+            <li><strong class="text-green-600 uppercase italic">Completed:</strong> Maintenance task is finalized and the resident has been notified.</li>
+            <li><strong class="text-red-600 uppercase italic">Cancelled:</strong> Ticket invalidated (e.g., duplicated or resident resolved independently).</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Aging & Priority</h3>
+          <p>
+            The <strong>Days Open</strong> metric is the primary driver for service level (SLA) tracking:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>Over 3 Days:</strong> Tickets highlighted for immediate supervisor review.</li>
+            <li><strong>SLA Calculation:</strong> Calculated as the difference between the <strong>Call Date</strong> and the current date (or <strong>Completion Date</strong>).</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Categorization</h3>
+          <p>
+            Proper categorization (e.g., HVAC, Electrical, Plumbing) is critical for:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>Technician Assignment:</strong> Routing tasks to the correct specialized personnel.</li>
+            <li><strong>Resource Planning:</strong> Identifying recurring issues across buildings or unit types.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Data Integrity</h3>
+          <div class="space-y-2 text-xs text-gray-500">
+            <p><strong>Yardi Sync Pulse:</strong> Work orders are synchronized from Yardi every 24 hours. Manual changes in this dashboard are for temporary auditing and may be overridden by the next sync if not reconciled in Yardi.</p>
+          </div>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>

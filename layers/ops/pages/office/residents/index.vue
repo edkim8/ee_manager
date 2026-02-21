@@ -3,8 +3,8 @@ import { ref, computed } from 'vue'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
-import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/residents-complete.generated'
-import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
+import { allColumns } from '../../../../../configs/table-configs/residents-complete.generated'
+import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
 
 const supabase = useSupabaseClient()
 const { activeProperty, userContext } = usePropertyState()
@@ -44,15 +44,12 @@ const { data: residents, status, error } = await useAsyncData('residents-list', 
 
 // Columns from Excel configuration - Restricted by Role/Dept
 const columns = computed(() => {
-  return getAccessibleColumns(
-    allColumns,
-    filterGroups,
-    roleColumns,
-    departmentColumns,
-    'all', // Residents table currently uses 'all' as base
-    userContext.value,
-    activeProperty.value
-  )
+  return filterColumnsByAccess(allColumns, {
+    userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+    userDepartment: userContext.value?.profile?.department,
+    isSuperAdmin: !!userContext.value?.access?.is_super_admin,
+    filterGroup: 'all'
+  })
 })
 
 // Status color mapping
@@ -271,5 +268,48 @@ const handleRowClick = (row: any) => {
         <span v-else class="text-gray-400">-</span>
       </template>
     </GenericDataTable>
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Resident Manager" 
+      description="Active Residents & Household Auditing"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Resident Lifecycle</h3>
+          <p>
+            The Resident Manager tracks the population of the property through various tenancy stages:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong class="text-primary-600">Current:</strong> Active residents currently living in the unit.</li>
+            <li><strong class="text-warning-600">Notice:</strong> Residents who have submitted a move-out notice but are still in residence.</li>
+            <li><strong class="text-error-600">Past:</strong> Former residents who have officially moved out.</li>
+            <li><strong>Future:</strong> Approved applicants with a confirmed future move-in date.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Household Views</h3>
+          <p>
+            Use the <strong>Display</strong> filter to toggle between granular and aggregated views:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>All:</strong> Shows every individual occupant, including roommates and occupants.</li>
+            <li><strong>Primary:</strong> Filters to only the primary leaseholder for each unit.</li>
+            <li><strong>Households:</strong> Aggregates residents by tenancy, showing one representative per unit for household-level auditing.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Role Distinction</h3>
+          <p>
+            Residents are assigned specific roles (Primary, Roommate, Occupant, Guarantor). 
+          </p>
+          <div class="mt-2 bg-orange-50 dark:bg-orange-900/20 p-2 rounded border border-orange-100 dark:border-orange-800 text-xs text-orange-800 dark:text-orange-300">
+            <strong>Important:</strong> Only <strong>Primary</strong> and <strong>Roommate</strong> roles typically have financial responsibility for the lease.
+          </div>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>

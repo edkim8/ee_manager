@@ -2,8 +2,8 @@
 import { ref, computed, watch } from 'vue'
 import { definePageMeta, usePropertyState, useSupabaseClient, useAsyncData } from '#imports'
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
-import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/alerts-complete.generated'
-import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
+import { allColumns } from '../../../../../configs/table-configs/alerts-complete.generated'
+import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
 
 definePageMeta({
   layout: 'dashboard'
@@ -80,15 +80,12 @@ const displayedAlerts = computed(() => {
 // TABLE CONFIGURATION - From Excel
 // ============================================================
 const columns = computed(() => {
-  return getAccessibleColumns(
-    allColumns,
-    filterGroups,
-    roleColumns,
-    departmentColumns,
-    'all',
-    userContext.value,
-    activeProperty.value
-  )
+  return filterColumnsByAccess(allColumns, {
+    userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+    userDepartment: userContext.value?.profile?.department,
+    isSuperAdmin: !!userContext.value?.access?.is_super_admin,
+    filterGroup: 'all'
+  })
 })
 
 // ============================================================
@@ -525,5 +522,46 @@ const isLoading = computed(() => alertsStatus.value === 'pending')
         </template>
       </SimpleTabs>
     </UCard>
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Alerts Dashboard" 
+      description="System Health & Compliance Monitoring"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Alert Sources</h3>
+          <p>
+            Alerts are generated from two primary sources, each requiring a different management protocol:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong class="text-green-600">App Alerts:</strong> Internal signals typically related to unit flags or maintenance issues. These can be <strong>Resolved</strong> directly in the dashboard.</li>
+            <li><strong class="text-purple-600">Yardi Alerts:</strong> Automated compliance signals from the daily Yardi sync. These are <strong>Deactivated</strong> when the underlying data issue is addressed.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Severity & Priority</h3>
+          <p>
+            Dashboard items are color-coded by urgency:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong class="text-red-600 uppercase italic">Error:</strong> Critical compliance or system failures requiring immediate attention.</li>
+            <li><strong class="text-orange-600 uppercase italic">Warning:</strong> Latency issues or data inconsistencies that may become errors if not addressed.</li>
+            <li><strong class="text-blue-600 uppercase italic">Info:</strong> Status updates or non-critical activity notifications.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Overdue Tracking</h3>
+          <p>
+            The <strong>Overdue</strong> tab tracks alerts that have remained active beyond their expected resolution window.
+          </p>
+          <div class="mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-100 dark:border-red-800 text-xs text-red-800 dark:text-red-300">
+            <strong>Key Metric:</strong> Overdue alerts represent a risk to property performance and resident satisfaction. Clearing these is a primary objective for the office staff.
+          </div>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>

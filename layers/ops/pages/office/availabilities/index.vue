@@ -5,8 +5,8 @@ import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta, useOverlay
 import { useConstantsMutation, type AppConstant } from '../../../../base/composables/mutations/useConstantsMutation'
 import ConstantsModal from '../../../../base/components/modals/ConstantsModal.vue'
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
-import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/availabilities-complete.generated'
-import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
+import { allColumns } from '../../../../../configs/table-configs/availabilities-complete.generated'
+import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
 
 const supabase = useSupabaseClient()
 const { activeProperty, userContext } = usePropertyState()
@@ -62,15 +62,12 @@ const { data: availabilities, status, error, refresh: refreshAvailabilities } = 
 
 // Dynamic columns from Excel configuration based on filter + role/dept access
 const columns = computed(() => {
-  return getAccessibleColumns(
-    allColumns,
-    filterGroups,
-    roleColumns,
-    departmentColumns,
-    displayFilter.value,
-    userContext.value,
-    activeProperty.value
-  )
+  return filterColumnsByAccess(allColumns, {
+    userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+    userDepartment: userContext.value?.profile?.department,
+    isSuperAdmin: !!userContext.value?.access?.is_super_admin,
+    filterGroup: displayFilter.value.toLowerCase()
+  })
 })
 
 // Status color mapping
@@ -472,5 +469,50 @@ const handleConfigClose = async (saved: boolean) => {
       :on-close="handleConfigClose"
       @close="handleConfigClose"
     />
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Availability Manager" 
+      description="Leasing Pipeline & Unit Inventory"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Leasing Pipeline</h3>
+          <p>
+            The Availability Manager tracks units through three main stages, which can be toggled via the <strong>Stage Selector</strong> buttons in the header:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong class="text-primary-600">Available:</strong> Vacant units ready for new applications.</li>
+            <li><strong class="text-warning-600">Applied:</strong> Units with pending applications or approved residents awaiting move-in.</li>
+            <li><strong class="text-success-600">Leased:</strong> Units with signed leases and confirmed move-in dates.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Pricing & Adjustments</h3>
+          <p>
+            The <strong>Floor Plan Detailed</strong> button (available to Managers) provides a granular view of inventory performance, facilitating strategic rental adjustments based on current market velocity.
+          </p>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Navigation Logic</h3>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Clicking the Unit:</strong> Routes directly to the <strong>Unit Detailed</strong> page for maintenance and occupancy history.</li>
+            <li><strong>Clicking the Row:</strong> Routes to the <strong>Availability Detail</strong> view (currently in development) for workflow-specific leasing actions.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Availability Rules</h3>
+          <p>
+            Color coding for expected move-out and available dates is governed by <strong>App Constants</strong> specifically tuned for each property.
+          </p>
+          <div class="mt-2 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-100 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-300">
+            <strong>Pro Tip:</strong> Click the <UIcon name="i-heroicons-cog-6-tooth" class="inline-block w-3 h-3 align-text-bottom" /> icon in the toolbar to adjust thresholds for "Soon" and "Immediate" availability alerts.
+          </div>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>

@@ -1,6 +1,6 @@
 // ============================================================
 // AUTO-GENERATED from availabilities.xlsx
-// Generated: 2026-02-16
+// Generated: 2026-02-20
 // DO NOT EDIT MANUALLY - Edit Excel and regenerate
 // ============================================================
 
@@ -82,6 +82,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['Owner', 'Manager', 'RPM'],
+    departments: ['Management'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -100,6 +102,7 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '80px',
     align: 'center',
+    filterGroups: ['available'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -109,6 +112,7 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '110px',
     align: 'center',
+    filterGroups: ['available'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -123,6 +127,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '90px',
     align: 'center',
+    departments: ['Management'],
+    filterGroups: ['available'],
     class: 'max-xl:hidden',
     headerClass: 'max-xl:hidden'
   },
@@ -132,6 +138,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '120px',
     align: 'right',
+    roles: ['Owner', 'Manager', 'RPM'],
+    departments: ['Management'],
     class: 'max-xl:hidden',
     headerClass: 'max-xl:hidden'
   },
@@ -141,6 +149,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '160px',
     align: 'left',
+    roles: ['Manager', 'RPM'],
+    departments: ['Leasing', 'Management'],
     class: 'max-xl:hidden',
     headerClass: 'max-xl:hidden'
   },
@@ -150,6 +160,9 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '200px',
     align: 'left',
+    roles: ['Manager', 'RPM'],
+    departments: ['Leasing', 'Management'],
+    filterGroups: ['applied', 'leased'],
     class: 'max-xl:hidden',
     headerClass: 'max-xl:hidden'
   },
@@ -159,6 +172,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '110px',
     align: 'center',
+    departments: ['Leasing', 'Management'],
+    filterGroups: ['applied'],
     class: 'max-xl:hidden',
     headerClass: 'max-xl:hidden'
   },
@@ -173,6 +188,9 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '110px',
     align: 'center',
+    roles: ['Manager', 'RPM'],
+    departments: ['Leasing', 'Management'],
+    filterGroups: ['applied'],
     class: 'max-2xl:hidden',
     headerClass: 'max-2xl:hidden'
   },
@@ -191,6 +209,9 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '130px',
     align: 'center',
+    roles: ['Owner', 'Manager', 'RPM'],
+    departments: ['Management'],
+    filterGroups: ['applied', 'leased'],
     class: 'max-2xl:hidden',
     headerClass: 'max-2xl:hidden'
   },
@@ -200,6 +221,9 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '90px',
     align: 'center',
+    roles: ['Owner', 'Manager', 'RPM'],
+    departments: ['Management'],
+    filterGroups: ['applied', 'leased'],
     class: 'max-2xl:hidden',
     headerClass: 'max-2xl:hidden'
   },
@@ -209,6 +233,9 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['Owner', 'Manager', 'RPM'],
+    departments: ['Management'],
+    filterGroups: ['applied', 'leased'],
     class: 'max-2xl:hidden',
     headerClass: 'max-2xl:hidden'
   },
@@ -218,6 +245,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '120px',
     align: 'left',
+    departments: ['Leasing', 'Management'],
+    filterGroups: ['applied'],
     class: 'max-2xl:hidden',
     headerClass: 'max-2xl:hidden'
   },
@@ -227,6 +256,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '110px',
     align: 'center',
+    departments: ['Management'],
+    filterGroups: ['leased'],
     class: 'max-2xl:hidden',
     headerClass: 'max-2xl:hidden'
   },
@@ -236,6 +267,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '110px',
     align: 'center',
+    departments: ['Management'],
+    filterGroups: ['leased'],
     class: 'max-2xl:hidden',
     headerClass: 'max-2xl:hidden'
   },
@@ -245,6 +278,9 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['Owner', 'Manager', 'RPM'],
+    departments: ['Management'],
+    filterGroups: ['leased'],
     class: 'max-2xl:hidden',
     headerClass: 'max-2xl:hidden'
   },
@@ -254,6 +290,8 @@ const allColumns: TableColumn[] = [
     sortable: false,
     width: '150px',
     align: 'left',
+    roles: ['Manager', 'RPM'],
+    departments: ['Management'],
     class: 'max-2xl:hidden',
     headerClass: 'max-2xl:hidden'
   },
@@ -279,4 +317,5 @@ const departmentColumns = {
   Management: ['rent_offered', 'temp_amenities_total', 'resident_name', 'resident_email', 'screening_result', 'concession_total_pct', 'concession_display_calc', 'concession_upfront_amount', 'lease_rent_amount', 'pricing_comment'],
   Leasing: ['resident_name', 'resident_email', 'screening_result']
 }
+
 export { allColumns, filterGroups, roleColumns, departmentColumns }

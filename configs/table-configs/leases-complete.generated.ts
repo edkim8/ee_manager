@@ -1,4 +1,8 @@
-import type { TableColumn } from '../../layers/table/types'
+// ============================================================
+// AUTO-GENERATED from leases.xlsx
+// Generated: 2026-02-20
+// DO NOT EDIT MANUALLY - Edit Excel and regenerate
+// ============================================================
 
 const allColumns: TableColumn[] = [
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -78,6 +82,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -87,6 +93,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'center',
+    roles: ['manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -110,11 +118,6 @@ const allColumns: TableColumn[] = [
   },
 ]
 
-// Filter Groups
-const filterGroups = {
-  all: ['unit_name', 'resident_name', 'lease_status', 'start_date', 'end_date', 'move_in_date', 'move_out_date', 'rent_amount', 'deposit_amount', 'household_count', 'term_months']
-}
-
 // Role-based column visibility
 const roleColumns = {
   manager: ['rent_amount', 'deposit_amount'],
@@ -128,4 +131,4 @@ const departmentColumns = {
   Leasing: ['rent_amount', 'deposit_amount']
 }
 
-export { allColumns, filterGroups, roleColumns, departmentColumns }
+export { allColumns, roleColumns, departmentColumns }

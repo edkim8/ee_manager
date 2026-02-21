@@ -1,4 +1,8 @@
-import type { TableColumn } from '../../layers/table/types'
+// ============================================================
+// AUTO-GENERATED from work_orders.xlsx
+// Generated: 2026-02-20
+// DO NOT EDIT MANUALLY - Edit Excel and regenerate
+// ============================================================
 
 const allColumns: TableColumn[] = [
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -55,6 +59,7 @@ const allColumns: TableColumn[] = [
     label: 'Assigned',
     sortable: true,
     width: '150px',
+    departments: ['maintenance', 'operations'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -100,10 +105,5 @@ const filterGroups = {
   all: ['work_order_number', 'unit_name', 'category', 'priority', 'description', 'assigned_to', 'created_at', 'completed_at', 'status']
 }
 
-// Role-based column visibility
-const roleColumns = {}
 
-// Department-based column visibility
-const departmentColumns = {}
-
-export { allColumns, filterGroups, roleColumns, departmentColumns }
+export { allColumns, filterGroups }

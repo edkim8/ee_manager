@@ -3,8 +3,8 @@ import { ref, computed } from 'vue'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
-import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/floor_plans-complete.generated'
-import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
+import { allColumns } from '../../../../../configs/table-configs/floor_plans-complete.generated'
+import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
 
 const supabase = useSupabaseClient()
 const { activeProperty, userContext } = usePropertyState()
@@ -55,15 +55,12 @@ const { data: floorPlans, status } = await useAsyncData('floor-plans-list', asyn
 
 // Columns from Excel configuration - Restricted by Role/Dept
 const columns = computed(() => {
-  return getAccessibleColumns(
-    allColumns,
-    filterGroups,
-    roleColumns,
-    departmentColumns,
-    'all',
-    userContext.value,
-    activeProperty.value
-  )
+  return filterColumnsByAccess(allColumns, {
+    userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+    userDepartment: userContext.value?.profile?.department,
+    isSuperAdmin: !!userContext.value?.access?.is_super_admin,
+    filterGroup: 'all'
+  })
 })
 
 // Search filter
@@ -140,5 +137,43 @@ const handleRowClick = (row: any) => {
         <CellsCurrencyCell :value="value" />
       </template>
     </GenericDataTable>
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Floor Plans Inventory" 
+      description="Specifications, Pricing & Unit Distribution"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">What are Floor Plans?</h3>
+          <p>
+            Floor Plans define the layout, square footage, and market rent for a group of units. They are the blueprint for your inventory management.
+          </p>
+        </section>
+
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Key Metrics</h3>
+          <ul class="list-disc pl-5 space-y-2">
+            <li><strong>Market Rent:</strong> The baseline base rent established for this specific layout.</li>
+            <li><strong>SF (SqFt):</strong> The total livable square footage for units associated with this plan.</li>
+            <li><strong>Unit Count:</strong> The total number of physical units currently assigned to this floor plan.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Navigation</h3>
+          <p>
+            Click the floor plan <strong>Code</strong> to view more granular details, including a breakdown of specific units and their financial performance.
+          </p>
+        </section>
+
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Access-Driven Visibility</h3>
+          <p>
+             Financial data (Market Rent) and inventory specifics are dynamically filtered based on your security profile (Department and Role).
+          </p>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>

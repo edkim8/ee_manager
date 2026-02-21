@@ -346,35 +346,36 @@ export function generateCode(parsed: ParsedTableConfig): string {
  * Generate code for a single column
  */
 function generateColumn(col: ColumnDefinition, responsive: boolean, breakpoint?: string): string {
-  const lines: string[] = []
+  const props: string[] = []
 
-  lines.push(`  {`)
-  lines.push(`    key: '${col.key}',`)
-  lines.push(`    label: '${col.label}',`)
-  lines.push(`    sortable: ${col.sortable},`)
+  props.push(`    key: '${col.key}'`)
+  props.push(`    label: '${col.label}'`)
+  props.push(`    sortable: ${col.sortable}`)
+  props.push(`    width: '${col.width}px'`)
 
-  const hasAlign = col.align !== undefined
-  const hasResponsive = responsive && breakpoint
-
-  // Width line - add comma if there's more content
-  lines.push(`    width: '${col.width}px'${(hasAlign || hasResponsive) ? ',' : ''}`)
-
-  // Align line - add comma if there's responsive classes
-  if (hasAlign) {
-    lines.push(`    align: '${col.align}'${hasResponsive ? ',' : ''}`)
+  if (col.align) {
+    props.push(`    align: '${col.align}'`)
   }
 
-  // Roles and Departments
   if (col.roles && col.roles.length > 0 && !col.roles.includes('all')) {
-    lines.push(`    roles: [${col.roles.map(r => `'${r}'`).join(', ')}],`)
+    props.push(`    roles: [${col.roles.map(r => `'${r}'`).join(', ')}]`)
   }
+
   if (col.departments && col.departments.length > 0 && !col.departments.includes('all')) {
-    lines.push(`    departments: [${col.departments.map(d => `'${d}'`).join(', ')}],`)
+    props.push(`    departments: [${col.departments.map(d => `'${d}'`).join(', ')}]`)
   }
 
-  lines.push(`  },`)
+  if (col.filterGroups && col.filterGroups.length > 0 && !col.filterGroups.includes('all')) {
+    props.push(`    filterGroups: [${col.filterGroups.map(g => `'${g}'`).join(', ')}]`)
+  }
 
-  return lines.join('\n')
+  if (responsive && breakpoint) {
+    const hiddenClass = `max-${breakpoint}:hidden`
+    props.push(`    class: '${hiddenClass}'`)
+    props.push(`    headerClass: '${hiddenClass}'`)
+  }
+
+  return `  {\n${props.join(',\n')}\n  },`
 }
 
 /**

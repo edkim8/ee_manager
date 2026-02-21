@@ -55,7 +55,7 @@ export const useInventoryItems = () => {
     console.log('🔧 Fetching inventory items', filters)
 
     let query = supabase
-      .from('view_inventory_lifecycle')
+      .from('view_inventory_installations')
       .select('*')
 
     // Apply filters
@@ -116,7 +116,7 @@ export const useInventoryItems = () => {
       .from('inventory_items')
       .select('*')
       .eq('id', id)
-      .single()
+      .maybeSingle()
 
     if (error) {
       console.error('❌ Error fetching item:', error)
@@ -133,10 +133,10 @@ export const useInventoryItems = () => {
     console.log('🔧 Fetching item with lifecycle:', id)
 
     const { data, error } = await supabase
-      .from('view_inventory_lifecycle')
+      .from('view_inventory_installations')
       .select('*')
       .eq('id', id)
-      .single()
+      .maybeSingle()
 
     if (error) {
       console.error('❌ Error fetching item:', error)
@@ -222,7 +222,7 @@ export const useInventoryItems = () => {
       .select('*')
       .eq('location_type', locationType)
       .eq('location_id', locationId)
-      .single()
+      .maybeSingle()
 
     if (error) {
       // No data is not an error - just means no items yet

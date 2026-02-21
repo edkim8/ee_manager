@@ -1,4 +1,8 @@
-import type { TableColumn } from '../../layers/table/types'
+// ============================================================
+// AUTO-GENERATED from alerts.xlsx
+// Generated: 2026-02-20
+// DO NOT EDIT MANUALLY - Edit Excel and regenerate
+// ============================================================
 
 const allColumns: TableColumn[] = [
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -92,10 +96,5 @@ const filterGroups = {
   all: ['unit_name', 'building_name', 'alert_type', 'severity', 'created_at', 'days_open', 'description', 'resolved_at', ' ']
 }
 
-// Role-based column visibility
-const roleColumns = {}
 
-// Department-based column visibility
-const departmentColumns = {}
-
-export { allColumns, filterGroups, roleColumns, departmentColumns }
+export { allColumns, filterGroups }

@@ -3,8 +3,8 @@ import { ref, computed } from 'vue'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
-import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/units-complete.generated'
-import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
+import { allColumns } from '../../../../../configs/table-configs/units-complete.generated'
+import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
 
 const supabase = useSupabaseClient()
 const { activeProperty, userContext } = usePropertyState()
@@ -44,15 +44,12 @@ const { data: units, status, error } = await useAsyncData('units-list', async ()
 
 // Columns from Excel configuration - Restricted by Role/Dept
 const columns = computed(() => {
-  return getAccessibleColumns(
-    allColumns,
-    filterGroups,
-    roleColumns,
-    departmentColumns,
-    'all',
-    userContext.value,
-    activeProperty.value
-  )
+  return filterColumnsByAccess(allColumns, {
+    userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+    userDepartment: userContext.value?.profile?.department,
+    isSuperAdmin: !!userContext.value?.access?.is_super_admin,
+    filterGroup: 'all'
+  })
 })
 
 // Status color mapping
@@ -220,5 +217,42 @@ const handleRowClick = (row: any) => {
         <span v-else class="text-gray-400">-</span>
       </template>
     </GenericDataTable>
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Units Management" 
+      description="Tracking Inventory, Status, and Tenancy"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Unit Inventory</h3>
+          <p>
+            The Units list is your primary tool for managing individual residences. It tracks real-time status, square footage, and current resident associations.
+          </p>
+        </section>
+
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Status & Tenancy</h3>
+          <ul class="list-disc pl-5 space-y-2">
+            <li><strong>Tenancy Badges:</strong> Indicates the current lease state (Current, Future, Past, or Notice).</li>
+            <li><strong>Resident Links:</strong> Click active resident names to navigate directly to their profile in the Resident module.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Cross-Asset Navigation</h3>
+          <p>
+            Units are tightly integrated with other assets. You can click <strong>Building</strong> or <strong>Floor Plan</strong> names to jump to those specific management pages.
+          </p>
+        </section>
+
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Access-Driven Visibility</h3>
+          <p>
+             Your security profile (Department/Role) filters the columns you see. Relevant data like market rent or move-in dates may be restricted based on your role.
+          </p>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>

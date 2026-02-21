@@ -53,7 +53,7 @@ const expectedColumns = computed(() => {
 
 <template>
   <div 
-    class="fixed bottom-4 right-4 z-50 transition-all duration-300 pointer-events-auto"
+    class="fixed bottom-4 left-4 z-50 transition-all duration-300 pointer-events-auto"
     :class="[
       isExpanded 
         ? 'bg-gray-900/95 text-white p-4 rounded-lg shadow-2xl border-2 border-blue-500 max-w-xs' 

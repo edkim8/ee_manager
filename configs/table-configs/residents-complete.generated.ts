@@ -1,10 +1,8 @@
 // ============================================================
 // AUTO-GENERATED from residents.xlsx
-// Generated: 2026-02-17
+// Generated: 2026-02-20
 // DO NOT EDIT MANUALLY - Edit Excel and regenerate
 // ============================================================
-
-import type { TableColumn } from '../../layers/table/types'
 
 const allColumns: TableColumn[] = [
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -104,10 +102,5 @@ const filterGroups = {
   all: ['name', 'unit_name', 'tenancy_status', 'lease_start_date', 'lease_end_date', 'move_in_date', 'move_out_date', 'email', 'phone']
 }
 
-// Role-based column visibility
-const roleColumns = {}
 
-// Department-based column visibility
-const departmentColumns = {}
-
-export { allColumns, filterGroups, roleColumns, departmentColumns }
+export { allColumns, filterGroups }

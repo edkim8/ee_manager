@@ -225,6 +225,11 @@ const navigationItems = computed(() => {
         icon: 'i-heroicons-arrow-path-rounded-square',
         to: '/office/renewals',
       },
+      {
+        label: 'Locations',
+        icon: 'i-heroicons-map-pin',
+        to: '/assets/locations',
+      },
     ],
   })
 
@@ -238,6 +243,11 @@ const navigationItems = computed(() => {
         label: 'Work Orders',
         icon: 'i-heroicons-clipboard-document-check',
         to: '/maintenance/work-orders',
+      },
+      {
+        label: 'Locations',
+        icon: 'i-heroicons-map-pin',
+        to: '/assets/locations',
       },
     ],
   })
@@ -387,7 +397,7 @@ const navigationItems = computed(() => {
     </div>
 
     <!-- Mobile Slideover -->
-    <USlideover v-model:open="isMobileMenuOpen" title="Menu">
+    <USlideover v-model:open="isMobileMenuOpen" title="Menu" description="Main navigation menu for mobile devices">
       <template #body>
         <!-- Property Switcher (Mobile) -->
         <div v-if="propertyOptions.length > 0" class="mb-6">
