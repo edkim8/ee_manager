@@ -791,6 +791,31 @@ const handleFileUpload = async (event: Event) => {
             <strong>Pro Tip:</strong> Click the <UIcon name="i-heroicons-cog-6-tooth" class="inline-block w-3 h-3 align-text-bottom" /> icon in the toolbar to adjust thresholds for "Soon" and "Immediate" availability alerts.
           </div>
         </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Yardi Sync Workflow</h3>
+          <p class="mb-2">
+            The <strong>Sync</strong> column and <strong>Export Sync</strong> button compare two rent values per unit:
+          </p>
+          <ul class="list-disc pl-5 space-y-1 mb-3">
+            <li><strong>Yardi Offered Rent</strong> — loaded from the daily <code>5p_Availables</code> upload (Yardi's "Market Rent" column). This value is Yardi-owned and only refreshes on the next daily Solver run.</li>
+            <li><strong>Calculated Offered Rent</strong> — our internal calculation: Base Rent + Fixed Amenities + Temp Amenities.</li>
+          </ul>
+          <p class="mb-2">
+            These two numbers should match when amenity pricing in the app is aligned with Yardi. A mismatch means either an amenity amount is wrong, or — more commonly — a manager has just updated amenities in this app and hasn't posted the changes to Yardi yet.
+          </p>
+          <p class="font-semibold mb-1">Standard workflow after changing amenities in this app:</p>
+          <ol class="list-decimal pl-5 space-y-1 mb-3">
+            <li>Manager adjusts amenities on the <strong>Floor Plan Pricing</strong> page.</li>
+            <li><strong>Export Sync</strong> now shows the affected units — this is the change list. Use it to know exactly what to post back to Yardi.</li>
+            <li>Manager posts the updated amenities in Yardi.</li>
+            <li>Use <strong>Compare Amenities</strong> (upload the fresh Yardi "Available Units" export) to confirm that every amenity in Yardi now matches the database. This is the verification step.</li>
+            <li>Export Sync remains mismatched until the <strong>following day's Solver run</strong> refreshes the Yardi Offered Rent. This is expected and correct — the value is Yardi-owned and is not manually editable here.</li>
+          </ol>
+          <div class="bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-100 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
+            <strong>In short:</strong> Export Sync = "what to post to Yardi." Compare Amenities = "confirm what was posted." Export Sync clears automatically on the next daily upload.
+          </div>
+        </section>
       </div>
     </LazyContextHelper>
   </div>

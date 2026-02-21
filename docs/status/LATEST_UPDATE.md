@@ -1,6 +1,6 @@
 # Field Report — 2026-02-21
 
-## Session: Availables Audit + Color Theme System
+## Session: Availables Audit + Color Theme System + Yardi Sync Workflow Documentation
 
 ---
 
@@ -187,3 +187,34 @@ Client-only plugin that calls `initTheme()` on page load, restoring the saved th
 The fix (direct inline style injection) bypasses this resolution entirely. This pattern should be used any time Nuxt UI v4 needs custom color palettes at runtime that are not part of the built-in Tailwind color set.
 
 **Reference:** `layers/base/composables/useTheme.ts` — `applyInlinePalette()` function
+
+---
+
+## Part 3 — Yardi Sync Workflow: Context Helper Update
+
+### Overview
+
+Clarified and documented the intended workflow behind **Export Sync** and **Compare Amenities** on the Availabilities page. Logic was reviewed against the Solver architecture and confirmed correct. Added a new "Yardi Sync Workflow" section to the page's `LazyContextHelper`.
+
+### File Modified
+
+**`layers/ops/pages/office/availabilities/index.vue`** — Context Helper only. No logic changes.
+
+### Workflow Documented
+
+**What Export Sync compares:**
+- `rent_offered` — Yardi's Market Rent from `5p_Availables`, loaded by the daily Solver. Yardi-owned, read-only in this app.
+- `calculated_offered_rent` — Our DB's calculation: Base Rent + Fixed Amenities + Temp Amenities.
+
+**The manager workflow:**
+1. Manager changes amenities in this app (Floor Plan Pricing page).
+2. `calculated_offered_rent` shifts → Export Sync shows a mismatch. This mismatch IS the change list — it shows exactly what needs to be posted back to Yardi.
+3. Manager posts the updated amenities in Yardi.
+4. Manager uploads the fresh Yardi "Available Units" export via **Compare Amenities** to confirm all amenities match the database.
+5. Export Sync stays mismatched until the **next daily Solver run** refreshes `rent_offered`. This is correct and intentional — `rent_offered` is Yardi-owned data and should not be manually overwritten.
+
+**Decision: do not manually update `rent_offered`.**
+Allowing users to write to a Yardi-sourced field risks data integrity. The one-day mismatch window is acceptable. Compare Amenities provides the interim confirmation tool.
+
+**Summary for managers (added to Context Helper):**
+> Export Sync = "what to post to Yardi." Compare Amenities = "confirm what was posted." Export Sync clears automatically on the next daily upload.

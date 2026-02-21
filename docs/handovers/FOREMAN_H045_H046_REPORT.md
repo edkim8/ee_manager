@@ -123,5 +123,29 @@ The STATUS_BOARD "Next Step" note mentions content refinement using the Excel ta
 
 ---
 
+---
+
+## Addendum — Yardi Sync Workflow Clarification
+
+**Date:** 2026-02-21 (same session)
+
+Following a review of how Export Sync and Compare Amenities relate to the daily Solver, the intended workflow was confirmed and documented in the Availabilities page Context Helper. No logic was changed — documentation only.
+
+### The confirmed workflow
+
+`rent_offered` (loaded from Yardi's `5p_Availables` each day) and `calculated_offered_rent` (our DB's own math) should match when amenity pricing is aligned. When a manager changes amenities in this app, the calculated rent shifts and Export Sync shows the difference. That difference is intentional — it is the pending action list for Yardi.
+
+**Step-by-step:**
+1. Manager changes amenities in this app → Export Sync lights up showing the gap
+2. Manager uses the Export Sync list to post the correct amenities back to Yardi
+3. Manager uploads the fresh Yardi "Available Units" file via **Compare Amenities** to verify the Yardi entries now match the database
+4. Export Sync remains mismatched until the **next daily Solver run** refreshes `rent_offered` — this is correct and safe
+
+**Decision confirmed:** `rent_offered` will not be manually editable. It is Yardi-owned data. The one-day mismatch window is acceptable. Compare Amenities provides the interim confirmation.
+
+**File changed:** `layers/ops/pages/office/availabilities/index.vue` — Context Helper section only.
+
+---
+
 *Report prepared: 2026-02-21*
-*Both features complete, tested, and documented.*
+*All features complete, tested, and documented.*
