@@ -13,7 +13,8 @@ import { useLocationService } from '../../../composables/useLocationService'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 
 definePageMeta({
-  layout: 'dashboard'
+  layout: 'dashboard',
+  alias: ['/office/locations', '/maintenance/locations']
 })
 
 const supabase = useSupabaseClient()
@@ -124,6 +125,65 @@ const handleDelete = async () => {
         alert('Failed to delete location')
     } finally {
         isDeleting.value = false
+    }
+}
+
+// Sharing functionality
+const handleShareFromMap = (locationId: string) => {
+    const loc = locations.value.find((l: any) => l.id === locationId)
+    if (loc) {
+        shareLocation(loc)
+    }
+}
+
+// Sharing functionality
+const isSharing = ref(false)
+const shareLocation = async (locationOverride?: any) => {
+    if (isSharing.value) return
+    
+    const loc = locationOverride || selectedLocation.value
+    if (!loc) return
+
+    isSharing.value = true
+    try {
+        const iconType = loc.icon_type || 'general'
+        const shareLink = `${window.location.origin}/assets/locations/map?locationId=${loc.id}`
+        const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${loc.latitude},${loc.longitude}`
+        
+        const lat = typeof loc.latitude === 'number' ? loc.latitude.toFixed(6) : (loc.latitude || 'N/A')
+        const lng = typeof loc.longitude === 'number' ? loc.longitude.toFixed(6) : (loc.longitude || 'N/A')
+        
+        const shareText = `📍 ${iconType.replace('_', ' ').toUpperCase()}
+Description: ${loc.description || 'No description'}
+Coordinates: ${lat}, ${lng}
+ID: ${loc.id}
+
+🔗 Dashboard Link (Internal): ${shareLink}
+🌐 Google Maps (Public): ${googleMapsLink}`
+
+        const clipboardText = `${shareText}\n\n(You can copy and paste this into an email or message to share the location details).`
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `Location: ${iconType.replace('_', ' ')}`,
+                    text: shareText,
+                    url: shareLink
+                })
+            } catch (err) {
+                console.error('Error sharing:', err)
+            }
+        } else {
+            // Fallback to clipboard
+            try {
+                await navigator.clipboard.writeText(clipboardText)
+                alert('Location details copied to clipboard! You can now paste this into an email or message to share with your team.')
+            } catch (err) {
+                console.error('Failed to copy:', err)
+            }
+        }
+    } finally {
+        isSharing.value = false
     }
 }
 
@@ -337,6 +397,7 @@ const categorySummary = computed(() => {
                         :locations="locations"
                         :initial-center="selectedProperty?.latitude && selectedProperty?.longitude ? { lat: selectedProperty.latitude, lng: selectedProperty.longitude } : undefined"
                         @view-notes="handleViewNotesFromMap"
+                        @share-location="handleShareFromMap"
                     />
                 </div>
             </div>
@@ -388,11 +449,18 @@ const categorySummary = computed(() => {
                         <p class="text-sm font-mono font-medium text-gray-900 dark:text-white">{{ selectedLocation.longitude.toFixed(6) }}</p>
                     </div>
                 </div>
+                <a 
+                    :href="`https://www.google.com/maps/search/?api=1&query=${selectedLocation.latitude},${selectedLocation.longitude}`" 
+                    target="_blank"
+                    class="mt-3 block text-center text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors"
+                >
+                    <UIcon name="i-heroicons-globe-alt" class="w-3 h-3 mr-1 inline-block align-middle" />
+                    Open in Google Maps (Public)
+                </a>
             </div>
 
             <!-- Actions -->
             <div class="space-y-3">
-                <!-- View Notes Button -->
                 <UButton
                     color="primary"
                     variant="solid"
@@ -401,6 +469,17 @@ const categorySummary = computed(() => {
                 >
                     <UIcon name="i-heroicons-document-text" class="w-4 h-4 mr-2" />
                     View Notes
+                </UButton>
+
+                <!-- Share Location Button -->
+                <UButton
+                    color="green"
+                    variant="solid"
+                    block
+                    @click="shareLocation"
+                >
+                    <UIcon name="i-heroicons-share" class="w-4 h-4 mr-2" />
+                    Share Location
                 </UButton>
 
                 <!-- Secondary Actions -->
@@ -434,6 +513,63 @@ const categorySummary = computed(() => {
         :location-id="selectedLocation.id"
         :location-name="selectedLocation.icon_type.replace('_', ' ')"
     />
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Location Manager" 
+      description="Geospatial Asset Tracking & Maintenance"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Geospatial Assets</h3>
+          <p>
+            The Location Manager allows you to track physical assets (Electrical, Plumbing, HVAC) and incidents across the property using precise GPS coordinates.
+          </p>
+          <p class="mt-2 text-xs text-gray-400">
+            <strong>Pro Tip:</strong> These location data can be ported or shared to facilitate field coordination.
+          </p>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Interactive Map</h3>
+          <ul class="list-disc pl-5 space-y-2">
+            <li>
+              <strong>Add Location:</strong> Tap to drop a pin. 
+              <div class="mt-1 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-100 dark:border-blue-800 text-xs">
+                <strong>Optimization:</strong> The optimal method is by taking a photo. Geolocation is extracted from the photo's metadata. 
+                <br><br>
+                Note that the coordinates reflect the <em>camera's location</em>, not the subject. Take the photo as close to the asset as possible (ideally from directly above).
+              </div>
+            </li>
+            <li><strong>View Map:</strong> Open a full-screen interactive view of all assets at the selected property.</li>
+            <li class="mt-4">
+              <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-100 dark:border-green-800">
+                <div class="flex items-center gap-2 mb-1">
+                    <UIcon name="i-heroicons-share" class="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <strong class="text-green-900 dark:text-green-200">Sharing & Team Coordination</strong>
+                </div>
+                <p class="text-xs text-green-800 dark:text-green-300">
+                    Click any location and use the <strong>Share</strong> button. Use the <strong>Copy</strong> feature to generate a detailed summary that you can paste directly into an email or message for team coordination.
+                </p>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Asset Categories</h3>
+          <p>
+            Assets are categorized into specialized groups (e.g., HVAC, Fire Safety) with color-coded badges for quick visual auditing in both the list and map views.
+          </p>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Recent Activity</h3>
+          <p>
+            The "Recent Locations" list provides a quick audit trail of the latest assets added or updated for the property.
+          </p>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>
 

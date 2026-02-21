@@ -1,6 +1,6 @@
 // ============================================================
 // AUTO-GENERATED from renewal_items_mtm.xlsx
-// Generated: 2026-02-16
+// Generated: 2026-02-20
 // DO NOT EDIT MANUALLY - Edit Excel and regenerate
 // ============================================================
 
@@ -58,6 +58,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['admin', 'finance'],
+    departments: ['finance', 'leasing'],
     class: 'max-md:hidden',
     headerClass: 'max-md:hidden'
   },
@@ -72,6 +74,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['admin', 'finance'],
+    departments: ['finance', 'leasing'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -81,6 +85,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['admin', 'finance'],
+    departments: ['finance', 'leasing'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -90,6 +96,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['admin', 'finance'],
+    departments: ['finance', 'leasing'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -108,6 +116,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '80px',
     align: 'center',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -122,6 +132,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '80px',
     align: 'center',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-xl:hidden',
     headerClass: 'max-xl:hidden'
   },
@@ -131,6 +143,8 @@ const allColumns: TableColumn[] = [
     sortable: false,
     width: '100px',
     align: 'center',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-xl:hidden',
     headerClass: 'max-xl:hidden'
   },
@@ -152,4 +166,5 @@ const departmentColumns = {
   Management: ['status', 'approved', 'actions'],
   Leasing: ['status', 'approved', 'actions']
 }
+
 export { allColumns, roleColumns, departmentColumns }

@@ -38,6 +38,17 @@ export const useLocationService = () => {
     return data as LocationRecord[]
   }
 
+  const fetchLocationById = async (id: string) => {
+    const { data, error } = await supabase
+      .from('locations')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
+    return data as LocationRecord
+  }
+
   const addLocation = async (location: LocationRecord) => {
     const { data, error } = await supabase
       .from('locations')
@@ -145,6 +156,7 @@ export const useLocationService = () => {
 
   return {
     fetchLocations,
+    fetchLocationById,
     addLocation,
     deleteLocation,
     uploadLocationImage

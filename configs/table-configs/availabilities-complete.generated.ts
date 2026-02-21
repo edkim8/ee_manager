@@ -1,8 +1,6 @@
-import type { TableColumn } from '../../layers/table/types'
-
 // ============================================================
 // AUTO-GENERATED from availabilities.xlsx
-// Generated: 2026-02-17
+// Generated: 2026-02-20
 // DO NOT EDIT MANUALLY - Edit Excel and regenerate
 // ============================================================
 
@@ -31,7 +29,7 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '120px',
     align: 'left',
-    departments: ['Leasing'],
+    departments: ['Leasing']
   },
   {
     key: 'sf',
@@ -51,6 +49,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '60px',
     align: 'center',
+    class: 'max-md:hidden',
+    headerClass: 'max-md:hidden'
   },
   {
     key: 'status',
@@ -58,6 +58,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '80px',
     align: 'center',
+    class: 'max-md:hidden',
+    headerClass: 'max-md:hidden'
   },
   {
     key: 'available_date',
@@ -66,6 +68,8 @@ const allColumns: TableColumn[] = [
     width: '100px',
     align: 'center',
     departments: ['Management', 'Leasing'],
+    class: 'max-md:hidden',
+    headerClass: 'max-md:hidden'
   },
   {
     key: 'available_date',
@@ -74,6 +78,8 @@ const allColumns: TableColumn[] = [
     width: '100px',
     align: 'center',
     departments: ['Maintenance'],
+    class: 'max-md:hidden',
+    headerClass: 'max-md:hidden'
   },
   {
     key: 'vacant_days',
@@ -82,6 +88,8 @@ const allColumns: TableColumn[] = [
     width: '60px',
     align: 'center',
     departments: ['Management', 'Leasing'],
+    class: 'max-md:hidden',
+    headerClass: 'max-md:hidden'
   },
   {
     key: 'turnover_days',
@@ -90,6 +98,8 @@ const allColumns: TableColumn[] = [
     width: '60px',
     align: 'center',
     departments: ['Management', 'Maintenance'],
+    class: 'max-md:hidden',
+    headerClass: 'max-md:hidden'
   },
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -103,6 +113,8 @@ const allColumns: TableColumn[] = [
     width: '80px',
     align: 'right',
     departments: ['Management', 'Leasing'],
+    class: 'max-lg:hidden',
+    headerClass: 'max-lg:hidden'
   },
   {
     key: 'rent_offered',
@@ -111,6 +123,8 @@ const allColumns: TableColumn[] = [
     width: '80px',
     align: 'right',
     departments: ['Management', 'Leasing'],
+    class: 'max-lg:hidden',
+    headerClass: 'max-lg:hidden'
   },
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -125,6 +139,8 @@ const allColumns: TableColumn[] = [
     align: 'right',
     roles: ['Owner', 'Manager', 'RPM', 'Asset'],
     departments: ['Management', 'Leasing'],
+    class: 'max-xl:hidden',
+    headerClass: 'max-xl:hidden'
   },
   {
     key: 'concession_total_pct',
@@ -134,6 +150,8 @@ const allColumns: TableColumn[] = [
     align: 'center',
     roles: ['Owner', 'Manager', 'RPM', 'Asset'],
     departments: ['Management', 'Leasing'],
+    class: 'max-xl:hidden',
+    headerClass: 'max-xl:hidden'
   },
   {
     key: 'concession_upfront_amount',
@@ -142,6 +160,8 @@ const allColumns: TableColumn[] = [
     width: '100px',
     align: 'right',
     departments: ['Management', 'Leasing'],
+    class: 'max-xl:hidden',
+    headerClass: 'max-xl:hidden'
   },
   {
     key: 'concession_free_rent_days',
@@ -150,6 +170,8 @@ const allColumns: TableColumn[] = [
     width: '100px',
     align: 'right',
     departments: ['Management', 'Leasing'],
+    class: 'max-xl:hidden',
+    headerClass: 'max-xl:hidden'
   },
   {
     key: 'concession_display_calc',
@@ -159,6 +181,8 @@ const allColumns: TableColumn[] = [
     align: 'center',
     roles: ['Owner', 'Manager', 'RPM', 'Asset'],
     departments: ['Management', 'Leasing'],
+    class: 'max-xl:hidden',
+    headerClass: 'max-xl:hidden'
   },
   {
     key: 'pricing_comment',
@@ -168,6 +192,8 @@ const allColumns: TableColumn[] = [
     align: 'left',
     roles: ['Manager', 'RPM', 'Asset'],
     departments: ['Management', 'Leasing'],
+    class: 'max-xl:hidden',
+    headerClass: 'max-xl:hidden'
   },
   {
     key: 'resident_name',
@@ -177,6 +203,9 @@ const allColumns: TableColumn[] = [
     align: 'left',
     roles: ['Manager', 'RPM', 'Asset'],
     departments: ['Management', 'Leasing'],
+    filterGroups: ['applied', 'leased'],
+    class: 'max-xl:hidden',
+    headerClass: 'max-xl:hidden'
   },
   {
     key: 'application_date',
@@ -185,6 +214,9 @@ const allColumns: TableColumn[] = [
     width: '100px',
     align: 'center',
     departments: ['Management', 'Leasing'],
+    filterGroups: ['applied'],
+    class: 'max-xl:hidden',
+    headerClass: 'max-xl:hidden'
   },
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -199,6 +231,9 @@ const allColumns: TableColumn[] = [
     align: 'center',
     roles: ['Manager', 'RPM', 'Asset'],
     departments: ['Management', 'Leasing'],
+    filterGroups: ['applied'],
+    class: 'max-2xl:hidden',
+    headerClass: 'max-2xl:hidden'
   },
   {
     key: 'move_out_date',
@@ -206,6 +241,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'center',
+    class: 'max-2xl:hidden',
+    headerClass: 'max-2xl:hidden'
   },
   {
     key: 'move_in_date',
@@ -213,6 +250,9 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'center',
+    filterGroups: ['applied', 'leased'],
+    class: 'max-2xl:hidden',
+    headerClass: 'max-2xl:hidden'
   },
   {
     key: 'leasing_agent',
@@ -221,6 +261,9 @@ const allColumns: TableColumn[] = [
     width: '120px',
     align: 'left',
     departments: ['Management', 'Leasing'],
+    filterGroups: ['applied', 'leased'],
+    class: 'max-2xl:hidden',
+    headerClass: 'max-2xl:hidden'
   },
   {
     key: 'lease_start_date',
@@ -229,6 +272,9 @@ const allColumns: TableColumn[] = [
     width: '100px',
     align: 'center',
     departments: ['Management', 'Leasing'],
+    filterGroups: ['leased'],
+    class: 'max-2xl:hidden',
+    headerClass: 'max-2xl:hidden'
   },
   {
     key: 'lease_end_date',
@@ -237,6 +283,9 @@ const allColumns: TableColumn[] = [
     width: '100px',
     align: 'center',
     departments: ['Management', 'Leasing'],
+    filterGroups: ['leased'],
+    class: 'max-2xl:hidden',
+    headerClass: 'max-2xl:hidden'
   },
   {
     key: 'lease_rent_amount',
@@ -246,6 +295,9 @@ const allColumns: TableColumn[] = [
     align: 'right',
     roles: ['Owner', 'Manager', 'RPM', 'Asset'],
     departments: ['Management', 'Leasing'],
+    filterGroups: ['leased'],
+    class: 'max-2xl:hidden',
+    headerClass: 'max-2xl:hidden'
   },
   {
     key: 'building_name',
@@ -254,6 +306,8 @@ const allColumns: TableColumn[] = [
     width: '150px',
     align: 'left',
     departments: ['Leasing'],
+    class: 'max-2xl:hidden',
+    headerClass: 'max-2xl:hidden'
   },
   {
     key: 'resident_email',
@@ -263,6 +317,9 @@ const allColumns: TableColumn[] = [
     align: 'left',
     roles: ['Manager', 'RPM', 'Asset'],
     departments: ['Management', 'Leasing'],
+    filterGroups: ['applied', 'leased'],
+    class: 'max-2xl:hidden',
+    headerClass: 'max-2xl:hidden'
   },
   {
     key: 'resident_phone',
@@ -272,6 +329,9 @@ const allColumns: TableColumn[] = [
     align: 'left',
     roles: ['Manager', 'RPM', 'Asset'],
     departments: ['Leasing'],
+    filterGroups: ['applied', 'leased'],
+    class: 'max-2xl:hidden',
+    headerClass: 'max-2xl:hidden'
   },
 ]
 

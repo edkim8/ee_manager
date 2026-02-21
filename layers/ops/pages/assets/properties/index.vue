@@ -3,10 +3,11 @@ import { ref, computed, onMounted } from 'vue'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
 import type { Tables } from '@/types/supabase'
+import ContextHelper from '../../../../base/components/ContextHelper.vue'
 
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
-import { allColumns, filterGroups, roleColumns, departmentColumns } from '../../../../../configs/table-configs/properties-complete.generated'
-import { getAccessibleColumns } from '../../../../table/utils/column-filtering'
+import { allColumns } from '../../../../../configs/table-configs/properties-complete.generated'
+import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
 
 const supabase = useSupabaseClient()
 const { activeProperty, userContext } = usePropertyState()
@@ -28,15 +29,12 @@ const { data: properties, status } = await useAsyncData('properties-list', async
 
 // Columns from Excel configuration - Restricted by Role/Dept
 const columns = computed(() => {
-  return getAccessibleColumns(
-    allColumns,
-    filterGroups,
-    roleColumns,
-    departmentColumns,
-    'all',
-    userContext.value,
-    activeProperty.value
-  )
+  return filterColumnsByAccess(allColumns, {
+    userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+    userDepartment: userContext.value?.profile?.department,
+    isSuperAdmin: !!userContext.value?.access?.is_super_admin,
+    filterGroup: 'all'
+  })
 })
 
 // DEBUG: Log column classes on mount
@@ -120,7 +118,7 @@ const handleRowClick = (row: Tables<'properties'>) => {
             placeholder="Search properties..."
             class="w-64"
           />
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-gray-400">
             {{ filteredData.length }} {{ filteredData.length === 1 ? 'property' : 'properties' }}
           </span>
         </div>
@@ -154,5 +152,54 @@ const handleRowClick = (row: Tables<'properties'>) => {
         <span v-else class="text-gray-400 text-xs">-</span>
       </template>
     </GenericDataTable>
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Properties Overview" 
+      description="Understanding the Property Portfolio Management"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">What are Properties?</h3>
+          <p>
+            Properties are the top-level entity in the EE_manager system. Every building, unit, resident, and lease is associated with a specific property.
+          </p>
+        </section>
+
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Search & Navigation</h3>
+          <ul class="list-disc pl-5 space-y-2">
+            <li><strong>Search:</strong> Filter the list by property code, name, or address using the search bar above the table.</li>
+            <li><strong>Navigation:</strong> Click any row to view the <strong>Property Detail Page</strong>.</li>
+            <li><strong>Website Links:</strong> Click the <UIcon name="i-heroicons-arrow-top-right-on-square" class="inline-block w-4 h-4" /> icon to open the property's external website in a new tab.</li>
+            <li>
+              <strong>Sorting:</strong> Click any column header to toggle sorting.
+              <ul class="list-circle pl-5 mt-1 text-xs text-gray-500">
+                <li>First Click: Ascending order (A-Z)</li>
+                <li>Second Click: Descending order (Z-A)</li>
+                <li>Third Click: Resets to default sorting</li>
+              </ul>
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Access-Driven Visibility</h3>
+          <p>
+            The columns you see are dynamically filtered based on your security profile. Your <strong>Department</strong> and <strong>Role</strong> govern which relevant data is visible or hidden.
+          </p>
+          <p class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded text-xs italic">
+            Tip: You can verify your assigned Role and Department on your <strong>Profile Page</strong>.
+          </p>
+        </section>
+
+        <section>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Exporting Data</h3>
+          <p>
+            Use the <strong>Export</strong> button in the table actions to download the current view as a CSV or PDF file for external reporting.
+          </p>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>

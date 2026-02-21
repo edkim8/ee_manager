@@ -1,4 +1,8 @@
-import type { TableColumn } from '../../layers/table/types'
+// ============================================================
+// AUTO-GENERATED from buildings.xlsx
+// Generated: 2026-02-20
+// DO NOT EDIT MANUALLY - Edit Excel and regenerate
+// ============================================================
 
 const allColumns: TableColumn[] = [
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -42,28 +46,18 @@ const allColumns: TableColumn[] = [
   },
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // PRIORITY 3: Desktop Basic (1 columns, +200px → 950px total)
+  // PRIORITY 3: Desktop Basic (1 columns, +300px → 1050px total)
   // BREAKPOINT: hidden lg:table-cell (1024px+)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
     key: 'street_address',
     label: 'Address',
     sortable: false,
-    width: '200px',
+    width: '300px',
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
 ]
 
-// Filter Groups
-const filterGroups = {
-  all: ['name', 'unit_count', 'floor_plans_data', 'floor_count', 'street_address']
-}
 
-// Role-based column visibility
-const roleColumns = {}
-
-// Department-based column visibility
-const departmentColumns = {}
-
-export { allColumns, filterGroups, roleColumns, departmentColumns }
+export { allColumns }

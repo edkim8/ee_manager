@@ -1,36 +1,39 @@
-import type { TableColumn } from '../../layers/table/types'
+// ============================================================
+// AUTO-GENERATED from floor_plans.xlsx
+// Generated: 2026-02-20
+// DO NOT EDIT MANUALLY - Edit Excel and regenerate
+// ============================================================
 
 const allColumns: TableColumn[] = [
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // PRIORITY 1: Mobile Essentials (2 columns, 320px total)
+  // PRIORITY 1: Mobile Essentials (3 columns, 350px total)
   // BREAKPOINT: base (no class)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
     key: 'code',
     label: 'Code',
     sortable: true,
-    width: '240px'
+    width: '140px'
   },
   {
     key: 'sf',
     label: 'SF',
     sortable: true,
-    width: '80px',
+    width: '60px',
     align: 'right'
   },
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // PRIORITY 2: Tablet+ (5 columns, +460px → 780px total)
-  // BREAKPOINT: hidden md:table-cell (768px+)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
     key: 'marketing_name',
     label: 'Marketing Name',
     sortable: true,
-    width: '200px',
-    class: 'max-md:hidden',
-    headerClass: 'max-md:hidden'
+    width: '150px',
+    departments: ['Leasing', 'Management']
   },
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // PRIORITY 2: Tablet+ (4 columns, +260px → 610px total)
+  // BREAKPOINT: hidden md:table-cell (768px+)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
     key: 'bedroom_count',
     label: 'Beds',
@@ -55,6 +58,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-md:hidden',
     headerClass: 'max-md:hidden'
   },
@@ -69,11 +74,6 @@ const allColumns: TableColumn[] = [
   },
 ]
 
-// Filter Groups
-const filterGroups = {
-  all: ['code', 'sf', 'marketing_name', 'bedroom_count', 'bathroom_count', 'base_rent', 'unit_count']
-}
-
 // Role-based column visibility
 const roleColumns = {
   Manager: ['base_rent'],
@@ -87,4 +87,4 @@ const departmentColumns = {
   Leasing: ['base_rent']
 }
 
-export { allColumns, filterGroups, roleColumns, departmentColumns }
+export { allColumns, roleColumns, departmentColumns }

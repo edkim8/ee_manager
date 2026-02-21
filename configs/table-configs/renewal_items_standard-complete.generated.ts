@@ -1,6 +1,6 @@
 // ============================================================
 // AUTO-GENERATED from renewal_items_standard.xlsx
-// Generated: 2026-02-16
+// Generated: 2026-02-20
 // DO NOT EDIT MANUALLY - Edit Excel and regenerate
 // ============================================================
 
@@ -54,6 +54,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-md:hidden',
     headerClass: 'max-md:hidden'
   },
@@ -63,6 +65,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-md:hidden',
     headerClass: 'max-md:hidden'
   },
@@ -72,6 +76,8 @@ const allColumns: TableColumn[] = [
     sortable: false,
     width: '100px',
     align: 'right',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-md:hidden',
     headerClass: 'max-md:hidden'
   },
@@ -86,6 +92,8 @@ const allColumns: TableColumn[] = [
     sortable: false,
     width: '100px',
     align: 'right',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -95,6 +103,8 @@ const allColumns: TableColumn[] = [
     sortable: false,
     width: '120px',
     align: 'right',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -104,6 +114,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-lg:hidden',
     headerClass: 'max-lg:hidden'
   },
@@ -118,6 +130,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '100px',
     align: 'right',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-xl:hidden',
     headerClass: 'max-xl:hidden'
   },
@@ -127,6 +141,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '80px',
     align: 'center',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-xl:hidden',
     headerClass: 'max-xl:hidden'
   },
@@ -136,6 +152,8 @@ const allColumns: TableColumn[] = [
     sortable: true,
     width: '80px',
     align: 'center',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-xl:hidden',
     headerClass: 'max-xl:hidden'
   },
@@ -145,6 +163,8 @@ const allColumns: TableColumn[] = [
     sortable: false,
     width: '100px',
     align: 'center',
+    roles: ['Manager', 'RPM', 'Asset'],
+    departments: ['Management', 'Leasing'],
     class: 'max-xl:hidden',
     headerClass: 'max-xl:hidden'
   },
@@ -162,4 +182,5 @@ const departmentColumns = {
   Management: ['market_rent', 'current_rent', 'ltl_rent', 'max_rent', 'manual_rent', 'final_rent', 'increase', 'status', 'approved', 'actions'],
   Leasing: ['market_rent', 'current_rent', 'ltl_rent', 'max_rent', 'manual_rent', 'final_rent', 'increase', 'status', 'approved', 'actions']
 }
+
 export { allColumns, roleColumns, departmentColumns }

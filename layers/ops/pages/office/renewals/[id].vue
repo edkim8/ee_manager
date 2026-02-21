@@ -13,6 +13,7 @@ import UpdateStatusModal from '../../../components/renewals/UpdateStatusModal.vu
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
 import { allColumns as standardColumnsGenerated } from '../../../../../configs/table-configs/renewal_items_standard-complete.generated'
 import { allColumns as mtmColumnsGenerated } from '../../../../../configs/table-configs/renewal_items_mtm-complete.generated'
+import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
 
 definePageMeta({
   layout: 'dashboard'
@@ -21,7 +22,7 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const supabase = useSupabaseClient()
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
 
 const worksheetId = route.params.id as string
 const isNewWorksheet = computed(() => worksheetId === 'new')
@@ -335,8 +336,23 @@ const { selectedRows, selectedCount, isSelected, toggleRow, selectAll, clearSele
 )
 
 // Table columns from Excel configurations
-const standardColumns = computed(() => standardColumnsGenerated)
-const mtmColumns = computed(() => mtmColumnsGenerated)
+const standardColumns = computed(() => {
+  return filterColumnsByAccess(standardColumnsGenerated, {
+    userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+    userDepartment: userContext.value?.profile?.department,
+    isSuperAdmin: !!userContext.value?.access?.is_super_admin,
+    filterGroup: 'all'
+  })
+})
+
+const mtmColumns = computed(() => {
+  return filterColumnsByAccess(mtmColumnsGenerated, {
+    userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+    userDepartment: userContext.value?.profile?.department,
+    isSuperAdmin: !!userContext.value?.access?.is_super_admin,
+    filterGroup: 'all'
+  })
+})
 
 // Format helpers (timezone-safe)
 const formatDate = (dateStr: string | null) => {
@@ -1860,6 +1876,87 @@ onBeforeRouteLeave((to, from, next) => {
         :on-close="handleUpdateStatusModalClose"
       />
     </SimpleModal>
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Renewal Worksheet Detail" 
+      description="Strategy Configuration & Offer Auditing"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Pricing Strategy</h3>
+          <p>
+            The system calculates proposed increases based on two primary levers:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>LTL % (Lease-to-List):</strong> Determines what percentage of the "gap" between Current Rent and Market Rent is closed. (e.g., 25% LTL means the new rent will be Current + 25% of the difference).</li>
+            <li><strong>Max Increase %:</strong> Acts as a global safety cap. No calculated renewal will exceed this percentage of the current rent.</li>
+            <li><strong>Manual Override:</strong> Select the <strong>Manual Rent</strong> column to type a specific <code>+/- $</code> adjustment. This will bypass automated logic for that specific unit.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Review & Approval</h3>
+          <div class="space-y-2">
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong>Approve (Checkbox):</strong> Mark a unit as "Ready for Offer." Approved units are included in the summary stats and final export.</li>
+              <li><strong>Approve All:</strong> Located in the header, this allows you to batch-approve everything in the current filtered view.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Action Items</h3>
+          <p>
+            The <strong>Actions</strong> column provides tools for handling verbal or external responses:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><UIcon name="i-heroicons-check" class="inline-block w-3 h-3 text-green-600" /> <strong>Manual Accept:</strong> Confirm the resident's choice of term length if they signed offline.</li>
+            <li><UIcon name="i-heroicons-x-mark" class="inline-block w-3 h-3 text-red-600" /> <strong>Manual Decline:</strong> Mark the unit as non-renewing to trigger NTV (Notice to Vacate) workflows.</li>
+            <li><UIcon name="i-heroicons-chat-bubble-left-right" class="inline-block w-3 h-3" /> <strong>Comment:</strong> Log negotation notes or specific resident details for internal auditing.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Worksheet Lifecycle</h3>
+          <div class="space-y-2">
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong class="text-blue-600 uppercase italic">Draft:</strong> Active editing phase. Changes are saved locally and only persisted to the database when you click <strong>Save</strong>.</li>
+              <li><strong class="text-purple-600 uppercase italic">Finalized:</strong> Once review is complete, locking the worksheet generates a <strong>Mail Merger Excel</strong>. This file contains all approved offer data, formatted specifically for your offer letter templates.</li>
+              <li><strong class="text-gray-600 uppercase italic">Download Mail Merger:</strong> Available at any time for finalized worksheets to re-download the offer data payload.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Term Configuration</h3>
+          <p>
+            Use <strong>Configure Terms</strong> to setup multiple offer options:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>Primary Term:</strong> The standard lease length (usually 12 months).</li>
+            <li><strong>Alternative Terms:</strong> Up to 3 additional options (e.g., 10 or 15 months) with optional percentage offsets to drive specific occupancy goals.</li>
+            <li><strong>Early Discount:</strong> Apply a one-time incentive for residents who sign by a specific deadline.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Audit & Compliance</h3>
+          <div class="space-y-2">
+            <p>
+              <strong>Status Definitions:</strong>
+            </p>
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong class="text-yellow-600">Manual Accepted:</strong> resident confirmed verbally or via external Email. Awaiting sync from Yardi.</li>
+              <li><strong class="text-green-600">Yardi Confirmed:</strong> The new lease has been fully executed and synced from the property management system.</li>
+            </ul>
+          </div>
+          <div v-if="isCAProperty" class="mt-3 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-100 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-300">
+            <strong>⚖️ CA Compliance:</strong> For this property, Month-to-Month (MTM) increases are capped by state/local law. The system will block saves that violate these rolling 12-month limits.
+          </div>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
   </ClientOnly>
 </template>

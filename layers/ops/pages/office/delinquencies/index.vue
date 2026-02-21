@@ -652,5 +652,52 @@ const handleResidentClick = (row: any) => {
 
     <!-- Error State -->
     <UAlert v-if="error" icon="i-heroicons-exclamation-triangle" color="red" variant="soft" title="Error" :description="error" class="mt-8" />
+
+    <!-- Context Helper (Lazy Loaded) -->
+    <LazyContextHelper 
+      title="Delinquency Manager" 
+      description="Accounts Receivable & Aging Analysis"
+    >
+      <div class="space-y-4 text-sm leading-relaxed">
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Aging Buckets</h3>
+          <p>
+            The Delinquency Manager categorizes unpaid balances into time-based buckets to prioritize collection efforts:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>0-60 Days:</strong> Standard delinquencies often resolved with simple payment reminders.</li>
+            <li><strong class="text-orange-600">61-90 Days:</strong> High-risk balances that may require formal legal notices.</li>
+            <li><strong class="text-red-600">90+ Days:</strong> Critical delinquencies that typically align with eviction proceedings.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Snapshots & Trends</h3>
+          <p>
+            The dashboard displays two distinct data signals:
+          </p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>Daily Trends:</strong> Real-time tracking based on daily delinquency report uploads.</li>
+            <li><strong>Yardi Snapshots (26th):</strong> Historical benchmarks captured on the 26th of each month, aligning with the official Yardi accounting cycle.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Financial Terminology</h3>
+          <div class="space-y-2">
+            <p>
+              Understanding the difference between raw debt and actual liability:
+            </p>
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong>Total Unpaid:</strong> The gross sum of all outstanding resident charges.</li>
+              <li><strong>Total Balance:</strong> The net sum, which includes <strong>Prepays</strong> (resident credits) that offset the unpaid amount.</li>
+            </ul>
+          </div>
+          <div class="mt-2 bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-100 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-300">
+            <strong>Pro Tip:</strong> Click any resident in the "Delinquent Residents" list to view the specific daily snapshot associated with their current balance.
+          </div>
+        </section>
+      </div>
+    </LazyContextHelper>
   </div>
 </template>
