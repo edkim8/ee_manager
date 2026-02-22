@@ -91,7 +91,7 @@ const getHealthIcon = (status: string): string => {
     <div v-else-if="items.length === 0" class="text-center py-8">
       <UIcon name="i-heroicons-cube" class="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-2" />
       <p class="text-sm text-gray-500 dark:text-gray-400">No assets tracked yet</p>
-      <NuxtLink :to="`/inventory/test?location=${locationType}&id=${locationId}`">
+      <NuxtLink to="/office/inventory/installations">
         <UButton size="xs" variant="ghost" class="mt-2">Add Asset</UButton>
       </NuxtLink>
     </div>
@@ -130,7 +130,7 @@ const getHealthIcon = (status: string): string => {
         v-for="item in displayedItems"
         :key="item.id"
         class="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900/70 transition-colors cursor-pointer"
-        @click="$router.push(`/inventory/test?item=${item.id}`)"
+        @click="$router.push('/office/inventory/installations')"
       >
         <div class="flex items-start justify-between mb-1">
           <div class="flex-1 min-w-0">
@@ -190,7 +190,7 @@ const getHealthIcon = (status: string): string => {
 
     <!-- View All Link -->
     <div v-if="items.length > 0" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-      <NuxtLink :to="`/inventory/test?location=${locationType}&id=${locationId}`">
+      <NuxtLink to="/office/inventory/installations">
         <UButton variant="outline" size="sm" class="w-full" icon="i-heroicons-cube">
           Manage Assets
         </UButton>

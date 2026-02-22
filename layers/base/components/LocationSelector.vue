@@ -28,28 +28,63 @@ const emit = defineEmits<Emits>()
 const showModal = ref(false)
 const searchTerm = ref('')
 
+// --- Recent Selections (localStorage) ---
+const RECENT_KEY = computed(() => `recent_selections:${props.label}`)
+const MAX_RECENTS = 5
+
+const recentSelections = ref<LocationOption[]>([])
+
+const loadRecents = () => {
+  try {
+    const stored = localStorage.getItem(RECENT_KEY.value)
+    recentSelections.value = stored ? JSON.parse(stored) : []
+  } catch {
+    recentSelections.value = []
+  }
+}
+
+const saveRecent = (option: LocationOption) => {
+  try {
+    const existing = recentSelections.value.filter(r => r.id !== option.id)
+    const updated = [option, ...existing].slice(0, MAX_RECENTS)
+    recentSelections.value = updated
+    localStorage.setItem(RECENT_KEY.value, JSON.stringify(updated))
+  } catch {
+    // Silently fail if localStorage is unavailable
+  }
+}
+
 // Selected option display
 const selectedOption = computed(() => {
   return props.options.find(opt => opt.id === props.modelValue)
 })
 
-// Filtered options based on search
-const filteredOptions = computed(() => {
-  if (!searchTerm.value) return props.options
+// Filtered options based on search (exclude recent IDs to avoid duplication)
+const recentIds = computed(() => new Set(recentSelections.value.map(r => r.id)))
 
-  const search = searchTerm.value.toLowerCase()
-  return props.options.filter(opt =>
-    opt.name.toLowerCase().includes(search)
-  )
+const filteredOptions = computed(() => {
+  const base = searchTerm.value
+    ? props.options.filter(opt => opt.name.toLowerCase().includes(searchTerm.value.toLowerCase()))
+    : props.options
+
+  // When searching, show all matches (no deduplication with recents)
+  if (searchTerm.value) return base
+
+  // When not searching, exclude items already in recents section
+  return base.filter(opt => !recentIds.value.has(opt.id))
 })
 
+const showRecents = computed(() => !searchTerm.value && recentSelections.value.length > 0)
+
 const selectOption = (option: LocationOption) => {
+  saveRecent(option)
   emit('update:modelValue', option.id)
   showModal.value = false
   searchTerm.value = ''
 }
 
 const openModal = () => {
+  loadRecents()
   showModal.value = true
   searchTerm.value = ''
 }
@@ -131,7 +166,41 @@ const clearSelection = () => {
 
           <!-- Options List -->
           <div class="flex-1 overflow-y-auto">
-            <div v-if="filteredOptions.length === 0" class="p-8 text-center text-gray-500">
+
+            <!-- Recent Selections Section -->
+            <template v-if="showRecents">
+              <div class="px-4 pt-3 pb-1">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Recent</p>
+              </div>
+              <button
+                v-for="option in recentSelections"
+                :key="`recent-${option.id}`"
+                type="button"
+                @click="selectOption(option)"
+                class="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900/20
+                       border-b border-gray-100 dark:border-gray-800 transition-colors
+                       flex items-center justify-between group"
+                :class="option.id === modelValue && 'bg-blue-100 dark:bg-blue-900/30'"
+              >
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-400 text-xs">↩</span>
+                  <span class="font-medium">{{ option.name }}</span>
+                </div>
+                <span
+                  v-if="option.id === modelValue"
+                  class="text-blue-600 dark:text-blue-400"
+                >
+                  ✓
+                </span>
+              </button>
+
+              <div class="px-4 pt-3 pb-1">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">All Options</p>
+              </div>
+            </template>
+
+            <!-- Main Options -->
+            <div v-if="filteredOptions.length === 0 && !showRecents" class="p-8 text-center text-gray-500">
               No results found
             </div>
 
