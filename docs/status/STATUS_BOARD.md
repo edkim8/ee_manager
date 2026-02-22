@@ -2,7 +2,7 @@
 
 ## Overview
 **Current Phase**: Table Standardization & UX Polish
-**Latest Update**: [2026-02-21] H-047/H-048: Availability Snapshots & Navigation Split — Daily trend tracking with custom SVG charts + Dedicated Notices page + Streamlined navigation menu.
+**Latest Update**: [2026-02-22] H-055/H-056: Dashboard & Audit Archiving — Live metrics for Control Center + New Inventory Health widget + Hybrid file/email audit archiving system.
 
 ## Feature Tracker
 
@@ -33,6 +33,8 @@
 | F-029 | Notices Page | Ops | **COMPLETED** | Claude |
 | F-030 | Navigation Restructure | Base | **COMPLETED** | Claude |
 | F-031 | Email Report Enhancements | Admin | **COMPLETED** | Claude |
+| F-032 | Control Center Live Metrics | Base | **COMPLETED** | Claude |
+| F-033 | Audit Archiving System | Admin | **COMPLETED** | Claude |
 
 
 > **F-010 Note:** Stable Core Layer - Open for Extension. See `layers/table/AI_USAGE_GUIDE.md`.
@@ -88,6 +90,8 @@
 - [x] Notices Page — Dedicated residents list (F-029)
 - [x] Navigation Restructure — Split Office menu (F-030)
 - [x] Email Report Enhancements — High-fidelity summaries (F-031)
+- [x] Control Center Live Metrics (F-032)
+- [x] Audit Archiving System (F-033)
 - [ ] **Next Step**: Content refinement using Excel system (column labels, widths, priorities)
 
 ## Recent Audit & Improvements (2026-02-09)
