@@ -194,10 +194,10 @@ const navigationItems = computed(() => {
     ],
   })
 
-  // Add Office menu
+  // Add Leasing menu
   items.push({
-    label: 'Office',
-    icon: 'i-heroicons-briefcase',
+    label: 'Leasing',
+    icon: 'i-heroicons-clipboard-document-list',
     to: '/office/availabilities',
     children: [
       {
@@ -206,53 +206,67 @@ const navigationItems = computed(() => {
         to: '/office/availabilities',
       },
       {
-        label: 'Leases',
-        icon: 'i-heroicons-document-text',
-        to: '/office/leases',
-      },
-      {
-        label: 'Residents',
-        icon: 'i-heroicons-users',
-        to: '/office/residents',
-      },
-      {
-        label: 'Alerts',
-        icon: 'i-heroicons-bell-alert',
-        to: '/office/alerts',
-      },
-      {
-        label: 'Delinquencies',
+        label: 'Availability Analysis',
         icon: 'i-heroicons-chart-bar',
-        to: '/office/delinquencies',
+        to: '/office/availabilities/analysis',
+      },
+      {
+        label: 'Notices',
+        icon: 'i-heroicons-bell',
+        to: '/office/notices',
       },
       {
         label: 'Renewals',
         icon: 'i-heroicons-arrow-path-rounded-square',
         to: '/office/renewals',
       },
+    ],
+  })
+
+  // Add Residents menu
+  items.push({
+    label: 'Residents',
+    icon: 'i-heroicons-users',
+    to: '/office/residents',
+    children: [
       {
-        label: 'Locations',
-        icon: 'i-heroicons-map-pin',
-        to: '/assets/locations',
+        label: 'Residents',
+        icon: 'i-heroicons-users',
+        to: '/office/residents',
+      },
+      {
+        label: 'Leases',
+        icon: 'i-heroicons-document-text',
+        to: '/office/leases',
+      },
+      {
+        label: 'Delinquencies',
+        icon: 'i-heroicons-chart-bar',
+        to: '/office/delinquencies',
       },
     ],
   })
 
-  // Add Maintenance menu
+  // Add Operations menu
   items.push({
-    label: 'Maintenance',
+    label: 'Operations',
     icon: 'i-heroicons-wrench-screwdriver',
-    to: '/maintenance/work-orders',
+    to: '/office/alerts',
     children: [
+      {
+        label: 'Alerts',
+        icon: 'i-heroicons-bell-alert',
+        to: '/office/alerts',
+      },
       {
         label: 'Work Orders',
         icon: 'i-heroicons-clipboard-document-check',
         to: '/maintenance/work-orders',
       },
       {
-        label: 'Locations',
-        icon: 'i-heroicons-map-pin',
-        to: '/assets/locations',
+        label: 'Inventory',
+        icon: 'i-heroicons-archive-box',
+        to: '/office/inventory',
       },
     ],
   })

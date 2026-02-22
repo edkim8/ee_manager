@@ -2118,6 +2118,100 @@ export const useSolverEngine = () => {
             const result = await tracker.completeRun(batchId, propertiesProcessed)
 
             if (result) {
+                // ====================================================
+                // AVAILABILITY SNAPSHOTS — one row per property per day
+                // Non-fatal: errors are logged but never block completion
+                // ====================================================
+                const snapshotDate = getTodayPST()
+                const snapshotProps = propertiesProcessed.filter(c => c !== 'STALE_UPDATE')
+
+                for (const pCode of snapshotProps) {
+                    try {
+                        // Query active availabilities for this property
+                        const { data: avails } = await supabase
+                            .from('availabilities')
+                            .select('status, rent_market, rent_offered, available_date, move_in_date, updated_at, concession_free_rent_days, concession_upfront_amount')
+                            .eq('property_code', pCode)
+                            .eq('is_active', true)
+
+                        // Query total unit count
+                        const { count: totalUnits } = await supabase
+                            .from('units')
+                            .select('*', { count: 'exact', head: true })
+                            .eq('property_code', pCode)
+
+                        if (!avails) {
+                            console.warn(`[Solver] Snapshot: no availability data for ${pCode}, skipping`)
+                            continue
+                        }
+
+                        // Status counts
+                        const availableCount = avails.filter(a => a.status === 'Available').length
+                        const appliedCount   = avails.filter(a => a.status === 'Applied').length
+                        const leasedCount    = avails.filter(a => a.status === 'Leased').length
+                        const occupiedCount  = avails.filter(a => a.status === 'Occupied').length
+
+                        // Rent averages (only rows that have rent data)
+                        const withMarket  = avails.filter(a => a.rent_market && a.rent_market > 0)
+                        const withOffered = avails.filter(a => a.rent_offered && a.rent_offered > 0)
+                        const avgMarketRent  = withMarket.length  ? withMarket.reduce((s, a)  => s + Number(a.rent_market), 0)  / withMarket.length  : null
+                        const avgOfferedRent = withOffered.length ? withOffered.reduce((s, a) => s + Number(a.rent_offered), 0) / withOffered.length : null
+
+                        // Days on market: Leased units with both available_date and move_in_date, updated within last 60 days
+                        const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
+                        const leasedWithDates = avails.filter(a =>
+                            a.status === 'Leased' &&
+                            a.available_date &&
+                            a.move_in_date &&
+                            a.updated_at >= sixtyDaysAgo
+                        )
+                        let avgDaysOnMarket: number | null = null
+                        if (leasedWithDates.length > 0) {
+                            const totalDays = leasedWithDates.reduce((sum, a) => {
+                                const avail = new Date(a.available_date!).getTime()
+                                const movein = new Date(a.move_in_date!).getTime()
+                                return sum + Math.max(0, Math.round((movein - avail) / (1000 * 60 * 60 * 24)))
+                            }, 0)
+                            avgDaysOnMarket = Math.round((totalDays / leasedWithDates.length) * 10) / 10
+                        }
+
+                        // Concession averages
+                        const withConcDays   = avails.filter(a => a.concession_free_rent_days && a.concession_free_rent_days > 0)
+                        const withConcAmount = avails.filter(a => a.concession_upfront_amount && a.concession_upfront_amount > 0)
+                        const avgConcessionDays   = withConcDays.length   ? withConcDays.reduce((s, a)   => s + Number(a.concession_free_rent_days), 0)   / withConcDays.length   : null
+                        const avgConcessionAmount = withConcAmount.length ? withConcAmount.reduce((s, a) => s + Number(a.concession_upfront_amount), 0) / withConcAmount.length : null
+
+                        // Price changes from current run summary
+                        const priceChangesCount = result.summary[pCode]?.priceChanges ?? 0
+
+                        await supabase.from('availability_snapshots').upsert({
+                            solver_run_id:        result.runId,
+                            property_code:        pCode,
+                            snapshot_date:        snapshotDate,
+                            available_count:      availableCount,
+                            applied_count:        appliedCount,
+                            leased_count:         leasedCount,
+                            occupied_count:       occupiedCount,
+                            total_active_count:   avails.length,
+                            total_units:          totalUnits ?? 0,
+                            avg_market_rent:      avgMarketRent   ? Math.round(avgMarketRent  * 100) / 100 : null,
+                            avg_offered_rent:     avgOfferedRent  ? Math.round(avgOfferedRent * 100) / 100 : null,
+                            avg_days_on_market:   avgDaysOnMarket,
+                            avg_concession_days:  avgConcessionDays   ? Math.round(avgConcessionDays   * 10) / 10 : null,
+                            avg_concession_amount: avgConcessionAmount ? Math.round(avgConcessionAmount * 100) / 100 : null,
+                            price_changes_count:  priceChangesCount
+                        }, { onConflict: 'property_code,snapshot_date', ignoreDuplicates: true })
+
+                        console.log(`[Solver] ✓ Availability snapshot saved for ${pCode} (${snapshotDate}): available=${availableCount}, applied=${appliedCount}, leased=${leasedCount}`)
+                    } catch (snapErr) {
+                        console.error(`[Solver] Snapshot failed for ${pCode}:`, snapErr)
+                        // Non-fatal — continue to next property
+                    }
+                }
+                // ====================================================
+                // END AVAILABILITY SNAPSHOTS
+                // ====================================================
+
                 // Generate markdown report
                 const reportTimestamp = getNowPST()
                 const markdown = reportGen.generateMarkdown(

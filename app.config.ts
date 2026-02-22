@@ -8,6 +8,13 @@ export default defineAppConfig({
       primary: 'sky',
       neutral: 'neutral'
     },
+    // NavigationMenu: override viewport to be fully opaque with higher z-index.
+    // NuxtUI v4 merges these with the default classes via tailwind-variants extend.
+    // bg-white/bg-gray-900 override the default bg-default (CSS variable), z-50 overrides z-[1].
+    navigationMenu: {
+      viewport: 'bg-white dark:bg-gray-900 z-50 shadow-xl',
+      viewportWrapper: 'z-50',
+    },
     // Standardized classes from design_standards.md
     theme: {
       typography: {

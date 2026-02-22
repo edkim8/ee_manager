@@ -111,7 +111,8 @@ export default defineEventHandler(async (event) => {
       },
       access: {
         is_super_admin: isSuperAdmin,
-        property_roles: propertyRoles
+        property_roles: propertyRoles,
+        allowed_codes: Object.keys(propertyRoles)
       },
       properties: allProperties
     }

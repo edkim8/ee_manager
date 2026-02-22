@@ -2,7 +2,7 @@
 
 ## Overview
 **Current Phase**: Table Standardization & UX Polish
-**Latest Update**: [2026-02-21] H-045/H-046: Availables Audit Tool & Color Theme System — Read-only Yardi compare tool on Availabilities page + 12-theme persistent color switcher.
+**Latest Update**: [2026-02-21] H-047/H-048: Availability Snapshots & Navigation Split — Daily trend tracking with custom SVG charts + Dedicated Notices page + Streamlined navigation menu.
 
 ## Feature Tracker
 
@@ -29,6 +29,10 @@
 | F-025 | Table & Pricing Polish | Table/Leasing | **COMPLETED** | Gemini |
 | F-026 | Availables Audit Tool | Ops/Parsing | **COMPLETED** | Claude |
 | F-027 | Color Theme System | Base | **COMPLETED** | Claude |
+| F-028 | Availability Snapshot System | Admin/Ops | **COMPLETED** | Claude |
+| F-029 | Notices Page | Ops | **COMPLETED** | Claude |
+| F-030 | Navigation Restructure | Base | **COMPLETED** | Claude |
+| F-031 | Email Report Enhancements | Admin | **COMPLETED** | Claude |
 
 
 > **F-010 Note:** Stable Core Layer - Open for Extension. See `layers/table/AI_USAGE_GUIDE.md`.
@@ -80,6 +84,10 @@
 - [x] Enable Cross-Module Navigation for Locations
 - [x] Availables Audit — Compare with Yardi (H-045)
 - [x] Color Theme System — 12 themes, persistent (H-046)
+- [x] Availability Snapshot System — Daily trend tracking (F-028)
+- [x] Notices Page — Dedicated residents list (F-029)
+- [x] Navigation Restructure — Split Office menu (F-030)
+- [x] Email Report Enhancements — High-fidelity summaries (F-031)
 - [ ] **Next Step**: Content refinement using Excel system (column labels, widths, priorities)
 
 ## Recent Audit & Improvements (2026-02-09)

@@ -8,11 +8,20 @@
 ALTER TABLE public.inventory_item_definitions
 ADD COLUMN IF NOT EXISTS property_code TEXT;
 
--- Add foreign key constraint to properties table
-ALTER TABLE public.inventory_item_definitions
-ADD CONSTRAINT fk_inventory_items_property
-FOREIGN KEY (property_code) REFERENCES public.properties(code)
-ON DELETE RESTRICT;
+-- Add foreign key constraint to properties table (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_inventory_items_property'
+      AND conrelid = 'public.inventory_item_definitions'::regclass
+  ) THEN
+    ALTER TABLE public.inventory_item_definitions
+    ADD CONSTRAINT fk_inventory_items_property
+    FOREIGN KEY (property_code) REFERENCES public.properties(code)
+    ON DELETE RESTRICT;
+  END IF;
+END $$;
 
 -- Create index for property_code filtering
 CREATE INDEX IF NOT EXISTS idx_inventory_items_property_code
