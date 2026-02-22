@@ -132,12 +132,13 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 3. Fetch all active recipients for these properties
+    // 3. Fetch all active daily_summary recipients for these properties
     const { data: recipients, error: recError } = await client
       .from('property_notification_recipients')
       .select('email, property_code')
       .in('property_code', propertiesProcessed)
       .eq('is_active', true)
+      .contains('notification_types', ['daily_summary'])
 
     if (recError) throw recError
     if (!recipients || recipients.length === 0) {

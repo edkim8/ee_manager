@@ -8,6 +8,7 @@ import AlertsWidget from '../components/widgets/AlertsWidget.vue'
 import RenewalsWidget from '../components/widgets/RenewalsWidget.vue'
 import WorkOrdersWidget from '../components/widgets/WorkOrdersWidget.vue'
 import DelinquenciesWidget from '../components/widgets/DelinquenciesWidget.vue'
+import InventoryWidget from '../components/widgets/InventoryWidget.vue'
 
 definePageMeta({
   layout: 'dashboard',
@@ -21,6 +22,7 @@ const allWidgets = [
   { id: 'renewals', title: 'Renewals', icon: 'i-heroicons-arrow-path', component: markRaw(RenewalsWidget) },
   { id: 'work_orders', title: 'Work Orders', icon: 'i-heroicons-wrench-screwdriver', component: markRaw(WorkOrdersWidget) },
   { id: 'delinquencies', title: 'Delinquencies', icon: 'i-heroicons-banknotes', component: markRaw(DelinquenciesWidget) },
+  { id: 'inventory', title: 'Inventory Health', icon: 'i-heroicons-cpu-chip', component: markRaw(InventoryWidget) },
 ]
 
 const SETTINGS_KEY = 'ee-manager-dashboard-prefs'

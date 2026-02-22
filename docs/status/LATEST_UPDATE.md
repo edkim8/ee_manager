@@ -1,98 +1,112 @@
-# Field Report: Inventory Integration & Encapsulation
+# Field Report: Dashboard Enhancements — Control Center Widgets
 **Date:** 2026-02-21
 **Model:** Claude Sonnet 4.6
-**Branch:** feat/finish-inventories
+**Branch:** feat/dashboard-fixes-widgets
 **Status:** COMPLETE
 
 ---
 
-## Objectives
-Finalize the Inventory system by relocating pages to the correct route namespace, adding UX polish to the location selector, integrating the asset widget into the unit detail page, and eliminating component duplication.
+## Summary
+
+Enhanced the Control Center dashboard with real data pipelines and a new Inventory Health widget. Removed all hardcoded placeholder metrics and connected every widget to live Supabase queries scoped to `activeProperty`.
 
 ---
 
-## Changes Delivered
+## Changes Made
 
-### 1. Page Route Migration
-**Moved** `layers/ops/pages/inventory/` → `layers/ops/pages/office/inventory/`
+### 1. Data Layer — `useDashboardData.ts`
 
-| File | Old Route | New Route |
-|------|-----------|-----------|
-| `index.vue` | `/inventory` | `/office/inventory` |
-| `installations.vue` | `/inventory/installations` | `/office/inventory/installations` |
+Added three new fetchers:
 
-**Internal links fixed:**
-- `office/inventory/index.vue` — `to="/inventory/installations"` → `to="/office/inventory/installations"`
-- `office/inventory/installations.vue` — `to="/inventory"` → `to="/office/inventory"`
+| Fetcher | Source | Output |
+|---|---|---|
+| `fetchRenewalsStats` | `renewal_worksheet_items` | `{ total, offered, pending, accepted, declined }` |
+| `fetchInventoryStats` | `view_inventory_installations` | `{ total, healthy, warning, critical, expired, unknown, atRisk }` |
+| `fetchAvailabilityTrend` | `availability_snapshots` | `{ direction, delta, previousDate }` |
 
-Navigation was already correct (`AppNavigation.vue` already pointed to `/office/inventory`).
+All three are property-scoped (`.eq('property_code', activeProperty.value)`) and included in the `watch(activeProperty)` block for automatic re-fetch on property switch.
 
----
+**Renewals note:** Filters out `expired` status items; buckets `manually_accepted`/`manually_declined` with their Yardi-confirmed counterparts.
 
-### 2. LocationSelector — Recent Selections
-**File:** `layers/base/components/LocationSelector.vue`
-
-Added localStorage persistence for recent selections:
-- On each selection, the chosen option is prepended to a `recent_selections:{label}` key in localStorage
-- Top 5 recents displayed as a distinct **"Recent"** section at the top of the modal (with a `↩` glyph)
-- Recents are excluded from the **"All Options"** section below to avoid duplication
-- When searching, all matching options appear without deduplication
-- Gracefully handles unavailable localStorage (try/catch)
-- Recents are namespaced per `label` prop so Unit selector and Building selector don't share history
+**Trend note:** Requires ≥2 snapshots to compute delta. Returns `null` when insufficient history exists — widget renders gracefully without the indicator.
 
 ---
 
-### 3. Unit Detail Page Integration
-**File:** `layers/ops/pages/assets/units/[id].vue`
+### 2. RenewalsWidget — `layers/base/components/widgets/RenewalsWidget.vue`
 
-The `InventoryLocationAssetsWidget` component reference (which mapped to the now-deleted ops duplicate) was updated to the canonical `LocationAssetsWidget` from `layers/inventory/components/`. Props unchanged:
-```vue
-<LocationAssetsWidget
-  location-type="unit"
-  :location-id="unitId"
-  title="Unit Assets"
-/>
+- Removed hardcoded `24 / 8 / 12 / 4` placeholder values
+- Wired to `renewalsStats` from composable via `onMounted`
+- Status columns: **Offered** (was "Sent"), **Pending**, **Signed** (accepted)
+- Dynamic alert banner: shows declined count (red) if any, otherwise shows pending follow-up nudge (amber)
+- Added "View Renewals" link → `/office/renewals`
+
+---
+
+### 3. New Widget — `layers/base/components/widgets/InventoryWidget.vue`
+
+New widget backed by `view_inventory_installations.health_status`.
+
+**Features:**
+- Total asset count with "At Risk" callout badge (critical + expired)
+- Segmented health bar: green (healthy) → yellow (warning) → orange (critical) → red (expired)
+- Status badges per health tier, hidden if count = 0
+- Shield-check icon when no at-risk assets exist
+- "View Inventory" link → `/office/inventory/installations`
+- Loading skeleton state
+
+---
+
+### 4. AvailabilityWidget Polish — `layers/base/components/widgets/AvailabilityWidget.vue`
+
+- Added `availabilityTrend` + `fetchAvailabilityTrend` from composable
+- Trend arrow icon inline with occupancy percentage:
+  - `arrow-trending-up` (green) when occupancy increased
+  - `arrow-trending-down` (red) when decreased
+  - `minus` (gray) when flat
+- Delta percentage shown below tile (e.g., `+1.2% vs prev snapshot`)
+- Gracefully hidden when no trend data is available
+
+---
+
+### 5. Dashboard Registry — `layers/base/pages/index.vue`
+
+- Imported `InventoryWidget`
+- Registered as `{ id: 'inventory', title: 'Inventory Health', icon: 'i-heroicons-cpu-chip' }`
+- Appears in Configure modal toggle list
+- Positioned at end of default order; draggable by user
+
+---
+
+## Data Contracts
+
+### `renewalsStats`
+```ts
+{ total: number; offered: number; pending: number; accepted: number; declined: number }
+```
+
+### `inventoryStats`
+```ts
+{ total: number; healthy: number; warning: number; critical: number; expired: number; unknown: number; atRisk: number }
+```
+
+### `availabilityTrend`
+```ts
+{ direction: 'up' | 'down' | 'flat'; delta: string; previousDate: string } | null
 ```
 
 ---
 
-### 4. Component Unification
-**Deleted:** `layers/ops/components/inventory/LocationAssetsWidget.vue` (duplicate)
+## Files Modified
 
-The canonical component at `layers/inventory/components/LocationAssetsWidget.vue` is now the single source of truth, auto-imported as `LocationAssetsWidget`.
+| File | Change |
+|---|---|
+| `layers/base/composables/useDashboardData.ts` | Added 3 fetchers, refs, watch entries, exports |
+| `layers/base/components/widgets/RenewalsWidget.vue` | Replaced hardcoded data with live composable |
+| `layers/base/components/widgets/AvailabilityWidget.vue` | Added trend arrow indicator |
+| `layers/base/pages/index.vue` | Registered InventoryWidget |
 
-**Stale links fixed in canonical widget:**
-- Empty state "Add Asset" → `/office/inventory/installations`
-- Item row click → `/office/inventory/installations`
-- "Manage Assets" footer link → `/office/inventory/installations`
+## Files Created
 
----
-
-### 5. Test Page Cleanup
-**Deleted:**
-- `layers/inventory/pages/test.vue`
-- `layers/ops/pages/office/inventory/test.vue` (was moved then deleted)
-
----
-
-## File Summary
-
-| Action | File |
-|--------|------|
-| Created | `layers/ops/pages/office/inventory/index.vue` |
-| Created | `layers/ops/pages/office/inventory/installations.vue` |
-| Deleted | `layers/ops/pages/inventory/index.vue` |
-| Deleted | `layers/ops/pages/inventory/installations.vue` |
-| Deleted | `layers/ops/pages/inventory/test.vue` |
-| Deleted | `layers/inventory/pages/test.vue` |
-| Deleted | `layers/ops/components/inventory/LocationAssetsWidget.vue` |
-| Modified | `layers/base/components/LocationSelector.vue` (recents feature) |
-| Modified | `layers/inventory/components/LocationAssetsWidget.vue` (link fixes) |
-| Modified | `layers/ops/pages/assets/units/[id].vue` (component rename) |
-
----
-
-## Constraints Honored
-- NO ADMIN EDITS
-- No new image assets introduced (NuxtImg constraint N/A — no images in scope)
-- Field Report written to `LATEST_UPDATE.md`
+| File | Purpose |
+|---|---|
+| `layers/base/components/widgets/InventoryWidget.vue` | New inventory health dashboard widget |
