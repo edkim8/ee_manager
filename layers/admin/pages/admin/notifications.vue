@@ -23,8 +23,14 @@ const submitting = ref(false)
 // Form state
 const newRecipient = ref({
   email: '',
-  property_code: ''
+  property_code: '',
+  notification_types: ['daily_summary'] as string[]
 })
+
+const notificationTypeOptions = [
+  { label: 'Daily Summary', value: 'daily_summary' },
+  { label: 'Audit Report', value: 'audit' }
+]
 
 const propertyOptions = PROPERTY_LIST.map(p => ({
   label: `${p.code} - ${p.name}`,
@@ -73,6 +79,7 @@ async function addRecipient() {
     
     newRecipient.value.email = ''
     newRecipient.value.property_code = ''
+    newRecipient.value.notification_types = ['daily_summary']
     fetchRecipients()
   } catch (error: any) {
     toast.add({
@@ -124,6 +131,35 @@ async function deleteRecipient(id: string) {
 }
 
 const sendingTest = ref(false)
+const sendingTestAudit = ref(false)
+
+async function sendTestAudit() {
+  sendingTestAudit.value = true
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    const response: any = await $fetch('/api/admin/notifications/send-audit', {
+      method: 'POST',
+      body: {
+        content: `# Test Audit Email\n\nThis is a test audit email sent from /admin/notifications on ${today}.\n\nIf you received this, audit email delivery is working correctly.`,
+        date: today,
+        batchId: 'test'
+      }
+    })
+
+    if (response.success) {
+      const failures = response.results?.filter((r: any) => r.status === 'failed') || []
+      if (failures.length > 0) {
+        toast.add({ title: 'Partial Success', description: `Sent to ${response.results.length - failures.length}, failed for ${failures.length}.`, color: 'warning' })
+      } else {
+        toast.add({ title: 'Success', description: `Test audit email sent to ${response.results?.length || 0} recipient(s).`, color: 'success' })
+      }
+    }
+  } catch (error: any) {
+    toast.add({ title: 'Error', description: error.message || 'Failed to send test audit email.', color: 'error' })
+  } finally {
+    sendingTestAudit.value = false
+  }
+}
 
 async function sendTestSummary() {
   sendingTest.value = true
@@ -183,6 +219,7 @@ onMounted(() => {
 const columns: TableColumn[] = [
   { key: 'email', label: 'Email Address', sortable: true },
   { key: 'property_code', label: 'Property', sortable: true },
+  { key: 'notification_types', label: 'Types' },
   { key: 'status', label: 'Status' },
   { key: 'actions', label: 'Actions', align: 'right' }
 ]
@@ -195,14 +232,24 @@ const columns: TableColumn[] = [
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Email Notifications</h1>
         <p class="text-gray-500 mt-1">Manage who receives the daily Solver summary reports.</p>
       </div>
-      <UButton
-        icon="i-heroicons-paper-airplane"
-        color="neutral"
-        variant="outline"
-        label="Send Test Summary"
-        :loading="sendingTest"
-        @click="sendTestSummary"
-      />
+      <div class="flex gap-2">
+        <UButton
+          icon="i-heroicons-clipboard-document-list"
+          color="neutral"
+          variant="outline"
+          label="Send Test Audit"
+          :loading="sendingTestAudit"
+          @click="sendTestAudit"
+        />
+        <UButton
+          icon="i-heroicons-paper-airplane"
+          color="neutral"
+          variant="outline"
+          label="Send Test Summary"
+          :loading="sendingTest"
+          @click="sendTestSummary"
+        />
+      </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -235,12 +282,24 @@ const columns: TableColumn[] = [
             />
           </UFormGroup>
 
-          <UButton 
-            type="submit" 
-            block 
-            color="primary" 
+          <UFormGroup label="Notification Types">
+            <div class="flex gap-4 pt-1">
+              <UCheckbox
+                v-for="opt in notificationTypeOptions"
+                :key="opt.value"
+                v-model="newRecipient.notification_types"
+                :value="opt.value"
+                :label="opt.label"
+              />
+            </div>
+          </UFormGroup>
+
+          <UButton
+            type="submit"
+            block
+            color="primary"
             :loading="submitting"
-            :disabled="!newRecipient.email || !newRecipient.property_code"
+            :disabled="!newRecipient.email || !newRecipient.property_code || newRecipient.notification_types.length === 0"
           >
             Add Recipient
           </UButton>
@@ -270,6 +329,19 @@ const columns: TableColumn[] = [
               <div class="flex flex-col">
                 <span class="font-bold">{{ row.property_code }}</span>
                 <span class="text-xs text-gray-500">{{ getPropertyName(row.property_code) }}</span>
+              </div>
+            </template>
+
+            <template #cell-notification_types="{ row }">
+              <div class="flex gap-1 flex-wrap">
+                <UBadge
+                  v-for="t in (row.notification_types || ['daily_summary'])"
+                  :key="t"
+                  :label="t === 'daily_summary' ? 'Summary' : 'Audit'"
+                  :color="t === 'audit' ? 'amber' : 'primary'"
+                  variant="subtle"
+                  size="xs"
+                />
               </div>
             </template>
 
