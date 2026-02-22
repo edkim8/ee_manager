@@ -1,6 +1,6 @@
 # History Index: Technical Decision Log
 
-This file tracks key architectural decisions and completed milestones. **Latest Update**: [2026-02-19] H-043: Table & Pricing Refinement - Normalized pricing schema, added concession metrics to Floor Plan UI, and implemented a collapsible ScreenDebug tool. Read this at the start of a session to "download" past wisdom without reading the full archives.
+This file tracks key architectural decisions and completed milestones. **Latest Update**: [2026-02-21] H-049: Inventory Integration — Full surface rollout of LocationAssetsWidget + localStorage recents + Map detail navigation. Read this at the start of a session to "download" past wisdom without reading the full archives.
 
 | ID | Module | Key Decisions | Archive Link |
 |----|--------|---------------|--------------|
@@ -51,3 +51,5 @@ This file tracks key architectural decisions and completed milestones. **Latest 
 | H-046 | Color Theme System | 12-theme color switcher in user dropdown. Custom palettes (Padres, DiamondBacks, Lilywhites, Messi) injected as inline `--ui-color-primary-*` styles — bypasses Nuxt UI v3's empty-fallback bug for unknown color names. Persisted via localStorage. | [LATEST_UPDATE](LATEST_UPDATE.md) |
 | H-047 | Snapshots & Navigation | Implemented Availability Snapshot system with daily trend tracking and custom SVG charting. Restructured application navigation by splitting the "Office" menu into focused functional areas (Leasing, Residents, Operations). | [FOREMAN_REPORT](../handovers/FOREMAN_REPORT_2026_02_21.md) |
 | H-048 | Reporting & Reliability | Enhanced executive HTML reports with per-property notice summaries. Resolved Profile 500 error and Navigation transparency issues. Patched inventory migrations for full idempotency. | [FOREMAN_REPORT](../handovers/FOREMAN_REPORT_2026_02_21.md) |
+| H-049 | Inventory Integration | Completed full surface rollout of LocationAssetsWidget to Building and Location detail views. Added localStorage recent-selections to LocationSelector. Added map InfoWindow "View Details" button for Location→detail navigation. Eliminated component duplication and migrated pages to /office/inventory. | [SESSION_LOG](SESSION_2026_02_21_INVENTORY_INTEGRATION.md) |
+

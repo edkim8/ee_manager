@@ -297,7 +297,7 @@ const getCategoryName = (categoryId: string) => {
         <p class="text-gray-600 dark:text-gray-400">Manage item catalog and categories</p>
       </div>
       <NuxtLink
-        to="/inventory/installations"
+        to="/office/inventory/installations"
         class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 whitespace-nowrap"
       >
         🏗️ View Installations

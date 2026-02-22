@@ -435,7 +435,7 @@ const floorPlanImageUrl = computed(() => {
 
           <!-- Unit Assets (Inventory) -->
           <ClientOnly>
-            <InventoryLocationAssetsWidget
+            <LocationAssetsWidget
               location-type="unit"
               :location-id="unitId"
               title="Unit Assets"

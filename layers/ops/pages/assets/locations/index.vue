@@ -109,6 +109,15 @@ const handleViewNotesFromMap = (locationId: string) => {
     }
 }
 
+const handleViewDetailFromMap = (locationId: string) => {
+    const location = locations.value.find((loc: any) => loc.id === locationId)
+    if (location) {
+        selectedLocation.value = location
+        showMapModal.value = false
+        showDetailModal.value = true
+    }
+}
+
 const handleDelete = async () => {
     if (!selectedLocation.value?.id) return
 
@@ -396,6 +405,7 @@ const categorySummary = computed(() => {
                     <LocationMap
                         :locations="locations"
                         :initial-center="selectedProperty?.latitude && selectedProperty?.longitude ? { lat: selectedProperty.latitude, lng: selectedProperty.longitude } : undefined"
+                        @view-detail="handleViewDetailFromMap"
                         @view-notes="handleViewNotesFromMap"
                         @share-location="handleShareFromMap"
                     />
@@ -457,6 +467,17 @@ const categorySummary = computed(() => {
                     <UIcon name="i-heroicons-globe-alt" class="w-3 h-3 mr-1 inline-block align-middle" />
                     Open in Google Maps (Public)
                 </a>
+            </div>
+
+            <!-- Location Assets (Inventory) -->
+            <div class="mb-6">
+              <ClientOnly>
+                <LocationAssetsWidget
+                  location-type="location"
+                  :location-id="selectedLocation.id"
+                  title="Assets"
+                />
+              </ClientOnly>
             </div>
 
             <!-- Actions -->

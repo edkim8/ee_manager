@@ -19,7 +19,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'view-notes': [locationId: string],
-  'share-location': [locationId: string]
+  'share-location': [locationId: string],
+  'view-detail': [locationId: string]
 }>()
 
 const mapDiv = ref<HTMLElement | null>(null)
@@ -199,7 +200,15 @@ const updateMarkers = () => {
           📍 ${Number(loc.latitude).toFixed(4)}, ${Number(loc.longitude).toFixed(4)}
         </div>
 
-        <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <button
+          id="view-detail-${loc.id}"
+          style="width: 100%; background-color: #6366F1; color: white; padding: 9px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 4px;"
+          onmouseover="this.style.backgroundColor='#4F46E5'"
+          onmouseout="this.style.backgroundColor='#6366F1'"
+        >
+          📋 View Details
+        </button>
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
           <button
             id="view-notes-${loc.id}"
             style="flex: 1; background-color: #3B82F6; color: white; padding: 8px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; display: flex; align-items: center; justify-content: center; gap: 4px;"
@@ -236,6 +245,14 @@ const updateMarkers = () => {
 
         // Add click listeners to buttons after info window opens
         setTimeout(() => {
+          const detailButton = document.getElementById(`view-detail-${loc.id}`)
+          if (detailButton) {
+            detailButton.onclick = () => {
+              emit('view-detail', loc.id)
+              infoWindow.close()
+            }
+          }
+
           const notesButton = document.getElementById(`view-notes-${loc.id}`)
           if (notesButton) {
             notesButton.onclick = () => {

@@ -246,12 +246,21 @@ const goBack = () => {
 
           <!-- Building Attachments - Desktop Sidebar -->
           <div class="hidden md:block bg-white dark:bg-gray-900/80 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-gray-200/50 dark:shadow-none">
-            <AttachmentManager 
-              :record-id="buildingId" 
-              record-type="building" 
+            <AttachmentManager
+              :record-id="buildingId"
+              record-type="building"
               title="Building Photos & Files"
             />
           </div>
+
+          <!-- Building Assets (Inventory) -->
+          <ClientOnly>
+            <LocationAssetsWidget
+              location-type="building"
+              :location-id="buildingId"
+              title="Building Assets"
+            />
+          </ClientOnly>
 
           <div class="bg-primary-600 dark:bg-primary-700/80 rounded-3xl p-8 text-white shadow-xl shadow-primary-500/10">
             <h4 class="text-xs font-black uppercase tracking-widest opacity-70 mb-4 font-mono">Quick Insights</h4>
