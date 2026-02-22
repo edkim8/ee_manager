@@ -22,7 +22,6 @@ export const usePricingEngine = () => {
    * Fetches the full pricing breakdown for a unit based on active amenities.
    */
   const getUnitPricingBreakdown = async (unitId: string): Promise<PricingBreakdown | null> => {
-    console.log('[PRICING ENGINE] getUnitPricingBreakdown called for unit:', unitId)
 
     const { data: pricingData, error } = await supabase
       .from('view_unit_pricing_analysis')
@@ -33,7 +32,6 @@ export const usePricingEngine = () => {
     if (error || !pricingData) return null
 
     // Fetch active amenity details
-    console.log('[PRICING ENGINE] Fetching unit_amenities for unit:', unitId)
     const { data: activeLinks, error: amenitiesError } = await supabase
       .from('unit_amenities')
       .select('amenity_id, amenities(yardi_name, amount, type)')
@@ -49,7 +47,6 @@ export const usePricingEngine = () => {
             full: amenitiesError
         })
     }
-    console.log('[PRICING ENGINE] Query result:', { activeLinks, count: activeLinks?.length })
 
     const fixed: any[] = []
     const temp: any[] = []
@@ -170,7 +167,6 @@ export const usePricingEngine = () => {
 
         // Perfect single-amenity match! Stop immediately
         if (delta === 0) {
-            console.log('[SOLVER] Perfect single-amenity match found:', amenity.yardi_name, amenity.amount)
             return {
                 success: true,
                 solution: bestCombination,
@@ -181,14 +177,12 @@ export const usePricingEngine = () => {
         }
     }
 
-    console.log('[SOLVER] Best single amenity:', bestCombination.length, 'items, delta:', bestDelta)
 
     // Step 2: Try combinations to see if we can get closer
     // Only search if: (a) no exact single match, AND (b) gap is still significant (>$10)
     const shouldSearchCombinations = bestDelta > 0 && bestDelta > 10
 
     if (shouldSearchCombinations) {
-        console.log('[SOLVER] Searching combinations to reduce gap from', bestDelta)
 
         const findCombination = (index: number, currentSum: number, currentCombination: any[]) => {
             const delta = Math.abs(targetGap - currentSum)
@@ -203,7 +197,6 @@ export const usePricingEngine = () => {
 
             // Early termination: Found exact match
             if (delta === 0) {
-                console.log('[SOLVER] Exact match found with', currentLength, 'amenities')
                 return
             }
 
@@ -232,19 +225,10 @@ export const usePricingEngine = () => {
         findCombination(0, 0, [])
     }
 
-    console.log('[SOLVER] Best solution:', bestCombination.length, 'amenities, delta:', bestDelta)
 
     const finalSum = bestCombination.reduce((acc, a) => acc + a.amount, 0)
     const finalGap = targetGap - finalSum
 
-    console.log('[SOLVER] Final solution:', {
-        amenityCount: bestCombination.length,
-        amenities: bestCombination.map(a => `${a.yardi_name} (${a.amount})`),
-        targetGap,
-        achievedSum: finalSum,
-        remainingGap: finalGap,
-        success: Math.abs(finalGap) < 0.01
-    })
 
     return {
         success: Math.abs(finalGap) < 0.01,

@@ -117,7 +117,6 @@ async function handleUpdateStatus() {
       return
     }
 
-    console.log('[Update Status] Successfully updated', itemIds.length, 'items')
 
     // Close modal with success
     props.onClose(true)

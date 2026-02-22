@@ -25,8 +25,6 @@ export const useAttachments = () => {
    * Fetch all attachments for a specific record
    */
   const fetchAttachments = async (recordId: string, recordType: string): Promise<Attachment[]> => {
-    console.log(`📎 Fetching attachments for ${recordType}:`, recordId)
-
     const { data, error } = await supabase
       .from('attachments')
       .select('*')
@@ -51,9 +49,6 @@ export const useAttachments = () => {
     file: File,
     fileType: 'image' | 'document'
   ): Promise<Attachment> => {
-    console.group(`📤 Uploading ${fileType} for ${recordType}`)
-    console.log('File:', file.name)
-    
     try {
       // 1. Process/Compress if image
       let processedFile: File | Blob = file
@@ -69,8 +64,6 @@ export const useAttachments = () => {
       const folder = recordType // Use record type as folder name
       const filePath = `${folder}/${fileName}`
 
-      console.log(`Storing in ${bucket}/${filePath}`)
-
       const { error: uploadError } = await supabase.storage
         .from(bucket)
         .upload(filePath, processedFile)
@@ -84,7 +77,7 @@ export const useAttachments = () => {
 
       // 4. Create database record
       const { data: { user } } = await supabase.auth.getUser()
-      
+
       const { data, error: dbError } = await supabase
         .from('attachments')
         .insert({
@@ -102,13 +95,10 @@ export const useAttachments = () => {
 
       if (dbError) throw dbError
 
-      console.log('✅ Attachment added successfully')
       return data as Attachment
     } catch (error) {
       console.error('❌ Failed to add attachment:', error)
       throw error
-    } finally {
-      console.groupEnd()
     }
   }
 
@@ -116,8 +106,6 @@ export const useAttachments = () => {
    * Delete an attachment record and its storage file
    */
   const deleteAttachment = async (attachment: Attachment): Promise<void> => {
-    console.log('🗑️ Deleting attachment:', attachment.id)
-
     try {
       // 1. Delete from database first (if RLS allows)
       const { error: dbError } = await supabase
@@ -134,8 +122,6 @@ export const useAttachments = () => {
         const filePath = urlParts[1]
         await supabase.storage.from(bucket).remove([filePath])
       }
-      
-      console.log('✅ Attachment deleted')
     } catch (error) {
       console.error('❌ Failed to delete attachment:', error)
       throw error

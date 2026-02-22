@@ -18,34 +18,18 @@ export function useDelinquenciesSync() {
         throw new Error('No data to sync')
       }
 
-      // 1. Pre-validation: Fetch ALL existing tenancy IDs to avoid FK violations
-      // Note: Supabase/PostgREST often has a 1000-row server-side limit.
-      // We loop to ensure we get the full roster (user has ~1.2k).
-      let allTenancies: { id: string }[] = []
-      let from = 0
-      const PAGE_SIZE = 1000
-      let hasMore = true
+      // 1. Pre-validation: Fetch tenancy IDs scoped to the properties in this batch
+      // No global fetch needed — delinquency rows are already property-scoped
+      const batchPropertyCodes = [...new Set(parsedRows.map(r => r.property_code))].filter(Boolean)
 
-      while (hasMore) {
-        const { data, error: tErr } = await client
-          .from('tenancies')
-          .select('id')
-          .order('id') // Added order to ensure stable pagination
-          .range(from, from + PAGE_SIZE - 1)
-        
-        if (tErr) throw tErr
-        if (data && data.length > 0) {
-          allTenancies = [...allTenancies, ...data]
-          from += PAGE_SIZE
-          if (data.length < PAGE_SIZE) hasMore = false
-        } else {
-          hasMore = false
-        }
-      }
-      
-      console.log(`Delinquencies Sync: Fetched ${allTenancies.length} registration records (Tenancy IDs) from DB.`)
-      
-      const validTenancyIds = new Set(allTenancies.map((t: { id: string }) => t.id.trim().toLowerCase()))
+      const { data: allTenancies, error: tErr } = await client
+        .from('tenancies')
+        .select('id')
+        .in('property_code', batchPropertyCodes)
+
+      if (tErr) throw tErr
+
+      const validTenancyIds = new Set((allTenancies || []).map((t: { id: string }) => t.id.trim().toLowerCase()))
 
       const missingTenancyIds: string[] = []
       const rowsToProcess = parsedRows.filter(row => {

@@ -128,16 +128,13 @@ const handleSaveAll = async () => {
     }))
 
   if (changes.length === 0) {
-    console.debug('[ConstantsModal] No changes to save.')
     emit('close', false)
     return
   }
 
-  console.log(`[ConstantsModal] Saving ${changes.length} constants...`)
   savingAll.value = true
   try {
     const success = await updateMultipleConstants(changes)
-    console.log(`[ConstantsModal] Save result: ${success}`)
     
     if (success) {
       // Update local values to match new defaults
@@ -147,11 +144,9 @@ const handleSaveAll = async () => {
 
       // IMPORTANT: Notify parent to refresh BEFORE closing
       if (props.onClose) {
-        console.log('[ConstantsModal] Triggering parent refresh (onClose)...')
         props.onClose(true)
       }
       
-      console.log('[ConstantsModal] Emitting close...')
       emit('close', true)
     }
   } catch (err) {

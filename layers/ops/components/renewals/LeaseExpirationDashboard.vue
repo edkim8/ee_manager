@@ -11,6 +11,7 @@ import {
   CategoryScale,
   LinearScale,
   LineElement,
+  LineController,
   PointElement,
 } from 'chart.js'
 import { useExpirationDashboard } from '../../composables/useExpirationDashboard'
@@ -23,6 +24,7 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   LineElement,
+  LineController,
   PointElement
 )
 
@@ -111,6 +113,7 @@ const chartData = computed(() => {
 
   const averagePerMonth = dashboardData.value.totalUnits / 12
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return {
     labels,
     datasets: [
@@ -134,7 +137,7 @@ const chartData = computed(() => {
       },
       {
         label: 'Monthly Average',
-        type: 'line' as const,
+        type: 'line',
         borderColor: 'rgba(107, 114, 128, 0.7)',
         borderDash: [5, 5],
         data: Array(labels.length).fill(averagePerMonth),
@@ -142,7 +145,7 @@ const chartData = computed(() => {
         pointRadius: 0,
       },
     ],
-  }
+  } as any
 })
 
 const chartOptions = {

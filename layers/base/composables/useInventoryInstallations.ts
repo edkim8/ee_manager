@@ -58,7 +58,6 @@ export const useInventoryInstallations = () => {
    * Fetch all installations with optional filters
    */
   const fetchInstallations = async (filters?: FetchInstallationsFilters): Promise<InstallationWithDetails[]> => {
-    console.log('🏗️ Fetching installations', filters)
 
     let query = supabase
       .from('view_inventory_installations')
@@ -93,7 +92,6 @@ export const useInventoryInstallations = () => {
       throw error
     }
 
-    console.log(`✅ Fetched ${data.length} installations`)
     return data as InstallationWithDetails[]
   }
 
@@ -101,7 +99,6 @@ export const useInventoryInstallations = () => {
    * Fetch single installation by ID
    */
   const fetchInstallation = async (id: string): Promise<Installation> => {
-    console.log('🏗️ Fetching installation:', id)
 
     const { data, error } = await supabase
       .from('inventory_installations')
@@ -121,7 +118,6 @@ export const useInventoryInstallations = () => {
    * Fetch installation with details (from view)
    */
   const fetchInstallationWithDetails = async (id: string): Promise<InstallationWithDetails> => {
-    console.log('🏗️ Fetching installation with details:', id)
 
     const { data, error } = await supabase
       .from('view_inventory_installations')
@@ -141,7 +137,6 @@ export const useInventoryInstallations = () => {
    * Create new installation
    */
   const createInstallation = async (installation: InstallationInsert): Promise<Installation> => {
-    console.log('🏗️ Creating installation:', installation)
 
     // Get current user
     const { data: { user } } = await supabase.auth.getUser()
@@ -160,7 +155,6 @@ export const useInventoryInstallations = () => {
       throw error
     }
 
-    console.log('✅ Installation created:', data.id)
     return data
   }
 
@@ -168,7 +162,6 @@ export const useInventoryInstallations = () => {
    * Update existing installation
    */
   const updateInstallation = async (id: string, updates: InstallationUpdate): Promise<Installation> => {
-    console.log('🏗️ Updating installation:', id)
 
     const { data, error } = await supabase
       .from('inventory_installations')
@@ -182,7 +175,6 @@ export const useInventoryInstallations = () => {
       throw error
     }
 
-    console.log('✅ Installation updated')
     return data
   }
 
@@ -190,7 +182,6 @@ export const useInventoryInstallations = () => {
    * Soft delete installation (set is_active = false)
    */
   const deleteInstallation = async (id: string): Promise<void> => {
-    console.log('🏗️ Deleting installation:', id)
 
     const { error } = await supabase
       .from('inventory_installations')
@@ -202,7 +193,6 @@ export const useInventoryInstallations = () => {
       throw error
     }
 
-    console.log('✅ Installation deleted')
   }
 
   /**

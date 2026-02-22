@@ -63,7 +63,6 @@ export const useSolverTracking = () => {
         events.length = 0 // Clear events array
         Object.keys(propertySummaries).forEach(key => delete propertySummaries[key])
 
-        console.log(`[SolverTracking] Started run ${currentRunId} for batch ${batchId}`)
         return currentRunId
     }
 
@@ -382,7 +381,6 @@ export const useSolverTracking = () => {
                 return null
             }
 
-            console.log(`[SolverTracking] Completed run ${currentRunId} - ${events.length} events saved`)
             return { runId: currentRunId, summary: propertySummaries, events }
         } catch (error) {
             console.error('[SolverTracking] Error completing run:', error)

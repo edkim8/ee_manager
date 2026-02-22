@@ -41,7 +41,6 @@ export const useInventoryItemDefinitions = () => {
    * Fetch all item definitions with optional filters
    */
   const fetchItemDefinitions = async (filters?: FetchItemsFilters): Promise<ItemDefinitionWithDetails[]> => {
-    console.log('📦 Fetching item definitions', filters)
 
     let query = supabase
       .from('view_inventory_item_definitions')
@@ -71,7 +70,6 @@ export const useInventoryItemDefinitions = () => {
       throw error
     }
 
-    console.log(`✅ Fetched ${data.length} item definitions`)
     return data as ItemDefinitionWithDetails[]
   }
 
@@ -79,7 +77,6 @@ export const useInventoryItemDefinitions = () => {
    * Fetch single item definition by ID
    */
   const fetchItemDefinition = async (id: string): Promise<ItemDefinition> => {
-    console.log('📦 Fetching item definition:', id)
 
     const { data, error } = await supabase
       .from('inventory_item_definitions')
@@ -99,7 +96,6 @@ export const useInventoryItemDefinitions = () => {
    * Fetch item definition with details (from view)
    */
   const fetchItemDefinitionWithDetails = async (id: string): Promise<ItemDefinitionWithDetails> => {
-    console.log('📦 Fetching item definition with details:', id)
 
     const { data, error } = await supabase
       .from('view_inventory_item_definitions')
@@ -119,7 +115,6 @@ export const useInventoryItemDefinitions = () => {
    * Create new item definition
    */
   const createItemDefinition = async (item: ItemDefinitionInsert): Promise<ItemDefinition> => {
-    console.log('📦 Creating item definition:', item)
 
     // Get current user
     const { data: { user } } = await supabase.auth.getUser()
@@ -138,7 +133,6 @@ export const useInventoryItemDefinitions = () => {
       throw error
     }
 
-    console.log('✅ Item definition created:', data.id)
     return data
   }
 
@@ -146,7 +140,6 @@ export const useInventoryItemDefinitions = () => {
    * Update existing item definition
    */
   const updateItemDefinition = async (id: string, updates: ItemDefinitionUpdate): Promise<ItemDefinition> => {
-    console.log('📦 Updating item definition:', id)
 
     const { data, error } = await supabase
       .from('inventory_item_definitions')
@@ -160,7 +153,6 @@ export const useInventoryItemDefinitions = () => {
       throw error
     }
 
-    console.log('✅ Item definition updated')
     return data
   }
 
@@ -169,7 +161,6 @@ export const useInventoryItemDefinitions = () => {
    * Checks for active installations first
    */
   const deleteItemDefinition = async (id: string): Promise<void> => {
-    console.log('📦 Deleting item definition:', id)
 
     // Check if item has active installations
     const { count, error: countError } = await supabase
@@ -199,7 +190,6 @@ export const useInventoryItemDefinitions = () => {
       throw error
     }
 
-    console.log('✅ Item definition deleted')
   }
 
   /**

@@ -31,12 +31,10 @@ export function useExpirationDashboard(propertyCode: string) {
       }
 
       // 2. Fetch expiration counts by month
+      // NOTE: Keep .select() inline — multi-line template literals cause 400 errors (see KNOWLEDGE_BASE.md)
       const { data: leaseData, error: leaseError } = await supabase
         .from('leases')
-        .select(`
-          end_date,
-          tenancies!inner(property_code)
-        `)
+        .select('end_date, tenancies!inner(property_code)')
         .eq('tenancies.property_code', propertyCode)
         .eq('lease_status', 'Current')
         .eq('is_active', true)
