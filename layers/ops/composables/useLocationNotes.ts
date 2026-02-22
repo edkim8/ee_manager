@@ -33,7 +33,6 @@ export const useLocationNotes = () => {
 
   // Fetch all notes for a location
   const fetchLocationNotes = async (locationId: string): Promise<NoteWithAttachments[]> => {
-    console.log('📝 Fetching notes for location:', locationId)
 
     // Fetch notes (without user email for now - auth.users is protected)
     const { data: notes, error: notesError } = await supabase
@@ -71,7 +70,6 @@ export const useLocationNotes = () => {
       attachments: attachments.filter(att => att.note_id === note.id)
     }))
 
-    console.log(`✅ Fetched ${notesWithAttachments.length} notes with attachments`)
     return notesWithAttachments
   }
 
@@ -81,14 +79,9 @@ export const useLocationNotes = () => {
     noteText: string,
     category: LocationNote['category']
   ): Promise<LocationNote> => {
-    console.group('➕ Adding note to location')
-    console.log('Location ID:', locationId)
-    console.log('Note text:', noteText)
-    console.log('Category:', category)
 
     // Get current user ID
     const { data: { user } } = await supabase.auth.getUser()
-    console.log('Current user ID:', user?.id)
 
     const { data, error } = await supabase
       .from('location_notes')
@@ -108,12 +101,9 @@ export const useLocationNotes = () => {
         hint: error.hint,
         code: error.code
       })
-      console.groupEnd()
       throw error
     }
 
-    console.log('✅ Note added successfully:', data.id)
-    console.groupEnd()
     return data
   }
 
@@ -122,7 +112,6 @@ export const useLocationNotes = () => {
     noteId: string,
     updates: { note_text?: string; category?: LocationNote['category'] }
   ): Promise<LocationNote> => {
-    console.log('✏️ Updating note:', noteId)
 
     const { data, error } = await supabase
       .from('location_notes')
@@ -136,18 +125,14 @@ export const useLocationNotes = () => {
       throw error
     }
 
-    console.log('✅ Note updated')
     return data
   }
 
   // Delete a note (cascades to attachments)
   const deleteLocationNote = async (noteId: string): Promise<boolean> => {
-    console.group('🗑️ Deleting note')
-    console.log('Note ID:', noteId)
 
     // Get current user
     const { data: { user } } = await supabase.auth.getUser()
-    console.log('Current user ID:', user?.id)
 
     // Get note to check created_by
     const { data: note } = await supabase
@@ -156,8 +141,6 @@ export const useLocationNotes = () => {
       .eq('id', noteId)
       .single()
 
-    console.log('Note created_by:', note?.created_by)
-    console.log('IDs match?', note?.created_by === user?.id)
 
     const { error, count } = await supabase
       .from('location_notes')
@@ -166,17 +149,12 @@ export const useLocationNotes = () => {
 
     if (error) {
       console.error('❌ Error deleting note:', error)
-      console.groupEnd()
       throw error
     }
 
-    console.log('Delete result - Rows affected:', count)
     if (count === 0) {
-      console.warn('⚠️ No rows deleted! RLS policy likely blocked it.')
     } else {
-      console.log('✅ Note deleted successfully')
     }
-    console.groupEnd()
     return true
   }
 
@@ -185,7 +163,6 @@ export const useLocationNotes = () => {
     file: File,
     fileType: 'image' | 'document'
   ): Promise<string> => {
-    console.log('📤 Uploading attachment:', file.name, `(${fileType})`)
 
     // Compress images before uploading (documents are not compressed)
     const { compressNoteAttachment } = useImageCompression()
@@ -198,7 +175,6 @@ export const useLocationNotes = () => {
     const folder = fileType === 'image' ? 'location-notes' : 'location-notes'
     const filePath = `${folder}/${fileName}`
 
-    console.log(`Uploading to: ${bucket}/${filePath}`)
 
     const { data, error } = await supabase.storage
       .from(bucket)
@@ -214,7 +190,6 @@ export const useLocationNotes = () => {
       .from(bucket)
       .getPublicUrl(filePath)
 
-    console.log('✅ Attachment uploaded:', publicUrl)
     return publicUrl
   }
 
@@ -224,7 +199,6 @@ export const useLocationNotes = () => {
     file: File,
     fileType: 'image' | 'document'
   ): Promise<NoteAttachment> => {
-    console.log('📎 Adding attachment to note:', noteId)
 
     // Upload file first
     const fileUrl = await uploadAttachment(file, fileType)
@@ -252,13 +226,11 @@ export const useLocationNotes = () => {
       throw error
     }
 
-    console.log('✅ Attachment added')
     return data
   }
 
   // Delete attachment
   const deleteNoteAttachment = async (attachmentId: string): Promise<boolean> => {
-    console.log('🗑️ Deleting attachment:', attachmentId)
 
     // Get attachment to find file path
     const { data: attachment } = await supabase
@@ -288,11 +260,9 @@ export const useLocationNotes = () => {
           await supabase.storage.from(bucket).remove([filePath])
         }
       } catch (storageError) {
-        console.warn('Failed to delete file from storage:', storageError)
       }
     }
 
-    console.log('✅ Attachment deleted')
     return true
   }
 

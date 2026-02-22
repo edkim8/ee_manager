@@ -18,7 +18,6 @@ export const useLocationSelector = () => {
    * Fetch units for a property
    */
   const fetchUnits = async (propertyCode: string): Promise<LocationOption[]> => {
-    console.log('🏠 Fetching units for property:', propertyCode)
 
     const { data, error } = await supabase
       .from('units')
@@ -42,7 +41,6 @@ export const useLocationSelector = () => {
    * Fetch buildings for a property
    */
   const fetchBuildings = async (propertyCode: string): Promise<LocationOption[]> => {
-    console.log('🏢 Fetching buildings for property:', propertyCode)
 
     const { data, error } = await supabase
       .from('buildings')
@@ -66,7 +64,6 @@ export const useLocationSelector = () => {
    * Fetch locations (common areas) for a property
    */
   const fetchLocations = async (propertyCode: string): Promise<LocationOption[]> => {
-    console.log('📍 Fetching locations for property:', propertyCode)
 
     try {
       const { data, error } = await supabase

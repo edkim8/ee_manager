@@ -155,23 +155,10 @@ const { data: termBreakdown } = await useAsyncData(
     if (!activeProperty.value) return null
 
     // Fetch all active renewal worksheet items with lease data
+    // NOTE: Keep .select() inline — multi-line template literals cause 400 errors (see KNOWLEDGE_BASE.md)
     const { data, error } = await supabase
       .from('renewal_worksheet_items')
-      .select(`
-        id,
-        status,
-        yardi_confirmed,
-        manual_status,
-        tenancies!inner(
-          id,
-          property_code,
-          leases!inner(
-            id,
-            term_months,
-            lease_status
-          )
-        )
-      `)
+      .select('id, status, yardi_confirmed, manual_status, tenancies!inner(id, property_code, leases!inner(id, term_months, lease_status))')
       .eq('tenancies.property_code', activeProperty.value)
       .eq('active', true)
 
@@ -409,10 +396,13 @@ const statusColors: Record<string, string> = {
 <template>
   <div class="space-y-6">
     <!-- Lease Expiration Forecast (24-month chart with target setting) -->
-    <LeaseExpirationDashboard
-      v-if="activeProperty"
-      :property-code="activeProperty"
-    />
+    <!-- ClientOnly required: Chart.js uses canvas/window APIs unavailable during SSR -->
+    <ClientOnly>
+      <LeaseExpirationDashboard
+        v-if="activeProperty"
+        :property-code="activeProperty"
+      />
+    </ClientOnly>
 
     <!-- Open Renewal Pipeline Dashboard -->
     <div v-if="pipelineSummary" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

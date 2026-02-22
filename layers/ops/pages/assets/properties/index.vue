@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 import { useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
 import type { Tables } from '@/types/supabase'
@@ -37,32 +37,6 @@ const columns = computed(() => {
   })
 })
 
-// DEBUG: Log column classes on mount
-onMounted(() => {
-  console.log('🔍 DEBUG: Properties Table Columns')
-  console.log('Total columns:', allColumns.length)
-  allColumns.forEach((col, idx) => {
-    console.log(`Column ${idx + 1}: ${col.key}`, {
-      label: col.label,
-      class: col.class || '(none - always visible)',
-      headerClass: col.headerClass || '(none)'
-    })
-  })
-
-  // Check actual DOM elements after a short delay
-  setTimeout(() => {
-    console.log('\n🔍 DEBUG: Actual DOM Classes')
-    const headers = document.querySelectorAll('th')
-    headers.forEach((th, idx) => {
-      console.log(`Header ${idx}:`, {
-        text: th.textContent?.trim(),
-        classes: th.className,
-        computedDisplay: window.getComputedStyle(th).display,
-        isVisible: window.getComputedStyle(th).display !== 'none'
-      })
-    })
-  }, 1000)
-})
 
 // Search filter
 const searchQuery = ref('')

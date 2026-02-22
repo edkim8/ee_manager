@@ -481,7 +481,8 @@ function renderPropertySummary(code: string, s: PropertySummary) {
 export function generateMarkdownReport(run: any, events: SolverEvent[]): string {
     const lines: string[] = []
     const summaryData = run.summary as Record<string, PropertySummary>
-    const properties = run.properties_processed || []
+    // Filter out STALE_UPDATE (system operation, not a real property)
+    const properties = (run.properties_processed || []).filter((code: string) => code !== 'STALE_UPDATE')
 
     lines.push('# Solver Run Summary')
     lines.push('')

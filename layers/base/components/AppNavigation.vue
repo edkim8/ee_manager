@@ -53,7 +53,6 @@ const { THEMES, currentThemeId, setTheme } = useTheme()
 watch(active_property, (newVal, oldVal) => {
   // Only reload if we actually changed from one valid property to another
   if (oldVal && newVal && oldVal !== newVal) {
-    console.log(`[AppNavigation] Property changed from ${oldVal} to ${newVal}.`)
     
     // Check if we are on a detail page (has route params like :id or :date)
     const hasParams = Object.keys(route.params).length > 0
@@ -62,11 +61,9 @@ watch(active_property, (newVal, oldVal) => {
       // Navigate up one level to the list view to avoid invalid ID context
       // e.g. /units/RS-123 -> /units
       const parentPath = route.path.split('/').slice(0, -1).join('/') || '/'
-      console.log(`[AppNavigation] Detail page detected. Redirecting to parent: ${parentPath}`)
       window.location.href = parentPath
     } else {
       // Standard reload for list pages/dashboard
-      console.log(`[AppNavigation] Standard page detected. Reloading...`)
       window.location.reload()
     }
   }
@@ -82,7 +79,6 @@ const userInitials = computed(() => {
 
 // AppNavigation logic... user and fetchProperties are now synchronized automatically by the useAsyncData in usePropertyState
 onMounted(async () => {
-  console.log('[AppNavigation] Mounted. User status:', !!user.value)
 })
 
 // User menu items
@@ -130,7 +126,6 @@ const userMenuItems = computed(() => [
 
 const handleSignOut = async () => {
   try {
-    console.log('[AppNavigation] Signing out...')
     resetProperty() // Clear properties and user context
     await supabase.auth.signOut()
     
@@ -148,7 +143,6 @@ const handleSignOut = async () => {
 
 const showConstantsModal = ref(false)
 const openConstantsModal = () => {
-  console.log('[AppNavigation] Opening Global Constants Modal')
   showConstantsModal.value = true
 }
 

@@ -11,11 +11,6 @@ export const useImageCompression = () => {
    * Output: ~200-500KB for typical photos
    */
   const compressLocationImage = async (file: File): Promise<File> => {
-    console.log('🖼️ Compressing location image:', {
-      original: file.name,
-      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
-    })
-
     const options = {
       maxSizeMB: 0.8,              // Target ~800KB max
       maxWidthOrHeight: 1200,       // Max dimension 1200px
@@ -26,11 +21,6 @@ export const useImageCompression = () => {
 
     try {
       const compressed = await imageCompression(file, options)
-      console.log('✅ Location image compressed:', {
-        original: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-        compressed: `${(compressed.size / 1024).toFixed(0)} KB`,
-        reduction: `${((1 - compressed.size / file.size) * 100).toFixed(0)}%`
-      })
       return compressed
     } catch (error) {
       console.error('❌ Compression failed, using original:', error)
@@ -46,14 +36,8 @@ export const useImageCompression = () => {
   const compressNoteAttachment = async (file: File): Promise<File> => {
     // Only compress images, not documents
     if (!file.type.startsWith('image/')) {
-      console.log('📄 Skipping compression for non-image:', file.type)
       return file
     }
-
-    console.log('📸 Compressing note attachment:', {
-      original: file.name,
-      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
-    })
 
     const options = {
       maxSizeMB: 1.2,               // Target ~1.2MB max (higher quality for notes)
@@ -65,11 +49,6 @@ export const useImageCompression = () => {
 
     try {
       const compressed = await imageCompression(file, options)
-      console.log('✅ Note attachment compressed:', {
-        original: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-        compressed: `${(compressed.size / 1024).toFixed(0)} KB`,
-        reduction: `${((1 - compressed.size / file.size) * 100).toFixed(0)}%`
-      })
       return compressed
     } catch (error) {
       console.error('❌ Compression failed, using original:', error)
@@ -82,8 +61,6 @@ export const useImageCompression = () => {
    * Optional: Use if you want to generate thumbnails
    */
   const createThumbnail = async (file: File): Promise<File> => {
-    console.log('🔍 Creating thumbnail:', file.name)
-
     const options = {
       maxSizeMB: 0.1,               // Very small (~100KB)
       maxWidthOrHeight: 300,        // Thumbnail size
@@ -94,7 +71,6 @@ export const useImageCompression = () => {
 
     try {
       const thumbnail = await imageCompression(file, options)
-      console.log('✅ Thumbnail created:', `${(thumbnail.size / 1024).toFixed(0)} KB`)
       return thumbnail
     } catch (error) {
       console.error('❌ Thumbnail creation failed:', error)

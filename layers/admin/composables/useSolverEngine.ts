@@ -1339,8 +1339,9 @@ export const useSolverEngine = () => {
 
                         // Validate status and auto-fix if needed
                         let finalStatus = tenancy.status
-                        if (tenancy.status !== 'Notice') {
+                        if (tenancy.status !== 'Notice' && tenancy.status !== 'Eviction') {
                             // Auto-fix: Update status to 'Notice'
+                            // NOTE: Eviction is a protected status — office-initiated, intentional, do not downgrade
                             finalStatus = 'Notice'
                             warnings.push(`Auto-fixed status for ${row.unit_name}: ${tenancy.status} → Notice`)
                             // Track status auto-fix
@@ -1965,10 +1966,19 @@ export const useSolverEngine = () => {
                             (existingFlags || []).map((f: any) => `${f.unit_id}:${f.flag_type}`)
                         )
 
-                        // Filter out flags that already exist
-                        const newFlags = flagsToCreate.filter((f: any) =>
+                        // Filter out flags that already exist in DB
+                        const dbFilteredFlags = flagsToCreate.filter((f: any) =>
                             !existingSet.has(`${f.unit_id}:${f.flag_type}`)
                         )
+
+                        // Deduplicate within batch (same unit may appear as FROM and TO across rows)
+                        const seenInBatch = new Set<string>()
+                        const newFlags = dbFilteredFlags.filter((f: any) => {
+                            const key = `${f.unit_id}:${f.flag_type}`
+                            if (seenInBatch.has(key)) return false
+                            seenInBatch.add(key)
+                            return true
+                        })
 
                         if (newFlags.length > 0) {
                             for (let i = 0; i < newFlags.length; i += 1000) {

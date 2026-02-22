@@ -52,7 +52,6 @@ export const useInventoryItems = () => {
    * Returns items with lifecycle calculations (age, health status)
    */
   const fetchItems = async (filters?: FetchItemsFilters): Promise<InventoryItemWithLifecycle[]> => {
-    console.log('🔧 Fetching inventory items', filters)
 
     let query = supabase
       .from('view_inventory_installations')
@@ -89,7 +88,6 @@ export const useInventoryItems = () => {
       throw error
     }
 
-    console.log(`✅ Fetched ${data.length} items`)
     return data as InventoryItemWithLifecycle[]
   }
 
@@ -101,7 +99,6 @@ export const useInventoryItems = () => {
     locationType: 'unit' | 'building' | 'location',
     locationId: string
   ): Promise<InventoryItemWithLifecycle[]> => {
-    console.log(`🔧 Fetching items for ${locationType}:`, locationId)
 
     return fetchItems({ locationType, locationId })
   }
@@ -110,7 +107,6 @@ export const useInventoryItems = () => {
    * Fetch single item by ID
    */
   const fetchItem = async (id: string): Promise<InventoryItem> => {
-    console.log('🔧 Fetching item:', id)
 
     const { data, error } = await supabase
       .from('inventory_items')
@@ -130,7 +126,6 @@ export const useInventoryItems = () => {
    * Fetch single item with lifecycle data
    */
   const fetchItemWithLifecycle = async (id: string): Promise<InventoryItemWithLifecycle> => {
-    console.log('🔧 Fetching item with lifecycle:', id)
 
     const { data, error } = await supabase
       .from('view_inventory_installations')
@@ -150,7 +145,6 @@ export const useInventoryItems = () => {
    * Create new item
    */
   const createItem = async (item: InventoryItemInsert): Promise<InventoryItem> => {
-    console.log('🔧 Creating item:', item)
 
     const { data, error } = await supabase
       .from('inventory_items')
@@ -163,7 +157,6 @@ export const useInventoryItems = () => {
       throw error
     }
 
-    console.log('✅ Item created:', data.id)
     return data
   }
 
@@ -171,7 +164,6 @@ export const useInventoryItems = () => {
    * Update existing item
    */
   const updateItem = async (id: string, updates: InventoryItemUpdate): Promise<InventoryItem> => {
-    console.log('🔧 Updating item:', id)
 
     const { data, error } = await supabase
       .from('inventory_items')
@@ -185,7 +177,6 @@ export const useInventoryItems = () => {
       throw error
     }
 
-    console.log('✅ Item updated')
     return data
   }
 
@@ -193,7 +184,6 @@ export const useInventoryItems = () => {
    * Soft delete item (set is_active = false)
    */
   const deleteItem = async (id: string): Promise<void> => {
-    console.log('🔧 Deleting item:', id)
 
     const { error } = await supabase
       .from('inventory_items')
@@ -205,7 +195,6 @@ export const useInventoryItems = () => {
       throw error
     }
 
-    console.log('✅ Item deleted')
   }
 
   /**
@@ -215,7 +204,6 @@ export const useInventoryItems = () => {
     locationType: 'unit' | 'building' | 'location',
     locationId: string
   ) => {
-    console.log(`🔧 Fetching location summary for ${locationType}:`, locationId)
 
     const { data, error } = await supabase
       .from('view_inventory_summary_by_location')

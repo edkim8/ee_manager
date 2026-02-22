@@ -16,7 +16,6 @@ export const useInventoryCategories = () => {
    * Fetch all active categories
    */
   const fetchCategories = async (): Promise<InventoryCategory[]> => {
-    console.log('📦 Fetching inventory categories')
 
     const { data, error } = await supabase
       .from('inventory_categories')
@@ -29,7 +28,6 @@ export const useInventoryCategories = () => {
       throw error
     }
 
-    console.log(`✅ Fetched ${data.length} categories`)
     return data
   }
 
@@ -37,7 +35,6 @@ export const useInventoryCategories = () => {
    * Fetch single category by ID
    */
   const fetchCategory = async (id: string): Promise<InventoryCategory> => {
-    console.log('📦 Fetching category:', id)
 
     const { data, error } = await supabase
       .from('inventory_categories')
@@ -57,7 +54,6 @@ export const useInventoryCategories = () => {
    * Create new category
    */
   const createCategory = async (category: InventoryCategoryInsert): Promise<InventoryCategory> => {
-    console.log('📦 Creating category:', category.name)
 
     // Get current user
     const { data: { user } } = await supabase.auth.getUser()
@@ -76,7 +72,6 @@ export const useInventoryCategories = () => {
       throw error
     }
 
-    console.log('✅ Category created:', data.id)
     return data
   }
 
@@ -84,7 +79,6 @@ export const useInventoryCategories = () => {
    * Update existing category
    */
   const updateCategory = async (id: string, updates: InventoryCategoryUpdate): Promise<InventoryCategory> => {
-    console.log('📦 Updating category:', id)
 
     const { data, error } = await supabase
       .from('inventory_categories')
@@ -98,7 +92,6 @@ export const useInventoryCategories = () => {
       throw error
     }
 
-    console.log('✅ Category updated')
     return data
   }
 
@@ -106,7 +99,6 @@ export const useInventoryCategories = () => {
    * Soft delete category (set is_active = false)
    */
   const deleteCategory = async (id: string): Promise<void> => {
-    console.log('📦 Deleting category:', id)
 
     const { error } = await supabase
       .from('inventory_categories')
@@ -118,7 +110,6 @@ export const useInventoryCategories = () => {
       throw error
     }
 
-    console.log('✅ Category deleted')
   }
 
   return {

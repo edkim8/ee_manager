@@ -24,7 +24,6 @@ export const useInventoryHistory = () => {
    * Fetch event history for an item
    */
   const fetchHistory = async (itemId: string): Promise<InventoryHistoryWithAttachment[]> => {
-    console.log('📜 Fetching history for item:', itemId)
 
     const { data, error } = await supabase
       .from('inventory_history')
@@ -40,7 +39,6 @@ export const useInventoryHistory = () => {
       throw error
     }
 
-    console.log(`✅ Fetched ${data.length} history events`)
     return data as InventoryHistoryWithAttachment[]
   }
 
@@ -48,7 +46,6 @@ export const useInventoryHistory = () => {
    * Fetch single history event
    */
   const fetchEvent = async (id: string): Promise<InventoryHistoryWithAttachment> => {
-    console.log('📜 Fetching event:', id)
 
     const { data, error } = await supabase
       .from('inventory_history')
@@ -73,7 +70,6 @@ export const useInventoryHistory = () => {
    * @returns Created event
    */
   const addEvent = async (event: InventoryHistoryInsert): Promise<InventoryHistory> => {
-    console.log('📜 Adding event:', event.event_type, 'for item:', event.item_id)
 
     const { data, error } = await supabase
       .from('inventory_history')
@@ -86,7 +82,6 @@ export const useInventoryHistory = () => {
       throw error
     }
 
-    console.log('✅ Event added:', data.id)
     return data
   }
 
@@ -94,7 +89,6 @@ export const useInventoryHistory = () => {
    * Get latest event for an item
    */
   const fetchLatestEvent = async (itemId: string): Promise<InventoryHistoryWithAttachment | null> => {
-    console.log('📜 Fetching latest event for item:', itemId)
 
     const { data, error } = await supabase
       .from('inventory_history')
@@ -126,7 +120,6 @@ export const useInventoryHistory = () => {
     itemId: string,
     eventType: 'install' | 'refinish' | 'replace' | 'repair' | 'retire'
   ): Promise<InventoryHistoryWithAttachment[]> => {
-    console.log(`📜 Fetching ${eventType} events for item:`, itemId)
 
     const { data, error } = await supabase
       .from('inventory_history')
@@ -150,7 +143,6 @@ export const useInventoryHistory = () => {
    * Get total cost for an item (sum of all event costs)
    */
   const calculateTotalCost = async (itemId: string): Promise<number> => {
-    console.log('📜 Calculating total cost for item:', itemId)
 
     const { data, error } = await supabase
       .from('inventory_history')
@@ -183,7 +175,6 @@ export const useInventoryHistory = () => {
       attachment_id?: string
     }
   ): Promise<InventoryHistory> => {
-    console.log('📜 Adding install event for item:', itemId)
 
     return addEvent({
       item_id: itemId,
@@ -206,7 +197,6 @@ export const useInventoryHistory = () => {
       attachment_id?: string
     }
   ): Promise<InventoryHistory> => {
-    console.log('📜 Adding refinish event for item:', itemId)
 
     return addEvent({
       item_id: itemId,

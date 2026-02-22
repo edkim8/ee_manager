@@ -3,12 +3,10 @@ import { Database } from '../../../../types/supabase'
 
 export default defineEventHandler(async (event) => {
   const cookies = parseCookies(event)
-  console.log('[API /api/me] Cookies received:', Object.keys(cookies))
 
   const user = await serverSupabaseUser(event)
   
   // LOG: See what we are getting from the session
-  console.log('[API /api/me] Raw Auth User:', user ? JSON.stringify(user) : 'NULL')
 
   let userId = user?.id
   const userEmail = user?.email
@@ -39,7 +37,6 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!profile && userEmail) {
-      console.log('[API /api/me] ID lookup failed, trying email lookup for:', userEmail)
       const { data, error } = await client
         .from('profiles')
         .select('*, full_name:profiles_full_name')
@@ -49,7 +46,6 @@ export default defineEventHandler(async (event) => {
       profileError = error
       if (profile) {
         userId = profile.id
-        console.log('[API /api/me] Recovered userId from email:', userId)
       }
     }
 
@@ -84,17 +80,14 @@ export default defineEventHandler(async (event) => {
          { id: 'CV', code: 'CV', name: 'City View' },
          { id: 'WO', code: 'WO', name: 'Whispering Oaks' }]
 
-    console.log(`[API /api/me] Total properties found (DB + fallback): ${allProperties.length}`)
 
     // 3. Fetch Access & Roles
     const propertyRoles: Record<string, string> = {}
     const isSuperAdmin = !!(profile as any)?.is_super_admin
 
     if (isSuperAdmin) {
-      console.log('[API /api/me] AUTH: Super Admin access detected')
       allProperties.forEach((p: any) => propertyRoles[p.code] = 'Owner')
     } else {
-      console.log('[API /api/me] AUTH: Regular user access check')
       const { data: accessData, error: accessError } = await client
         .from('user_property_access' as any)
         .select('property_code, role')
@@ -109,7 +102,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('[API /api/me] Final property roles:', propertyRoles)
 
     return {
       user: {
