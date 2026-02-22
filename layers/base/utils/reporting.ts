@@ -1,5 +1,5 @@
 
-import { getPropertyName } from '../constants/properties'
+import { getPropertyName, PROPERTY_LIST } from '../constants/properties'
 
 export interface SolverEvent {
     property_code: string
@@ -64,8 +64,9 @@ export interface OperationalSummary {
  */
 export function generateHighFidelityHtmlReport(run: any, events: SolverEvent[], operationalSummary?: OperationalSummary): string {
     const summaryData = run.summary as Record<string, PropertySummary>
-    // Filter out STALE_UPDATE (system operation, not a real property)
-    const properties = (run.properties_processed || []).filter((code: string) => code !== 'STALE_UPDATE')
+    const knownCodes = new Set(PROPERTY_LIST.map(p => p.code))
+    // Filter to known property codes only — excludes STALE_UPDATE and any staging artifacts
+    const properties = (run.properties_processed || []).filter((code: string) => knownCodes.has(code))
 
     let html = `
     <div style="font-family: 'Inter', sans-serif, system-ui; max-width: 800px; margin: 0 auto; color: #1f2937; line-height: 1.5;">
@@ -93,18 +94,18 @@ export function generateHighFidelityHtmlReport(run: any, events: SolverEvent[], 
                 <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">System Overview - Details</h2>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
                     ${renderStatCard('Properties', properties.length)}
-                    ${renderStatCard('New Tenancies', events.filter(e => e.event_type === 'new_tenancy').length)}
+                    ${renderStatCard('New Residents', events.filter(e => e.event_type === 'new_tenancy').length)}
                     ${renderStatCard('Renewals', events.filter(e => e.event_type === 'lease_renewal').length)}
                 </div>
             </div>
 
             <!-- Detailed Event Tables -->
             ${renderAvailabilitiesSection(events.filter(e => e.event_type === 'price_change'))}
-            ${renderEventSection('✍️ New Leases Signed', events.filter(e => e.event_type === 'lease_signed'), renderLeaseSignedRow)}
+            ${renderEventSection('✍️ New Leases Signed Today', events.filter(e => e.event_type === 'lease_signed'), renderLeaseSignedRow)}
             ${renderEventSection('🔄 Lease Renewals', events.filter(e => e.event_type === 'lease_renewal'), renderLeaseRenewalRow)}
             ${renderEventSection('💰 Price Changes', events.filter(e => e.event_type === 'price_change'), renderPriceChangeRow)}
             ${renderEventSection('📝 New Applications', events.filter(e => e.event_type === 'application_saved'), renderApplicationRow)}
-            ${renderEventSection('📋 Notices Given', events.filter(e => e.event_type === 'notice_given'), renderNoticeRow)}
+            ${renderNoticesSummarySection(events.filter(e => e.event_type === 'notice_given'))}
 
             <!-- Operational Summaries -->
             <div style="margin-top: 48px;">
@@ -423,6 +424,69 @@ function renderLeaseSignedRow(e: SolverEvent) {
     `
 }
 
+function renderNoticesSummarySection(noticeEvents: SolverEvent[]) {
+    if (noticeEvents.length === 0) return ''
+
+    // Sort by property_code, then by move_out_date ascending
+    const sorted = [...noticeEvents].sort((a, b) => {
+        const propCmp = (a.property_code || '').localeCompare(b.property_code || '')
+        if (propCmp !== 0) return propCmp
+        const dateA = a.details?.move_out_date || ''
+        const dateB = b.details?.move_out_date || ''
+        return dateA.localeCompare(dateB)
+    })
+
+    // Aggregate per property
+    const byProp = new Map<string, { count: number; earliest: string; latest: string }>()
+    for (const e of sorted) {
+        const code = e.property_code || '—'
+        const d = e.details?.move_out_date || ''
+        if (!byProp.has(code)) {
+            byProp.set(code, { count: 0, earliest: d, latest: d })
+        }
+        const entry = byProp.get(code)!
+        entry.count++
+        if (d && (!entry.earliest || d < entry.earliest)) entry.earliest = d
+        if (d && (!entry.latest  || d > entry.latest))   entry.latest  = d
+    }
+
+    const rows = Array.from(byProp.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([code, info]) => `
+            <tr>
+                <td style="padding: 8px 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">${code} — ${getPropertyName(code)}</td>
+                <td style="padding: 8px 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">${info.count}</td>
+                <td style="padding: 8px 10px; border-bottom: 1px solid #f3f4f6;">${info.earliest || '—'}</td>
+                <td style="padding: 8px 10px; border-bottom: 1px solid #f3f4f6;">${info.latest  || '—'}</td>
+            </tr>
+        `).join('')
+
+    return `
+    <div style="margin-bottom: 40px;">
+        <h3 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 12px; display: flex; align-items: center;">
+            📋 Notices on File
+            <span style="margin-left: 8px; background: #fff7ed; color: #c2410c; font-size: 12px; padding: 2px 8px; border-radius: 9999px;">${noticeEvents.length} total</span>
+        </h3>
+        <div style="overflow-x: auto; margin-bottom: 12px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                        <th style="padding: 8px 10px; text-align: left; font-weight: 600; color: #4b5563;">Property</th>
+                        <th style="padding: 8px 10px; text-align: center; font-weight: 600; color: #4b5563;">Count</th>
+                        <th style="padding: 8px 10px; text-align: left; font-weight: 600; color: #4b5563;">Earliest Move-Out</th>
+                        <th style="padding: 8px 10px; text-align: left; font-weight: 600; color: #4b5563;">Latest Move-Out</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+        <div style="padding: 12px; background-color: #fff7ed; border-radius: 6px; border: 1px solid #fed7aa; font-size: 12px; color: #9a3412;">
+            Individual notice details will be available in the Notices page (coming soon).
+        </div>
+    </div>
+    `
+}
+
 function renderSummaryBox(title: string, icon: string, items: {label: string, value: string}[], linkText: string = 'View Details', linkUrl: string = '#') {
     return `
     <div style="margin-bottom: 32px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; padding: 20px;">
@@ -447,31 +511,46 @@ function renderSummaryBox(title: string, icon: string, items: {label: string, va
 function renderPropertySummary(code: string, s: PropertySummary) {
     if (!s) return ''
 
+    const pill = (n: number, label: string, color = '#4f46e5') =>
+        n > 0
+            ? `<span style="background:${color}15; color:${color}; font-size:11px; font-weight:700; padding:2px 7px; border-radius:9999px; margin-left:4px;">${n} ${label}</span>`
+            : ''
+
     return `
-    <div style="margin-bottom: 24px; padding: 16px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+    <div style="margin-bottom: 16px; padding: 16px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h4 style="margin: 0; font-size: 15px; color: #111827;">${code} - ${getPropertyName(code)}</h4>
+            <h4 style="margin: 0; font-size: 15px; color: #111827;">${code} — ${getPropertyName(code)}</h4>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; font-size: 12px;">
             <div>
-                <div style="color: #6b7280;">Availabilities</div>
-                <div style="font-weight: 600;">+${s.availabilitiesNew} / ${s.availabilitiesUpdated} mod</div>
+                <div style="color: #6b7280; font-weight:600; text-transform:uppercase; font-size:10px; letter-spacing:0.05em;">Availabilities</div>
+                <div style="font-weight: 600; margin-top:3px;">
+                    ${s.availabilitiesNew > 0 ? `${s.availabilitiesNew} new` : '—'}
+                    ${s.availabilitiesUpdated > 0 ? `· ${s.availabilitiesUpdated} updated` : ''}
+                </div>
             </div>
             <div>
-                <div style="color: #6b7280;">Tenancies</div>
-                <div style="font-weight: 600;">+${s.tenanciesNew} / ${s.tenanciesUpdated} mod</div>
+                <div style="color: #6b7280; font-weight:600; text-transform:uppercase; font-size:10px; letter-spacing:0.05em;">Residents</div>
+                <div style="font-weight: 600; margin-top:3px;">
+                    ${s.tenanciesNew > 0 ? `${s.tenanciesNew} new` : '—'}
+                    ${s.tenanciesUpdated > 0 ? `· ${s.tenanciesUpdated} updated` : ''}
+                </div>
             </div>
             <div>
-                <div style="color: #6b7280;">Leases</div>
-                <div style="font-weight: 600;">${s.leasesRenewed} renewals</div>
+                <div style="color: #6b7280; font-weight:600; text-transform:uppercase; font-size:10px; letter-spacing:0.05em;">Lease Renewals</div>
+                <div style="font-weight: 600; margin-top:3px;">${s.leasesRenewed > 0 ? s.leasesRenewed : '—'}</div>
             </div>
             <div>
-                <div style="color: #6b7280;">Applications</div>
-                <div style="font-weight: 600;">${s.applicationsSaved} total</div>
+                <div style="color: #6b7280; font-weight:600; text-transform:uppercase; font-size:10px; letter-spacing:0.05em;">Applications</div>
+                <div style="font-weight: 600; margin-top:3px;">${s.applicationsSaved > 0 ? s.applicationsSaved : '—'}</div>
             </div>
             <div>
-                <div style="color: #6b7280;">Flags</div>
-                <div style="font-weight: 600;">${s.makereadyFlags + s.applicationFlags} created</div>
+                <div style="color: #6b7280; font-weight:600; text-transform:uppercase; font-size:10px; letter-spacing:0.05em;">Notices</div>
+                <div style="font-weight: 600; margin-top:3px;">${s.noticesProcessed > 0 ? s.noticesProcessed : '—'}</div>
+            </div>
+            <div>
+                <div style="color: #6b7280; font-weight:600; text-transform:uppercase; font-size:10px; letter-spacing:0.05em;">Flags</div>
+                <div style="font-weight: 600; margin-top:3px;">${(s.makereadyFlags + s.applicationFlags) > 0 ? (s.makereadyFlags + s.applicationFlags) : '—'}</div>
             </div>
         </div>
     </div>
@@ -481,8 +560,9 @@ function renderPropertySummary(code: string, s: PropertySummary) {
 export function generateMarkdownReport(run: any, events: SolverEvent[]): string {
     const lines: string[] = []
     const summaryData = run.summary as Record<string, PropertySummary>
-    // Filter out STALE_UPDATE (system operation, not a real property)
-    const properties = (run.properties_processed || []).filter((code: string) => code !== 'STALE_UPDATE')
+    const knownCodes = new Set(PROPERTY_LIST.map(p => p.code))
+    // Filter to known property codes only — excludes STALE_UPDATE and any staging artifacts
+    const properties = (run.properties_processed || []).filter((code: string) => knownCodes.has(code))
 
     lines.push('# Solver Run Summary')
     lines.push('')
@@ -499,7 +579,7 @@ export function generateMarkdownReport(run: any, events: SolverEvent[]): string 
     // Reuse patterns from useSolverReportGenerator.ts but enriched
     const newTenancies = events.filter(e => e.event_type === 'new_tenancy')
     if (newTenancies.length > 0) {
-        lines.push('### ✅ New Tenancies')
+        lines.push('### ✅ New Residents')
         lines.push('')
         lines.push('| Resident | Unit | Property | Status | Move-In |')
         lines.push('|----------|------|----------|--------|---------|')
@@ -547,9 +627,10 @@ export function generateMarkdownReport(run: any, events: SolverEvent[]): string 
         const s = summaryData[code]
         lines.push(`## Property: ${code} - ${getPropertyName(code)}`)
         lines.push('')
-        lines.push(`- **New Tenancies:** ${s.tenanciesNew}`)
+        lines.push(`- **New Residents:** ${s.tenanciesNew}`)
         lines.push(`- **Lease Renewals:** ${s.leasesRenewed}`)
         lines.push(`- **Applications:** ${s.applicationsSaved}`)
+        lines.push(`- **Notices on File:** ${s.noticesProcessed}`)
         lines.push(`- **Flags Created:** ${s.makereadyFlags + s.applicationFlags}`)
         lines.push('')
     }

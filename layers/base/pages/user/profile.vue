@@ -28,9 +28,13 @@ const profile = computed(() => userContext.value?.profile || {
   department: 'External'
 })
 
-const access = computed(() => userContext.value?.access || {
-  is_super_admin: false,
-  allowed_codes: []
+const access = computed(() => {
+  const a = userContext.value?.access
+  if (!a) return { is_super_admin: false, allowed_codes: [] }
+  return {
+    ...a,
+    allowed_codes: a.allowed_codes ?? Object.keys(a.property_roles ?? {})
+  }
 })
 
 // Compute initials

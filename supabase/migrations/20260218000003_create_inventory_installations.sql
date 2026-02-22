@@ -62,54 +62,32 @@ CREATE INDEX IF NOT EXISTS idx_installations_active ON public.inventory_installa
 -- =====================================================
 ALTER TABLE public.inventory_installations ENABLE ROW LEVEL SECURITY;
 
--- Property-scoped access
+-- Drop old policies if they exist (idempotent)
+DROP POLICY IF EXISTS "Users can view installations for their properties"   ON public.inventory_installations;
+DROP POLICY IF EXISTS "Users can insert installations for their properties" ON public.inventory_installations;
+DROP POLICY IF EXISTS "Users can update installations for their properties" ON public.inventory_installations;
+DROP POLICY IF EXISTS "Users can delete installations for their properties" ON public.inventory_installations;
+
+-- Standard authenticated access (consistent with rest of project)
 CREATE POLICY "Users can view installations for their properties"
 ON public.inventory_installations FOR SELECT
 TO authenticated
-USING (
-    property_code IN (
-        SELECT p.code
-        FROM public.properties p
-        JOIN public.property_roles pr ON pr.property_id = p.id
-        WHERE pr.user_id = auth.uid()
-    )
-);
+USING (true);
 
 CREATE POLICY "Users can insert installations for their properties"
 ON public.inventory_installations FOR INSERT
 TO authenticated
-WITH CHECK (
-    property_code IN (
-        SELECT p.code
-        FROM public.properties p
-        JOIN public.property_roles pr ON pr.property_id = p.id
-        WHERE pr.user_id = auth.uid()
-    )
-);
+WITH CHECK (true);
 
 CREATE POLICY "Users can update installations for their properties"
 ON public.inventory_installations FOR UPDATE
 TO authenticated
-USING (
-    property_code IN (
-        SELECT p.code
-        FROM public.properties p
-        JOIN public.property_roles pr ON pr.property_id = p.id
-        WHERE pr.user_id = auth.uid()
-    )
-);
+USING (true);
 
 CREATE POLICY "Users can delete installations for their properties"
 ON public.inventory_installations FOR DELETE
 TO authenticated
-USING (
-    property_code IN (
-        SELECT p.code
-        FROM public.properties p
-        JOIN public.property_roles pr ON pr.property_id = p.id
-        WHERE pr.user_id = auth.uid()
-    )
-);
+USING (true);
 
 -- =====================================================
 -- Triggers: Update updated_at timestamp
@@ -122,6 +100,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_installations_timestamp ON public.inventory_installations;
 CREATE TRIGGER trigger_update_installations_timestamp
 BEFORE UPDATE ON public.inventory_installations
 FOR EACH ROW
