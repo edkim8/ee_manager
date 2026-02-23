@@ -104,7 +104,7 @@ const isSuperAdmin = computed(() => !!userContext.value?.access?.is_super_admin)
 const isManager = computed(() => {
   if (isSuperAdmin.value) return true
   const roles = Object.values(userContext.value?.access?.property_roles || {}) as string[]
-  return roles.some(r => ['Owner', 'admin', 'manager', 'Manager'].includes(r))
+  return roles.some(r => ['Asset', 'RPM', 'Owner', 'admin', 'manager', 'Manager'].includes(r))
 })
 
 // IDs of widgets recommended for this user based on department + role

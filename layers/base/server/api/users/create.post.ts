@@ -1,5 +1,7 @@
+import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
+
 export default defineEventHandler(async (event) => {
-  const client = await serverSupabaseServiceRole(event)
+  const client = serverSupabaseServiceRole(event)
   const user = await serverSupabaseUser(event)
   const body = await readBody(event)
 
@@ -12,7 +14,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { email, password, first_name, last_name, department, phone, organization_name } = body
+  const { email, password, first_name, last_name, department, phone, organization_name, is_super_admin } = body
 
   // 2. Validate input
   if (!email || !password) {
@@ -32,7 +34,8 @@ export default defineEventHandler(async (event) => {
       last_name,
       department,
       phone,
-      organization_name
+      organization_name,
+      is_super_admin: !!is_super_admin
     }
   })
 
@@ -43,16 +46,21 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // 4. Ensure Profile exists/updates (Supabase Trigger usually handles this, but we can fast-track or update extras)
-  // The trigger on auth.users -> public.profiles might be async or limited.
-  // We'll trust the metadata to flow to the trigger, OR updates specifically if needed.
-  // For now, let's return the created user.
-  
-  // Note: If your trigger copies metadata to profile columns, this is sufficient.
-  // If not, we might need to manually update the profile record here.
+  // 4. Update Profile with is_super_admin specifically
+  // While triggers handle basic creation, we want to ensure the super admin flag is set if requested
+  if (is_super_admin) {
+    const { error: profileError } = await client
+      .from('profiles')
+      .update({ is_super_admin: true })
+      .eq('id', authData.user.id)
+    
+    if (profileError) {
+      console.warn('[API /api/users/create] Failed to set super admin flag:', profileError)
+    }
+  }
 
   return {
     user: authData.user,
-    message: 'User created successfully'
+    message: 'User created and confirmed successfully'
   }
 })

@@ -43,44 +43,26 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   loading.value = true
 
   try {
-    // Create user via Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: event.data.email,
-      password: event.data.password,
-      options: {
-        data: {
-          first_name: event.data.first_name || null,
-          last_name: event.data.last_name || null,
-          department: event.data.department || null,
-          is_super_admin: event.data.is_super_admin
-        }
-      }
-    })
-
-    if (authError) throw authError
-
-    if (!authData.user) {
-      throw new Error('User creation failed - no user returned')
-    }
-
-    // Update profile with additional fields
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({
+    // Create user via Server API to ensure auto-confirmation
+    const response = await $fetch('/api/users/create', {
+      method: 'POST',
+      body: {
+        email: event.data.email,
+        password: event.data.password,
         first_name: event.data.first_name || null,
         last_name: event.data.last_name || null,
         department: event.data.department || null,
         is_super_admin: event.data.is_super_admin
-      })
-      .eq('id', authData.user.id)
+      }
+    })
 
-    if (profileError) {
-      console.warn('[AdminUserCreate] Profile update warning:', profileError)
+    if (!response.user) {
+      throw new Error('User creation failed - no user returned')
     }
 
     toast.add({
       title: 'Success',
-      description: `User ${event.data.email} created successfully.`,
+      description: `User ${event.data.email} created and confirmed successfully.`,
       color: 'success'
     })
 
@@ -92,12 +74,12 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     state.department = ''
     state.is_super_admin = false
 
-    emit('created', authData.user.id)
+    emit('created', response.user.id)
   } catch (error: any) {
     console.error('[AdminUserCreate] Error:', error)
     toast.add({
       title: 'Error',
-      description: error.message || 'Failed to create user.',
+      description: error.data?.statusMessage || error.message || 'Failed to create user.',
       color: 'error'
     })
   } finally {

@@ -77,6 +77,38 @@ function handleEditUser(userId: string) {
   activeTab.value = 2 // Switch to Edit tab
 }
 
+// Delete user handler
+async function handleDeleteUser(userId: string) {
+  if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+    return
+  }
+
+  loading.value = true
+  selectedUserId.value = userId
+  try {
+    const { error } = await supabase.rpc('delete_user_v1', { target_user_id: userId })
+    
+    if (error) throw error
+
+    toast.add({
+      title: 'Success',
+      description: 'User deleted successfully.',
+      color: 'success'
+    })
+    
+    fetchUsers()
+  } catch (error: any) {
+    console.error('[AdminUsers] Delete error:', error)
+    toast.add({
+      title: 'Error',
+      description: error.message || 'Failed to delete user.',
+      color: 'error'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
 // Handle user created
 function handleUserCreated(userId: string) {
   fetchUsers()
@@ -221,13 +253,25 @@ onMounted(() => {
                     </div>
                   </td>
                   <td class="px-6 py-4 text-sm text-center">
-                    <UButton
-                      icon="i-heroicons-pencil-square"
-                      size="sm"
-                      color="neutral"
-                      variant="ghost"
-                      @click="handleEditUser(row.id)"
-                    />
+                    <div class="flex items-center justify-center gap-1">
+                      <UButton
+                        icon="i-heroicons-pencil-square"
+                        size="sm"
+                        color="neutral"
+                        variant="ghost"
+                        @click="handleEditUser(row.id)"
+                      />
+                      <UButton
+                        icon="i-heroicons-trash"
+                        size="sm"
+                        color="error"
+                        variant="solid"
+                        label="DELETE"
+                        class="font-bold"
+                        :loading="loading && selectedUserId === row.id"
+                        @click="handleDeleteUser(row.id)"
+                      />
+                    </div>
                   </td>
                 </tr>
               </tbody>
