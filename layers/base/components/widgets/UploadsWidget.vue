@@ -33,12 +33,13 @@ const lastUploadTime = computed(() => {
 const totalChanges = computed(() => {
   return properties.value.reduce((acc, p) => {
     const s = p.summary
-    return acc + 
-      (s.tenanciesNew || 0) + 
-      (s.tenanciesUpdated || 0) + 
-      (s.leasesRenewed || 0) + 
-      (s.availabilitiesUpdated || 0) + 
-      (s.applicationsSaved || 0)
+    return acc +
+      (s.tenanciesNew || 0) +
+      (s.tenanciesUpdated || 0) +
+      (s.leasesRenewed || 0) +
+      (s.availabilitiesUpdated || 0) +
+      (s.applicationsSaved || 0) +
+      (s.noticesProcessed || 0)
   }, 0)
 })
 </script>
@@ -75,22 +76,27 @@ const totalChanges = computed(() => {
             <span class="text-[10px] text-gray-500 font-mono">{{ lastUploadTime }}</span>
           </div>
 
+          <!-- These are SOLVER RUN COUNTS — records touched in this upload, not current status -->
           <div class="grid grid-cols-2 gap-y-1 gap-x-4">
             <div class="flex justify-between items-center text-[10px]">
-              <span class="text-gray-500">Leased Units</span>
+              <span class="text-gray-500">Tenancies Synced</span>
               <span class="font-bold text-gray-900 dark:text-gray-300">{{ (prop.summary.tenanciesNew || 0) + (prop.summary.tenanciesUpdated || 0) }}</span>
             </div>
             <div class="flex justify-between items-center text-[10px]">
-              <span class="text-gray-500">New Leases</span>
+              <span class="text-gray-500">Renewals</span>
               <span class="font-bold text-gray-900 dark:text-gray-300">{{ prop.summary.leasesRenewed || 0 }}</span>
             </div>
             <div class="flex justify-between items-center text-[10px]">
-              <span class="text-gray-500">Availabilities</span>
+              <span class="text-gray-500">Avail. Synced</span>
               <span class="font-bold text-gray-900 dark:text-gray-300">{{ prop.summary.availabilitiesUpdated || 0 }}</span>
             </div>
             <div class="flex justify-between items-center text-[10px]">
               <span class="text-gray-500">Applications</span>
               <span class="font-bold text-gray-900 dark:text-gray-300">{{ prop.summary.applicationsSaved || 0 }}</span>
+            </div>
+            <div class="flex justify-between items-center text-[10px] col-span-2">
+              <span class="text-gray-500">Notices in Run</span>
+              <span class="font-bold text-gray-900 dark:text-gray-300">{{ prop.summary.noticesProcessed || 0 }}</span>
             </div>
           </div>
         </div>

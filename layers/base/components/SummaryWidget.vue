@@ -12,7 +12,7 @@ defineProps<{
     <!-- Header -->
     <div class="flex items-center justify-between p-4 border-b border-white/10 dark:border-gray-800/30">
       <div class="flex items-center gap-3">
-        <div v-if="icon" :class="['p-2 rounded-lg bg-opacity-10', iconColor || 'bg-primary-500 text-primary-500']">
+        <div v-if="icon" :class="['p-2 rounded-lg', iconColor || 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300']">
           <UIcon :name="icon" class="w-5 h-5" />
         </div>
         <h3 class="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-xs">

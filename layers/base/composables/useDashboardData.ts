@@ -13,6 +13,7 @@ export const useDashboardData = () => {
   const workOrdersStats = ref<any>(null)
   const renewalsStats = ref<any>(null)
   const inventoryStats = ref<any>(null)
+  const makeReadyStats = ref<any>(null)
   const isLoading = ref(false)
 
   const fetchLatestRun = async () => {
@@ -43,7 +44,7 @@ export const useDashboardData = () => {
       const [unitsResult, tenanciesResult, metricsResult] = await Promise.all([
         supabase.from('units').select('id', { count: 'exact', head: true }).eq('property_code', activeProperty.value),
         supabase.from('tenancies').select('unit_id, status, move_out_date').eq('property_code', activeProperty.value).in('status', ['Current', 'Notice', 'Future', 'Applicant']),
-        supabase.from('view_availabilities_metrics').select('operational_status, future_status, ready_date').eq('property_code', activeProperty.value)
+        supabase.from('view_availabilities_metrics').select('status, operational_status, future_status, ready_date').eq('property_code', activeProperty.value)
       ])
 
       const totalUnits = unitsResult.count || 0
@@ -72,8 +73,9 @@ export const useDashboardData = () => {
       )
 
       // Availability pipeline counts (from availabilities table via view)
-      const totalAvailable = metrics.filter((m: any) => m.operational_status === 'Available').length
-      const applicants = metrics.filter((m: any) => m.operational_status === 'Applied').length
+      // Use stored `status` (not derived `operational_status`) to match what the Availabilities Table shows
+      const totalAvailable = metrics.filter((m: any) => m.status === 'Available').length
+      const applicants = metrics.filter((m: any) => m.status === 'Applied').length
       const future = metrics.filter((m: any) => m.future_status === 'Future').length
       const ready = metrics.filter((m: any) => m.ready_date && m.ready_date <= today).length
 
@@ -241,6 +243,23 @@ export const useDashboardData = () => {
     }
   }
 
+  const fetchMakeReadyStats = async () => {
+    if (!activeProperty.value) return
+    try {
+      const { count, error } = await supabase
+        .from('unit_flags')
+        .select('*', { count: 'exact', head: true })
+        .eq('property_code', activeProperty.value)
+        .eq('flag_type', 'makeready_overdue')
+        .is('resolved_at', null)
+
+      if (error) throw error
+      makeReadyStats.value = { count: count || 0 }
+    } catch (e) {
+      console.error('Failed to fetch makeready stats', e)
+    }
+  }
+
   const fetchWorkOrdersStats = async () => {
     if (!activeProperty.value) return
     isLoading.value = true
@@ -250,7 +269,6 @@ export const useDashboardData = () => {
         .select('id, created_at, status, is_active')
         .eq('property_code', activeProperty.value)
         .eq('is_active', true)
-        .neq('status', 'Completed')
 
       if (error) throw error
       
@@ -280,6 +298,7 @@ export const useDashboardData = () => {
     fetchWorkOrdersStats()
     fetchRenewalsStats()
     fetchInventoryStats()
+    fetchMakeReadyStats()
   })
 
   return {
@@ -292,6 +311,7 @@ export const useDashboardData = () => {
     workOrdersStats,
     renewalsStats,
     inventoryStats,
+    makeReadyStats,
     isLoading,
     fetchLatestRun,
     fetchAvailabilityStats,
@@ -300,7 +320,8 @@ export const useDashboardData = () => {
     fetchAlertsStats,
     fetchWorkOrdersStats,
     fetchRenewalsStats,
-    fetchInventoryStats
+    fetchInventoryStats,
+    fetchMakeReadyStats
   }
 }
 

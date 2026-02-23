@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
     for (const email of uniqueEmails) {
       try {
         await transporter.sendMail({
-          from: `"${config.public.mailersendSmtpName || 'EE Manager'}" <${config.public.mailersendUsername}>`,
+          from: `"${config.public.mailersendSmtpName || 'EE Manager'}" <${config.public.mailersendUsername || 'noreply@ee-manager.com'}>`,
           to: email,
           subject: `Daily Audit Report — ${date}`,
           html: htmlContent

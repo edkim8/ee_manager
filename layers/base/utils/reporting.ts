@@ -62,7 +62,7 @@ export interface OperationalSummary {
  * Generate a premium HTML report for a Solver run.
  * Optimized for email clients with inline CSS.
  */
-export function generateHighFidelityHtmlReport(run: any, events: SolverEvent[], operationalSummary?: OperationalSummary): string {
+export function generateHighFidelityHtmlReport(run: any, events: SolverEvent[], operationalSummary?: OperationalSummary, baseUrl: string = ''): string {
     const summaryData = run.summary as Record<string, PropertySummary>
     const knownCodes = new Set(PROPERTY_LIST.map(p => p.code))
     // Filter to known property codes only — excludes STALE_UPDATE and any staging artifacts
@@ -100,7 +100,7 @@ export function generateHighFidelityHtmlReport(run: any, events: SolverEvent[], 
             </div>
 
             <!-- Detailed Event Tables -->
-            ${renderAvailabilitiesSection(events.filter(e => e.event_type === 'price_change'))}
+            ${renderAvailabilitiesSection(events.filter(e => e.event_type === 'price_change'), baseUrl)}
             ${renderEventSection('✍️ New Leases Signed Today', events.filter(e => e.event_type === 'lease_signed'), renderLeaseSignedRow)}
             ${renderEventSection('🔄 Lease Renewals', events.filter(e => e.event_type === 'lease_renewal'), renderLeaseRenewalRow)}
             ${renderEventSection('💰 Price Changes', events.filter(e => e.event_type === 'price_change'), renderPriceChangeRow)}
@@ -115,54 +115,25 @@ export function generateHighFidelityHtmlReport(run: any, events: SolverEvent[], 
                     { label: 'Open Alerts', value: operationalSummary.alerts.active.toString() },
                     { label: 'New Today', value: operationalSummary.alerts.newToday.toString() },
                     { label: 'Closed Today', value: operationalSummary.alerts.closedToday.toString() }
-                ], 'View All Alerts', '/office/alerts') : ''}
+                ], 'View All Alerts', `${baseUrl}/office/alerts`) : ''}
 
                 ${operationalSummary ? renderSummaryBox('Work Orders', '🔧', [
                     { label: 'Open Orders', value: operationalSummary.workOrders.open.toString() },
                     { label: 'New Today', value: operationalSummary.workOrders.newToday > 0 ? operationalSummary.workOrders.newToday.toString() : 'N/A' },
                     { label: 'Completed Today', value: operationalSummary.workOrders.completedToday.toString() }
-                ], 'View All Work Orders', '/maintenance/work-orders') : ''}
+                ], 'View All Work Orders', `${baseUrl}/maintenance/work-orders`) : ''}
 
                 ${operationalSummary ? renderSummaryBox('MakeReady Status', '🏠', [
                     { label: 'Units in MakeReady', value: operationalSummary.makeReady.active.toString() },
                     { label: 'Overdue Units', value: operationalSummary.makeReady.overdue.toString() },
                     { label: 'Ready This Week', value: operationalSummary.makeReady.readyThisWeek > 0 ? operationalSummary.makeReady.readyThisWeek.toString() : 'N/A' }
-                ], 'View MakeReady Dashboard', '/office/makeready') : ''}
+                ], 'View MakeReady Dashboard', `${baseUrl}/office/makeready`) : ''}
 
                 ${operationalSummary ? renderSummaryBox('Delinquencies', '💵', [
                     { label: 'Total Delinquent', value: operationalSummary.delinquencies.count.toString() },
                     { label: 'Total Amount', value: '$' + operationalSummary.delinquencies.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
                     { label: 'Over 90 Days', value: operationalSummary.delinquencies.over90Days.toString() }
-                ], 'View Delinquency Report', '/office/delinquencies') : ''}
-            </div>
-
-            <!-- 3. Operational Summary -->
-            <div style="margin-top: 48px;">
-                <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 24px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Operational Summary</h2>
-
-                ${operationalSummary ? renderSummaryBox('Alerts', '🚨', [
-                    { label: 'Open Alerts', value: operationalSummary.alerts.active.toString() },
-                    { label: 'New Today', value: operationalSummary.alerts.newToday.toString() },
-                    { label: 'Closed Today', value: operationalSummary.alerts.closedToday.toString() }
-                ], 'View All Alerts', '/office/alerts') : ''}
-
-                ${operationalSummary ? renderSummaryBox('Work Orders', '🔧', [
-                    { label: 'Open Orders', value: operationalSummary.workOrders.open.toString() },
-                    { label: 'New Today', value: operationalSummary.workOrders.newToday > 0 ? operationalSummary.workOrders.newToday.toString() : 'N/A' },
-                    { label: 'Completed Today', value: operationalSummary.workOrders.completedToday.toString() }
-                ], 'View All Work Orders', '/maintenance/work-orders') : ''}
-
-                ${operationalSummary ? renderSummaryBox('MakeReady Status', '🏠', [
-                    { label: 'Units in MakeReady', value: operationalSummary.makeReady.active.toString() },
-                    { label: 'Overdue Units', value: operationalSummary.makeReady.overdue.toString() },
-                    { label: 'Ready This Week', value: operationalSummary.makeReady.readyThisWeek > 0 ? operationalSummary.makeReady.readyThisWeek.toString() : 'N/A' }
-                ], 'View MakeReady Dashboard', '/office/makeready') : ''}
-
-                ${operationalSummary ? renderSummaryBox('Delinquencies', '💵', [
-                    { label: 'Total Delinquent', value: operationalSummary.delinquencies.count.toString() },
-                    { label: 'Total Amount', value: '$' + operationalSummary.delinquencies.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
-                    { label: 'Over 90 Days', value: operationalSummary.delinquencies.over90Days.toString() }
-                ], 'View Delinquency Report', '/office/delinquencies') : ''}
+                ], 'View Delinquency Report', `${baseUrl}/office/delinquencies`) : ''}
             </div>
 
             <!-- 4. Technical Health -->
@@ -221,7 +192,7 @@ function renderStatCard(label: string, value: number) {
     `
 }
 
-function renderAvailabilitiesSection(priceChangeEvents: SolverEvent[]) {
+function renderAvailabilitiesSection(priceChangeEvents: SolverEvent[], baseUrl: string = '') {
     // Show availabilities summary based on price change events
     // This gives a snapshot of units that had pricing updates
 
@@ -238,7 +209,7 @@ function renderAvailabilitiesSection(priceChangeEvents: SolverEvent[]) {
                     : 'No pricing updates today. All availabilities remain at current market rates.'}
             </p>
             <div style="padding: 12px; background-color: white; border-radius: 6px; border: 1px solid #e5e7eb; text-align: center;">
-                <a href="/office/availabilities" style="color: #4f46e5; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 4px;">
+                <a href="${baseUrl}/office/availabilities" style="color: #4f46e5; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 4px;">
                     View Full Availabilities Dashboard →
                 </a>
                 <p style="margin: 8px 0 0 0; font-size: 12px; color: #9ca3af;">

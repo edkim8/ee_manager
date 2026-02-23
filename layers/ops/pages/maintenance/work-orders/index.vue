@@ -46,8 +46,10 @@ const { data, status, error, refresh } = await useAsyncData(
       if (ordersError) throw ordersError
 
       // Calculate summaries
-      const openOrders = orders?.filter(wo => wo.is_active && wo.status !== 'Completed') || []
-      const closedOrders = orders?.filter(wo => wo.status === 'Completed') || []
+      // Open = still on the Yardi report (is_active = true)
+      // Work Completed = status matches (is_active may be false if already synced off the report)
+      const openOrders = orders?.filter(wo => wo.is_active) || []
+      const closedOrders = orders?.filter(wo => wo.status === 'Work Completed') || []
 
       // Open summary
       const now = new Date()
@@ -121,20 +123,31 @@ const closedSummary = computed(() => data.value?.closedSummary || [])
 const searchQuery = ref('')
 const statusFilter = ref<string>('all')
 
+// Real Yardi statuses. "Open" is a synthetic filter meaning is_active = true.
+// "Work Completed" matches on status only (is_active may already be false).
 const statusOptions = [
-  { value: 'all', label: 'All Work Orders' },
-  { value: 'Open', label: 'Open' },
-  { value: 'In Progress', label: 'In Progress' },
-  { value: 'Completed', label: 'Completed' },
-  { value: 'Cancelled', label: 'Cancelled' }
+  { value: 'all',            label: 'All Work Orders' },
+  { value: 'open',           label: 'Open (Active)' },
+  { value: 'Call',           label: 'Call' },
+  { value: 'On Hold',        label: 'On Hold' },
+  { value: 'Parts Pending',  label: 'Parts Pending' },
+  { value: 'Scheduled',      label: 'Scheduled' },
+  { value: 'Web',            label: 'Web' },
+  { value: 'Work Completed', label: 'Work Completed' },
 ]
 
 const filteredWorkOrders = computed(() => {
   let filtered = workOrders.value
 
-  // Filter by status
-  if (statusFilter.value !== 'all') {
-    filtered = filtered.filter(wo => wo.status === statusFilter.value)
+  if (statusFilter.value === 'open') {
+    // Open = all WOs still on the Yardi report
+    filtered = filtered.filter(wo => wo.is_active)
+  } else if (statusFilter.value === 'Work Completed') {
+    // Work Completed matches on status regardless of is_active
+    filtered = filtered.filter(wo => wo.status === 'Work Completed')
+  } else if (statusFilter.value !== 'all') {
+    // Active-only specific statuses: Call, On Hold, Parts Pending, Scheduled, Web
+    filtered = filtered.filter(wo => wo.is_active && wo.status === statusFilter.value)
   }
 
   // Search filter
@@ -187,16 +200,13 @@ const enhancedWorkOrders = computed(() => {
 // ============================================================
 function getStatusColor(status: string): string {
   switch (status) {
-    case 'Completed':
-      return 'green'
-    case 'In Progress':
-      return 'blue'
-    case 'Open':
-      return 'orange'
-    case 'Cancelled':
-      return 'red'
-    default:
-      return 'gray'
+    case 'Work Completed': return 'success'
+    case 'Scheduled':      return 'primary'
+    case 'Parts Pending':  return 'warning'
+    case 'On Hold':        return 'neutral'
+    case 'Call':           return 'error'
+    case 'Web':            return 'info'
+    default:               return 'neutral'
   }
 }
 
@@ -435,16 +445,19 @@ const isLoading = computed(() => status.value === 'pending')
     >
       <div class="space-y-4 text-sm leading-relaxed">
         <section>
-          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Work Order Lifecycle</h3>
-          <p>
-            The system tracks work orders through four distinct states:
-          </p>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Work Order Statuses (Yardi)</h3>
           <ul class="list-disc pl-5 mt-2 space-y-1">
-            <li><strong class="text-orange-600 uppercase italic">Open:</strong> New ticket received. Awaiting assignment or initial review.</li>
-            <li><strong class="text-blue-600 uppercase italic">In Progress:</strong> Technician has been assigned and work has commenced.</li>
-            <li><strong class="text-green-600 uppercase italic">Completed:</strong> Maintenance task is finalized and the resident has been notified.</li>
-            <li><strong class="text-red-600 uppercase italic">Cancelled:</strong> Ticket invalidated (e.g., duplicated or resident resolved independently).</li>
+            <li><strong class="text-red-600">Call:</strong> New request received via phone call. Awaiting assignment.</li>
+            <li><strong class="text-blue-600">Web:</strong> Request submitted through the resident portal.</li>
+            <li><strong class="text-primary-600">Scheduled:</strong> Technician assigned and visit is scheduled.</li>
+            <li><strong class="text-amber-600">Parts Pending:</strong> Work started but waiting on parts or materials.</li>
+            <li><strong class="text-gray-500">On Hold:</strong> Work paused — resident unavailable, access issue, etc.</li>
+            <li><strong class="text-green-600">Work Completed:</strong> Technician marked complete in Yardi. Removed from active report on next sync.</li>
           </ul>
+        </section>
+        <section>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Active vs. Completed</h3>
+          <p><strong>Open (Active)</strong> = WO is still on the current Yardi 5p_WorkOrders report (<code>is_active = true</code>). When maintenance marks a WO done in Yardi, it drops off the report and <code>is_active</code> flips to <code>false</code> on the next Solver run.</p>
         </section>
 
         <section>

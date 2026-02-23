@@ -1,4 +1,5 @@
 import type { Database } from '~/types/supabase'
+import { solveRentCombination } from './solveRentCombination'
 
 export interface PricingBreakdown {
   unitId: string
@@ -120,119 +121,12 @@ export const usePricingEngine = () => {
         return { success: false, gap: targetGap, message: 'All available temporary amenities are already applied' }
     }
 
-    // 4. Optimal search: Balance between reducing gap (HIGH priority) and minimal amenities
-    // Strategy:
-    // 1. NEVER suggest 0 amenities (always try to reduce the gap!)
-    // 2. High priority: Reduce the gap as much as possible
-    // 3. Secondary: Among similar gaps (within $5-10), prefer fewer amenities
-    // 4. Sort by absolute value to try impactful changes first
-
-    // Sort amenities by absolute value descending - try impactful changes first
-    const sortedTemps = [...eligibleTemps].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
-
-    let bestCombination: any[] = []
-    let bestDelta = Math.abs(targetGap) // Start with full gap (no amenities)
-    let bestLength = 0
-
-    // Helper: Compare two solutions with correct priority
-    const isBetterSolution = (newDelta: number, newLength: number): boolean => {
-        // Rule 1: Always prefer having at least one amenity over none (reduce the gap!)
-        if (bestLength === 0 && newLength > 0) return true
-        if (bestLength > 0 && newLength === 0) return false
-
-        // Rule 2: Exact match (delta = 0) is always best
-        if (newDelta === 0 && bestDelta !== 0) return true
-        if (newDelta !== 0 && bestDelta === 0) return false
-
-        // Rule 3: If gaps are similar (within $5), prefer fewer amenities
-        const gapDiff = Math.abs(newDelta - bestDelta)
-        if (gapDiff <= 5) {
-            return newLength < bestLength
-        }
-
-        // Rule 4: Otherwise, prioritize smaller gap (reduce it more!)
-        return newDelta < bestDelta
-    }
-
-    // Step 1: Check all single amenities (most convenient!)
-    for (const amenity of sortedTemps) {
-        const sum = amenity.amount
-        const delta = Math.abs(targetGap - sum)
-
-        if (isBetterSolution(delta, 1)) {
-            bestDelta = delta
-            bestCombination = [amenity]
-            bestLength = 1
-        }
-
-        // Perfect single-amenity match! Stop immediately
-        if (delta === 0) {
-            return {
-                success: true,
-                solution: bestCombination,
-                remainingGap: 0,
-                marketRent: breakdown.marketRent,
-                targetOfferedRent
-            }
-        }
-    }
-
-
-    // Step 2: Try combinations to see if we can get closer
-    // Only search if: (a) no exact single match, AND (b) gap is still significant (>$10)
-    const shouldSearchCombinations = bestDelta > 0 && bestDelta > 10
-
-    if (shouldSearchCombinations) {
-
-        const findCombination = (index: number, currentSum: number, currentCombination: any[]) => {
-            const delta = Math.abs(targetGap - currentSum)
-            const currentLength = currentCombination.length
-
-            // Check if this combination is better
-            if (isBetterSolution(delta, currentLength)) {
-                bestDelta = delta
-                bestCombination = [...currentCombination]
-                bestLength = currentLength
-            }
-
-            // Early termination: Found exact match
-            if (delta === 0) {
-                return
-            }
-
-            // Pruning: Don't go beyond 4 amenities (too many changes!)
-            if (currentLength >= 4) return
-
-            // Pruning: If we're not making good progress, stop
-            // Current combination should reduce gap by at least 25% compared to no amenities
-            const noAmenitiesGap = Math.abs(targetGap)
-            const gapReduction = (noAmenitiesGap - delta) / noAmenitiesGap
-            if (gapReduction < 0.25 && currentLength >= 2) return
-
-            // Try adding more amenities
-            for (let i = index; i < sortedTemps.length; i++) {
-                findCombination(
-                    i + 1,
-                    currentSum + sortedTemps[i].amount,
-                    [...currentCombination, sortedTemps[i]]
-                )
-
-                // Early termination if we found perfect match
-                if (bestDelta === 0) return
-            }
-        }
-
-        findCombination(0, 0, [])
-    }
-
-
-    const finalSum = bestCombination.reduce((acc, a) => acc + a.amount, 0)
-    const finalGap = targetGap - finalSum
-
+    // 4. Optimal search: delegate to pure solver
+    const { combination, remainingGap: finalGap } = solveRentCombination(targetGap, eligibleTemps as any)
 
     return {
         success: Math.abs(finalGap) < 0.01,
-        solution: bestCombination,
+        solution: combination,
         remainingGap: finalGap,
         marketRent: breakdown.marketRent,
         targetOfferedRent

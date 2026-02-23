@@ -35,6 +35,7 @@
 | F-031 | Email Report Enhancements | Admin | **COMPLETED** | Claude |
 | F-032 | Control Center Live Metrics | Base | **COMPLETED** | Claude |
 | F-033 | Audit Archiving System | Admin | **COMPLETED** | Claude |
+| F-034 | Unit Testing Infrastructure | Base | **COMPLETED** | Claude |
 
 
 > **F-010 Note:** Stable Core Layer - Open for Extension. See `layers/table/AI_USAGE_GUIDE.md`.
@@ -92,6 +93,7 @@
 - [x] Email Report Enhancements — High-fidelity summaries (F-031)
 - [x] Control Center Live Metrics (F-032)
 - [x] Audit Archiving System (F-033)
+- [x] Unit Testing Infrastructure expansion (F-034)
 - [ ] **Next Step**: Content refinement using Excel system (column labels, widths, priorities)
 
 ## Recent Audit & Improvements (2026-02-09)
