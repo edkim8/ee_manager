@@ -4,6 +4,8 @@ import type { Database } from '~/types/supabase'
 import type { ResidentsStatusRow } from '~/layers/parsing/composables/parsers/useParseResidentsStatus'
 import { resolveUnitId } from '../../base/utils/lookup'
 import { getTodayPST, getNowPST, daysBetween, addDays } from '../../base/utils/date-helpers'
+import { buildTenancyPriorityMap, classifyStaleAvailabilities } from '../utils/availabilityUtils'
+import { mapTenancyStatus as mapTenancyStatusUtil, parseDate as parseDateUtil, deriveAvailabilityStatus, classifyMissingTenancies, isRenewal as isRenewalUtil } from '../utils/solverUtils'
 import { useSolverTracking } from './useSolverTracking'
 import { useSolverReportGenerator } from './useSolverReportGenerator'
 import { useAlertsSync } from '../../parsing/composables/useAlertsSync'
@@ -18,18 +20,8 @@ export const useSolverEngine = () => {
     
     // --- Helper Functions ---
 
-    const mapTenancyStatus = (rowStatus: string | null): Database['public']['Enums']['tenancy_status'] => {
-        const s = (rowStatus || '').toLowerCase()
-        if (s.includes('current')) return 'Current'
-        if (s.includes('past')) return 'Past'
-        if (s.includes('future')) return 'Future'
-        if (s.includes('notice')) return 'Notice'
-        if (s.includes('eviction')) return 'Eviction'
-        if (s.includes('applicant')) return 'Applicant'
-        if (s.includes('denied')) return 'Denied'
-        if (s.includes('cancel')) return 'Canceled'
-        return 'Current' // Fallback
-    }
+    const mapTenancyStatus = (rowStatus: string | null): Database['public']['Enums']['tenancy_status'] =>
+        mapTenancyStatusUtil(rowStatus) as Database['public']['Enums']['tenancy_status']
     
     const parseCurrency = (val: string | number | null | undefined): number | null => {
         if (!val && val !== 0) return null
@@ -40,11 +32,7 @@ export const useSolverEngine = () => {
         return isNaN(num) ? null : num
     }
 
-    const parseDate = (val: string | null): string | null => {
-        if (!val) return null
-        // Assuming parser returns ISO-like or 'YYYY-MM-DD'
-        return val 
-    }
+    const parseDate = parseDateUtil
 
     /**
      * Determines if a new lease represents a renewal (vs. an update to existing lease).
@@ -178,49 +166,7 @@ export const useSolverEngine = () => {
         }
     }
 
-    const isRenewal = (
-        newStartDate: string | null, 
-        newEndDate: string | null,
-        existingStartDate: string | null,
-        existingEndDate: string | null
-    ): boolean => {
-        if (!newStartDate || !newEndDate || !existingStartDate || !existingEndDate) return false
-        
-        const newStart = new Date(newStartDate)
-        const newEnd = new Date(newEndDate)
-        const existingStart = new Date(existingStartDate)
-        const existingEnd = new Date(existingEndDate)
-        
-        // Calculate lease term lengths in days
-        const newTermDays = Math.floor((newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60 * 24))
-        const existingTermDays = Math.floor((existingEnd.getTime() - existingStart.getTime()) / (1000 * 60 * 60 * 24))
-        
-        // Calculate gap between existing end and new start (in days)
-        const gapDays = Math.floor((newStart.getTime() - existingEnd.getTime()) / (1000 * 60 * 60 * 24))
-        
-        // CRITERIA 1: Clear gap between leases (30+ days)
-        // This indicates a new lease term starting after the old one ends
-        if (gapDays >= 30) {
-            return true
-        }
-        
-        // CRITERIA 2: Significant term length change (60+ days difference)
-        // This catches renewals where dates might overlap slightly but term is clearly different
-        // Example: 12-month lease renewed as 6-month lease
-        const termDifference = Math.abs(newTermDays - existingTermDays)
-        if (termDifference >= 60) {
-            return true
-        }
-        
-        // CRITERIA 3: New lease starts on/after existing end with minimal overlap (< 7 days)
-        // Allows for small timing overlaps but still indicates a renewal
-        if (gapDays >= -7 && newTermDays >= 90) { // 90 days = ~3 months minimum
-            return true
-        }
-        
-        // Otherwise, treat as an UPDATE to the existing lease
-        return false
-    }
+    const isRenewal = isRenewalUtil
 
     // --- Main Process ---
 
@@ -646,8 +592,94 @@ export const useSolverEngine = () => {
                         }
                     }
 
+                    // ==========================================
+                    // MISSING TENANCY SWEEP (Option A)
+                    // When Yardi drops a tenancy from the report (Canceled, Denied, or moved
+                    // to Past), it simply vanishes — no status row appears. We detect missing
+                    // tenancies and transition them to the appropriate terminal status.
+                    // Must run BEFORE the Availabilities phase so the tenancy map is up-to-date.
+                    // ==========================================
+                    statusMessage.value = `${pCode}: Checking for silently-dropped tenancies...`
+
+                    // Collect all tenancy_ids seen in today's report (Primary rows own status)
+                    const reportedTenancyIds = new Set(
+                        rows.filter((r: any) => r.tenancy_id).map((r: any) => r.tenancy_id)
+                    )
+
+                    // Fetch all currently active tenancies for this property from the DB
+                    const { data: activeTenancies } = await supabase
+                        .from('tenancies')
+                        .select('id, unit_id, status')
+                        .eq('property_code', pCode)
+                        .in('status', ['Current', 'Notice', 'Future', 'Applicant'])
+
+                    if (activeTenancies && activeTenancies.length > 0) {
+                        const { missing, toPastIds, toCanceledIds, availabilityResetUnitIds } =
+                            classifyMissingTenancies(reportedTenancyIds, activeTenancies as any)
+
+                        if (missing.length > 0) {
+                            console.log(`[Solver] ${pCode}: ${missing.length} silently-dropped tenancies detected`)
+
+                            // Transition Current/Notice → Past
+                            if (toPastIds.length > 0) {
+                                for (let i = 0; i < toPastIds.length; i += 1000) {
+                                    const chunk = toPastIds.slice(i, i + 1000)
+                                    const { error } = await supabase
+                                        .from('tenancies')
+                                        .update({ status: 'Past' })
+                                        .in('id', chunk)
+                                    if (error) console.error(`[Solver] ${pCode}: Past transition error:`, error)
+                                }
+                                console.log(`[Solver] ${pCode}: Transitioned ${toPastIds.length} tenancies → Past`)
+                            }
+
+                            // Transition Applicant/Future → Canceled
+                            if (toCanceledIds.length > 0) {
+                                for (let i = 0; i < toCanceledIds.length; i += 1000) {
+                                    const chunk = toCanceledIds.slice(i, i + 1000)
+                                    const { error } = await supabase
+                                        .from('tenancies')
+                                        .update({ status: 'Canceled' })
+                                        .in('id', chunk)
+                                    if (error) console.error(`[Solver] ${pCode}: Canceled transition error:`, error)
+                                }
+                                console.log(`[Solver] ${pCode}: Transitioned ${toCanceledIds.length} tenancies → Canceled`)
+                            }
+
+                            // Reset linked availability records back to Available
+                            // (clears leasing_agent, move_in_date, future_tenancy_id, screening_result)
+                            if (availabilityResetUnitIds.length > 0) {
+                                const { error: availResetError } = await supabase
+                                    .from('availabilities')
+                                    .update({
+                                        status: 'Available',
+                                        future_tenancy_id: null,
+                                        leasing_agent: null,
+                                        move_in_date: null,
+                                        screening_result: null,
+                                        is_mi_inspection: null
+                                    })
+                                    .in('unit_id', availabilityResetUnitIds)
+                                    .eq('is_active', true)
+                                if (availResetError) {
+                                    console.error(`[Solver] ${pCode}: Availability reset error:`, availResetError)
+                                } else {
+                                    console.log(`[Solver] ${pCode}: Reset ${availabilityResetUnitIds.length} availability records → Available`)
+                                }
+                            }
+
+                            // Track for reporting
+                            const summary = [
+                                toPastIds.length > 0 ? `${toPastIds.length}→Past` : null,
+                                toCanceledIds.length > 0 ? `${toCanceledIds.length}→Canceled` : null,
+                            ].filter(Boolean).join(', ')
+                            tracker.trackStatusAutoFix(pCode, `${missing.length} silently-dropped tenancies`, summary)
+                        }
+                    }
+                    // ==========================================
+
                     processedCount += rows.length
-                    
+
                 } catch (err: any) {
                     console.error(`[Solver] Failed processing property ${pCode}:`, err)
                     statusMessage.value = `Error processing ${pCode}: ${err.message}`
@@ -1041,36 +1073,8 @@ export const useSolverEngine = () => {
 
                         // Derive status from tenancy
                         const tenancyData = tenancyMap.get(unitId)
-                        const tenancyStatus = tenancyData?.status
-                        let availabilityStatus = 'Available' // Default
-                        let isActive = true // Default
-                        let shouldClearApplicantFields = false
-                        let futureTenancyId: string | null = null
-
-                        if (tenancyStatus) {
-                            if (tenancyStatus === 'Current') {
-                                availabilityStatus = 'Occupied'
-                                isActive = false // End this availability cycle
-                            }
-                            else if (tenancyStatus === 'Future') {
-                                availabilityStatus = 'Leased'
-                                futureTenancyId = tenancyData.id // Link to Future tenancy
-                            }
-                            else if (tenancyStatus === 'Applicant') {
-                                availabilityStatus = 'Applied'
-                                futureTenancyId = tenancyData.id // Link to Applicant tenancy
-                            }
-                            else if (tenancyStatus === 'Notice' || tenancyStatus === 'Eviction') {
-                                availabilityStatus = 'Available'
-                            }
-                            else if (tenancyStatus === 'Denied' || tenancyStatus === 'Canceled') {
-                                availabilityStatus = 'Available'
-                                shouldClearApplicantFields = true // Clear applicant data
-                            }
-                            else {
-                                availabilityStatus = 'Available' // Past, etc.
-                            }
-                        }
+                        const { status: availabilityStatus, isActive, shouldClearApplicantFields, futureTenancyId } =
+                            deriveAvailabilityStatus(tenancyData as any)
 
                         const availabilityRecord: any = {
                             unit_id: unitId,
@@ -1193,52 +1197,58 @@ export const useSolverEngine = () => {
             }
 
             // --- PHASE 2C-2: Update Stale Availability Records ---
+            // Sweep all is_active=true availability records and reconcile against current tenancy status.
+            // Three cases:
+            //   Available/Notice + Future tenancy  → update to Leased  (is_active stays true)
+            //   Available/Notice + Applicant tenancy → update to Applied (is_active stays true)
+            //   Any status       + Current tenancy  → deactivate (is_active=false, status=Occupied)
+            //     This happens when a unit was leased, the tenant moved in, and the unit left 5p_Availables
+            //     without going through the normal Availables sync (e.g. unit 1032 moving from Available→Current)
             statusMessage.value = 'Updating stale availability records...'
 
-            // Find availability records that are stale (status still 'Available' but unit has Future/Applicant tenancy)
-            const { data: staleAvailabilities } = await supabase
+            // Fetch ALL is_active=true availability records across all statuses
+            const { data: allActiveAvails } = await supabase
                 .from('availabilities')
-                .select('id, unit_id, property_code')
+                .select('id, unit_id, property_code, status')
                 .eq('is_active', true)
-                .in('status', ['Available', 'Notice'])
 
-            if (staleAvailabilities && staleAvailabilities.length > 0) {
-                const staleUnitIds = staleAvailabilities.map((a: any) => a.unit_id)
+            if (allActiveAvails && allActiveAvails.length > 0) {
+                const allActiveUnitIds = [...new Set(allActiveAvails.map((a: any) => a.unit_id))]
 
-                // Find which of these units have Future/Applicant tenancies
-                const { data: activeTenancies } = await supabase
+                // Fetch all relevant tenancies for these units in one query
+                const { data: allTenancies } = await supabase
                     .from('tenancies')
                     .select('id, unit_id, status')
-                    .in('unit_id', staleUnitIds)
-                    .in('status', ['Future', 'Applicant'])
+                    .in('unit_id', allActiveUnitIds)
+                    .in('status', ['Current', 'Future', 'Applicant'])
 
-                if (activeTenancies && activeTenancies.length > 0) {
-                    const tenancyMap = new Map(activeTenancies.map((t: any) => [t.unit_id, t]))
-                    const availsToUpdate: any[] = []
+                if (allTenancies && allTenancies.length > 0) {
+                    const tenancyMap = buildTenancyPriorityMap(allTenancies)
+                    const { toDeactivate, toUpdateStatus } = classifyStaleAvailabilities(allActiveAvails, tenancyMap)
 
-                    for (const avail of staleAvailabilities) {
-                        const tenancy: any = tenancyMap.get(avail.unit_id)
-                        if (tenancy) {
-                            availsToUpdate.push({
-                                id: avail.id,
-                                unit_id: avail.unit_id,
-                                property_code: avail.property_code,
-                                status: tenancy.status === 'Future' ? 'Leased' : 'Applied',
-                                future_tenancy_id: tenancy.id
-                            })
+                    // Deactivate records where unit now has a Current (occupied) tenancy
+                    if (toDeactivate.length > 0) {
+                        for (let i = 0; i < toDeactivate.length; i += 1000) {
+                            const chunk = toDeactivate.slice(i, i + 1000)
+                            const { error } = await supabase
+                                .from('availabilities')
+                                .update({ is_active: false, status: 'Occupied' })
+                                .in('id', chunk)
+                            if (error) console.error(`[Solver] Stale Deactivation Error:`, error)
                         }
+                        console.log(`[Solver] Deactivated ${toDeactivate.length} stale availability records (Current tenancy)`)
+                        tracker.trackAvailabilityChanges('STALE_DEACTIVATE', 0, toDeactivate.length)
                     }
 
-                    if (availsToUpdate.length > 0) {
-                        for (let i = 0; i < availsToUpdate.length; i += 1000) {
-                            const chunk = availsToUpdate.slice(i, i + 1000)
+                    // Update status for Future/Applicant tenancy changes
+                    if (toUpdateStatus.length > 0) {
+                        for (let i = 0; i < toUpdateStatus.length; i += 1000) {
+                            const chunk = toUpdateStatus.slice(i, i + 1000)
                             const { error } = await supabase.from('availabilities').upsert(chunk)
-                            if (error) {
-                                console.error(`[Solver] Stale Availability Update Error:`, error)
-                            }
+                            if (error) console.error(`[Solver] Stale Status Update Error:`, error)
                         }
-                        console.log(`[Solver] Updated ${availsToUpdate.length} stale availability records`)
-                        tracker.trackAvailabilityChanges('STALE_UPDATE', 0, availsToUpdate.length)
+                        console.log(`[Solver] Updated ${toUpdateStatus.length} stale availability records (Future/Applicant)`)
+                        tracker.trackAvailabilityChanges('STALE_UPDATE', 0, toUpdateStatus.length)
                     }
                 }
             }
@@ -1567,7 +1577,25 @@ export const useSolverEngine = () => {
                     const pCode = report.property_code
                     const rows = report.raw_data as any[]
 
-                    if (!rows || rows.length === 0) continue
+                    if (!rows || rows.length === 0) {
+                        // Empty report — all units finished. Resolve all active flags for this property.
+                        const { data: allActive } = await supabase
+                            .from('unit_flags')
+                            .select('id')
+                            .eq('flag_type', 'makeready_overdue')
+                            .eq('property_code', pCode)
+                            .is('resolved_at', null)
+                        if (allActive && allActive.length > 0) {
+                            const { data: resolved } = await supabase
+                                .from('unit_flags')
+                                .update({ resolved_at: getNowPST() })
+                                .in('id', allActive.map((f: any) => f.id))
+                                .select('id')
+                            totalFlagsResolved += resolved?.length || 0
+                            console.log(`[Solver] Resolved all ${resolved?.length || 0} makeready flags for ${pCode} (empty report)`)
+                        }
+                        continue
+                    }
 
                     console.log(`[Solver] Processing MakeReady ${pCode} (${rows.length} rows)`)
 
@@ -1671,29 +1699,39 @@ export const useSolverEngine = () => {
                     
                     
                     // Step 4: Resolve flags for units no longer in MakeReady report
-                    // TODO: Fix this - .not('unit_id', 'in', largeArray) causes 400 errors
-                    // Need to implement a different approach for flag resolution
-                    /*
-                    const currentMakeReadyUnitIds = rows
-                        .map((r: any) => unitMap.get(r.unit_name))
-                        .filter(Boolean)
-                    
-                    if (currentMakeReadyUnitIds.length > 0) {
-                        const { data: resolvedFlags } = await supabase
-                            .from('unit_flags')
-                            .update({ resolved_at: getNowPST() })
-                            .eq('flag_type', 'makeready_overdue')
-                            .eq('property_code', pCode)
-                            .not('unit_id', 'in', currentMakeReadyUnitIds)
-                            .is('resolved_at', null)
-                            .select('id')
-                        
-                        if (resolvedFlags) {
-                            totalFlagsResolved += resolvedFlags.length
-                            console.log(`[Solver] Resolved ${resolvedFlags.length} flags for ${pCode}`)
+                    // Strategy: fetch all active flags, diff in JS, resolve by specific ID list.
+                    // (.not('unit_id','in',[...]) causes 400 errors on PostgREST — avoided here.)
+                    const currentMakeReadyUnitIds = new Set(
+                        rows.map((r: any) => unitMap.get(r.unit_name)).filter(Boolean)
+                    )
+                    const { data: activeFlags } = await supabase
+                        .from('unit_flags')
+                        .select('id, unit_id')
+                        .eq('flag_type', 'makeready_overdue')
+                        .eq('property_code', pCode)
+                        .is('resolved_at', null)
+
+                    if (activeFlags && activeFlags.length > 0) {
+                        const flagIdsToResolve = activeFlags
+                            .filter((f: any) => !currentMakeReadyUnitIds.has(f.unit_id))
+                            .map((f: any) => f.id)
+
+                        if (flagIdsToResolve.length > 0) {
+                            const { data: resolvedFlags, error: resolveError } = await supabase
+                                .from('unit_flags')
+                                .update({ resolved_at: getNowPST() })
+                                .in('id', flagIdsToResolve)
+                                .select('id')
+                            if (resolveError) {
+                                console.error(`[Solver] Flag Resolution Error (MakeReady) ${pCode}:`, resolveError)
+                            } else {
+                                totalFlagsResolved += resolvedFlags?.length || 0
+                                console.log(`[Solver] Resolved ${resolvedFlags?.length || 0} makeready flags for ${pCode}`)
+                            }
+                        } else {
+                            console.log(`[Solver] No makeready flags to resolve for ${pCode}`)
                         }
                     }
-                    */
                 }
                 
                 statusMessage.value = `MakeReady Synced: ${totalFlagsCreated} flags created, ${totalFlagsResolved} resolved.`

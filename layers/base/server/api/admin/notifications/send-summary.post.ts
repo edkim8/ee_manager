@@ -177,7 +177,8 @@ export default defineEventHandler(async (event) => {
         // We keep the main summary but the generator only iterates over properties_processed
       }
 
-      const htmlContent = generateHighFidelityHtmlReport(scopedRun, recipientEvents, operationalSummary)
+      const baseUrl = getRequestURL(event).origin
+      const htmlContent = generateHighFidelityHtmlReport(scopedRun, recipientEvents, operationalSummary, baseUrl)
 
       try {
         await transporter.sendMail({

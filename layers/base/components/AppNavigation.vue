@@ -269,6 +269,11 @@ const navigationItems = computed(() => {
         to: '/maintenance/work-orders',
       },
       {
+        label: 'Make Ready',
+        icon: 'i-heroicons-home-modern',
+        to: '/office/make-ready',
+      },
+      {
         label: 'Inventory',
         icon: 'i-heroicons-archive-box',
         to: '/office/inventory',

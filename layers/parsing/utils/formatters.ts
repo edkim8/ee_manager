@@ -105,8 +105,19 @@ export function formatDateForDB(value: any): string | null {
     }
   }
 
+  // If it looks like an ISO timestamp (Date object serialized to JSON), extract UTC date
+  // e.g. "2026-01-14T00:00:00.000Z" → "2026-01-14"
+  if (str.match(/^\d{4}-\d{2}-\d{2}T/)) {
+    const d = new Date(str)
+    if (!isNaN(d.getTime())) {
+      const year = d.getUTCFullYear()
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(d.getUTCDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+  }
+
   // Fallback: Try date-fns parsing (for complex formats)
-  // Use UTC date to avoid timezone issues
   const formats = [
     'MM/dd/yyyy',   // US: 01/15/2024
     'M/d/yyyy',     // US short: 1/5/2024
@@ -118,13 +129,13 @@ export function formatDateForDB(value: any): string | null {
 
   for (const fmt of formats) {
     try {
-      // Parse with a fixed reference date in UTC
       const refDate = new Date(Date.UTC(2000, 0, 1))
       const parsed = parse(str, fmt, refDate)
       if (isValid(parsed)) {
-        const year = parsed.getFullYear()
-        const month = String(parsed.getMonth() + 1).padStart(2, '0')
-        const day = String(parsed.getDate()).padStart(2, '0')
+        // Use UTC methods to avoid PST/local-timezone off-by-one day errors
+        const year = parsed.getUTCFullYear()
+        const month = String(parsed.getUTCMonth() + 1).padStart(2, '0')
+        const day = String(parsed.getUTCDate()).padStart(2, '0')
         return `${year}-${month}-${day}`
       }
     } catch {
