@@ -55,32 +55,25 @@ const { data, status, error, refresh } = await useAsyncData(
       const now = new Date()
       const threeDaysAgo = new Date(now.getTime() - (3 * 24 * 60 * 60 * 1000))
       const over3Days = openOrders.filter(wo => new Date(wo.created_at) < threeDaysAgo).length
+      const onHoldParts = openOrders.filter(wo => wo.status === 'On Hold' || wo.status === 'Parts Pending').length
 
       const openSummary = {
         total_count: openOrders.length,
-        over_3_days: over3Days
+        over_3_days: over3Days,
+        on_hold_parts: onHoldParts
       }
 
-      // By category
-      const categoryMap = new Map<string, number>()
-      orders?.forEach(wo => {
-        const category = wo.category || 'Uncategorized'
-        categoryMap.set(category, (categoryMap.get(category) || 0) + 1)
-      })
-      const byCategory = Array.from(categoryMap.entries()).map(([category, count]) => ({
-        category,
-        count
-      }))
-
-      // Closed summary (last 3 months)
-      const closedByMonth = new Map<string, { count: number, totalDuration: number }>()
+      // Closed summary (last 6 months, sorted newest first)
+      const closedByMonth = new Map<string, { count: number, totalDuration: number, sortKey: string }>()
       closedOrders.forEach(wo => {
         if (wo.completion_date && wo.call_date) {
-          const month = new Date(wo.completion_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-          const duration = Math.ceil((new Date(wo.completion_date).getTime() - new Date(wo.call_date).getTime()) / (1000 * 60 * 60 * 24))
+          const completionDate = new Date(wo.completion_date)
+          const month = completionDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+          const sortKey = `${completionDate.getFullYear()}-${String(completionDate.getMonth() + 1).padStart(2, '0')}`
+          const duration = Math.ceil((completionDate.getTime() - new Date(wo.call_date).getTime()) / (1000 * 60 * 60 * 24))
 
           if (!closedByMonth.has(month)) {
-            closedByMonth.set(month, { count: 0, totalDuration: 0 })
+            closedByMonth.set(month, { count: 0, totalDuration: 0, sortKey })
           }
           const stats = closedByMonth.get(month)!
           stats.count++
@@ -92,14 +85,16 @@ const { data, status, error, refresh } = await useAsyncData(
         .map(([month, stats]) => ({
           month,
           total_orders: stats.count,
-          average_close_duration: Math.round(stats.totalDuration / stats.count)
+          average_close_duration: Math.round(stats.totalDuration / stats.count),
+          sortKey: stats.sortKey
         }))
-        .slice(0, 3)
+        .sort((a, b) => b.sortKey.localeCompare(a.sortKey))
+        .slice(0, 6)
+        .map(({ sortKey: _sk, ...rest }) => rest)
 
       return {
         workOrders: orders || [],
         openSummary,
-        byCategory,
         closedSummary
       }
     } catch (err) {
@@ -114,14 +109,45 @@ const { data, status, error, refresh } = await useAsyncData(
 
 const workOrders = computed(() => data.value?.workOrders || [])
 const openSummary = computed(() => data.value?.openSummary)
-const byCategory = computed(() => data.value?.byCategory || [])
 const closedSummary = computed(() => data.value?.closedSummary || [])
+
+// ============================================================
+// BY CATEGORY — client-side computed with time window filter
+// ============================================================
+const categoryTimeFilter = ref<string>('30')
+
+const categoryTimeOptions = [
+  { value: '30',  label: 'Last 30 Days' },
+  { value: '90',  label: 'Last 90 Days' },
+  { value: 'all', label: 'All Time' },
+]
+
+const filteredByCategory = computed(() => {
+  let source = workOrders.value
+
+  if (categoryTimeFilter.value !== 'all') {
+    const days = parseInt(categoryTimeFilter.value)
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - days)
+    source = source.filter(wo => new Date(wo.created_at) >= cutoff)
+  }
+
+  const categoryMap = new Map<string, number>()
+  source.forEach(wo => {
+    const category = wo.category || 'Uncategorized'
+    categoryMap.set(category, (categoryMap.get(category) || 0) + 1)
+  })
+
+  return Array.from(categoryMap.entries())
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count)
+})
 
 // ============================================================
 // FILTERING
 // ============================================================
 const searchQuery = ref('')
-const statusFilter = ref<string>('all')
+const statusFilter = ref<string>('open')
 
 // Real Yardi statuses. "Open" is a synthetic filter meaning is_active = true.
 // "Work Completed" matches on status only (is_active may already be false).
@@ -260,24 +286,39 @@ const isLoading = computed(() => status.value === 'pending')
               {{ openSummary?.over_3_days || 0 }}
             </span>
           </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-500 dark:text-gray-400">On Hold / Parts Pending</span>
+            <span class="text-lg font-semibold text-amber-600 dark:text-amber-400">
+              {{ openSummary?.on_hold_parts || 0 }}
+            </span>
+          </div>
         </div>
       </UCard>
 
       <!-- Work Orders by Category -->
       <UCard>
         <template #header>
-          <h3 class="font-bold">By Category</h3>
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="font-bold">By Category</h3>
+            <USelectMenu
+              v-model="categoryTimeFilter"
+              :items="categoryTimeOptions"
+              value-key="value"
+              size="xs"
+              class="w-32"
+            />
+          </div>
         </template>
-        <div v-if="byCategory.length > 0" class="grid grid-cols-2 gap-2 text-sm">
-          <div v-for="item in byCategory" :key="item.category" class="flex items-center justify-between">
-            <span class="text-gray-600 dark:text-gray-400 truncate">{{ item.category }}</span>
+        <div v-if="filteredByCategory.length > 0" class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+          <div v-for="item in filteredByCategory" :key="item.category" class="flex items-center justify-between gap-1">
+            <span class="text-gray-600 dark:text-gray-400 truncate text-xs">{{ item.category }}</span>
             <UBadge :color="getCategoryColor(item.category)" variant="soft" size="sm">
               {{ item.count }}
             </UBadge>
           </div>
         </div>
         <div v-else class="text-sm text-gray-400 dark:text-gray-600 italic">
-          No categories yet
+          No categories in this period
         </div>
       </UCard>
 
@@ -286,15 +327,21 @@ const isLoading = computed(() => status.value === 'pending')
         <template #header>
           <h3 class="font-bold">Recently Closed</h3>
         </template>
-        <div v-if="closedSummary.length > 0" class="space-y-2 text-sm">
-          <div v-for="item in closedSummary" :key="item.month" class="flex items-center justify-between">
-            <span class="text-gray-600 dark:text-gray-400">{{ item.month }}</span>
-            <div class="text-right">
-              <div class="font-semibold">{{ item.total_orders }}</div>
-              <div class="text-xs text-gray-400 dark:text-gray-600">
-                Avg: {{ item.average_close_duration }}d
-              </div>
-            </div>
+        <div v-if="closedSummary.length > 0">
+          <!-- Column headers -->
+          <div class="grid grid-cols-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600 pb-1 mb-1 border-b border-gray-100 dark:border-gray-800">
+            <span>Month</span>
+            <span class="text-center">Closed</span>
+            <span class="text-right">Avg Close</span>
+          </div>
+          <div
+            v-for="item in closedSummary"
+            :key="item.month"
+            class="grid grid-cols-3 items-center py-1.5 text-sm border-b border-gray-50 dark:border-gray-800/50 last:border-0"
+          >
+            <span class="text-gray-600 dark:text-gray-400 text-xs">{{ item.month }}</span>
+            <span class="text-center font-semibold text-gray-800 dark:text-gray-200">{{ item.total_orders }}</span>
+            <span class="text-right font-semibold text-primary-600 dark:text-primary-400">{{ item.average_close_duration }}d</span>
           </div>
         </div>
         <div v-else class="text-sm text-gray-400 dark:text-gray-600 italic">

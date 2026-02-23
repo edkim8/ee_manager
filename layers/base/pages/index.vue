@@ -147,6 +147,9 @@ const widgetSettings  = ref<WidgetSettings>({ order: [], visibility: {} })
 const widgetGrid      = ref<HTMLElement | null>(null)
 const isConfigModalOpen = ref(false)
 
+// Shared with DashboardHero via composable
+const { showWidgets } = useDashboardWidgets()
+
 function buildRecommendedSettings(): WidgetSettings {
   const recommended = recommendedIds.value
   return {
@@ -200,6 +203,7 @@ const anyVisible = computed(() =>
 )
 
 onMounted(() => {
+  showWidgets.value = false  // always start on Monitors when landing on dashboard
   loadSettings()
   fetchLatestRun()
 
@@ -227,6 +231,7 @@ watch(() => userContext.value?.id, (newId, oldId) => {
     loadSettings()
   }
 })
+
 </script>
 
 <template>
@@ -236,12 +241,12 @@ watch(() => userContext.value?.id, (newId, oldId) => {
       <!-- Hero Greeting -->
       <DashboardHero />
 
-      <!-- Section Title & Actions -->
-      <div class="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-800">
+      <!-- Monitors Section (default view) -->
+      <div v-show="!showWidgets" class="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-800">
         <div>
           <h2 class="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
             <UIcon name="i-heroicons-squares-2x2" class="text-primary-700 dark:text-primary-400" />
-            Control Center
+            Monitors
           </h2>
           <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{{ uploadTimeLabel }}</p>
         </div>
@@ -257,8 +262,8 @@ watch(() => userContext.value?.id, (newId, oldId) => {
         </UButton>
       </div>
 
-      <!-- Widget Grid -->
-      <div ref="widgetGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Monitors Grid -->
+      <div v-show="!showWidgets" ref="widgetGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <template v-for="widgetId in widgetSettings.order" :key="widgetId">
           <div
             v-if="widgetSettings.visibility[widgetId]"
@@ -276,18 +281,21 @@ watch(() => userContext.value?.id, (newId, oldId) => {
         </template>
       </div>
 
-      <!-- Empty State -->
+      <!-- Monitors Empty State -->
       <div
-        v-if="!anyVisible"
+        v-if="!showWidgets && !anyVisible"
         class="flex flex-col items-center justify-center p-20 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-3xl"
       >
-        <UIcon name="i-heroicons-puzzle-piece" class="text-6xl text-gray-300 mb-4" />
-        <h3 class="text-xl font-bold text-gray-500">Your dashboard is empty</h3>
-        <p class="text-sm text-gray-400 mt-2">Click "Configure" to add widgets back.</p>
+        <UIcon name="i-heroicons-squares-2x2" class="text-6xl text-gray-300 mb-4" />
+        <h3 class="text-xl font-bold text-gray-500">Your monitors are empty</h3>
+        <p class="text-sm text-gray-400 mt-2">Click "Configure" to add monitors back.</p>
         <UButton color="primary" variant="soft" class="mt-6" @click="isConfigModalOpen = true">
-          Add Widgets
+          Add Monitors
         </UButton>
       </div>
+
+      <!-- Widgets Section (swapped in via toggle) -->
+      <WidgetsDashboard v-if="showWidgets" />
 
     </div>
 
@@ -310,9 +318,10 @@ watch(() => userContext.value?.id, (newId, oldId) => {
         </section>
 
         <section>
-          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Control Center Widgets</h3>
-          <p>Your personal widget board. Click <strong>Configure</strong> to toggle widgets on or off and reorder them by dragging. Settings are saved per user so each person gets their own layout.</p>
-          <p class="mt-1 text-gray-500">The <strong>For you</strong> badge marks widgets recommended for your department. You can enable any widget regardless of department.</p>
+          <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Monitors</h3>
+          <p>Your personal monitor board. Click <strong>Configure</strong> to toggle monitors on or off and reorder them by dragging. Settings are saved per user so each person gets their own layout.</p>
+          <p class="mt-1 text-gray-500">The <strong>For you</strong> badge marks monitors recommended for your department. You can enable any monitor regardless of department.</p>
+          <p class="mt-1 text-gray-500">Use the <strong>Show Widgets</strong> button in the greeting banner to swap to your personal productivity widgets (clock, notes, calculator, etc.).</p>
         </section>
 
         <section>

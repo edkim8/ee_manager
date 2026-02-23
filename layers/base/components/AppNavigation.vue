@@ -158,11 +158,6 @@ const navigationItems = computed(() => {
       icon: 'i-heroicons-home',
       to: '/',
     },
-    {
-      label: 'Widgets',
-      icon: 'i-heroicons-puzzle-piece',
-      to: '/widgets',
-    },
   ]
 
   // Add Assets menu

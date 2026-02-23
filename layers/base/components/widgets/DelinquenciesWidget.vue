@@ -92,9 +92,35 @@ const formatCurrency = (val: number) => {
               title="90+ Days"
             />
           </div>
-          <div class="flex justify-between text-[9px] font-black text-gray-400 uppercase tracking-tighter">
-            <span>Current</span>
-            <span class="text-red-500">90+ Days Overdue</span>
+          <div class="grid grid-cols-4 gap-1 mt-1">
+            <div class="flex flex-col gap-0.5">
+              <div class="flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">0–30d</span>
+              </div>
+              <span class="text-[9px] font-bold text-blue-500 pl-3">{{ formatCurrency(stats.days_0_30_sum) }}</span>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <div class="flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-yellow-400 shrink-0" />
+                <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">31–60d</span>
+              </div>
+              <span class="text-[9px] font-bold text-yellow-500 pl-3">{{ formatCurrency(stats.days_31_60_sum) }}</span>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <div class="flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+                <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">61–90d</span>
+              </div>
+              <span class="text-[9px] font-bold text-orange-500 pl-3">{{ formatCurrency(stats.days_61_90_sum) }}</span>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <div class="flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-red-600 shrink-0" />
+                <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">90d+</span>
+              </div>
+              <span class="text-[9px] font-bold text-red-500 pl-3">{{ formatCurrency(stats.days_90_plus_sum) }}</span>
+            </div>
           </div>
         </div>
       </div>

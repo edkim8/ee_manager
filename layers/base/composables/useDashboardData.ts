@@ -271,16 +271,18 @@ export const useDashboardData = () => {
         .eq('is_active', true)
 
       if (error) throw error
-      
+
       const now = new Date()
       const threeDaysAgo = new Date(now.getTime() - (3 * 24 * 60 * 60 * 1000))
-      
+
       const totalOpen = data?.length || 0
       const overdue = data?.filter((wo: any) => new Date(wo.created_at) < threeDaysAgo).length || 0
-      
+      const onHoldParts = data?.filter((wo: any) => wo.status === 'On Hold' || wo.status === 'Parts Pending').length || 0
+
       workOrdersStats.value = {
         totalOpen,
-        overdue
+        overdue,
+        onHoldParts
       }
     } catch (e) {
       console.error('Failed to fetch work orders stats', e)

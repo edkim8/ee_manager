@@ -25,7 +25,8 @@ const { data: agedOrders, status } = await useAsyncData(`aged-work-orders-${acti
 
 const stats = computed(() => workOrdersStats.value || {
   totalOpen: 0,
-  overdue: 0
+  overdue: 0,
+  onHoldParts: 0
 })
 
 const getDaysOpen = (dateStr: string) => {
@@ -48,6 +49,18 @@ const getDaysOpen = (dateStr: string) => {
       <div class="text-right">
         <div class="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">{{ stats.totalOpen }}</div>
         <div class="text-[8px] uppercase font-black text-gray-500 tracking-[0.2em] -mt-1">Open Tickets</div>
+      </div>
+    </div>
+
+    <!-- Over 3 days + On Hold/Parts row -->
+    <div v-if="stats.totalOpen > 0" class="flex gap-2">
+      <div class="flex-1 flex items-center justify-between px-3 py-2 rounded-xl bg-red-50/60 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30">
+        <span class="text-[9px] font-black uppercase tracking-[0.15em] text-red-500 dark:text-red-400">Over 3d</span>
+        <span class="text-sm font-black text-red-600 dark:text-red-400">{{ stats.overdue }}</span>
+      </div>
+      <div class="flex-1 flex items-center justify-between px-3 py-2 rounded-xl bg-amber-50/60 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30">
+        <span class="text-[9px] font-black uppercase tracking-[0.15em] text-amber-500 dark:text-amber-400">Hold/Parts</span>
+        <span class="text-sm font-black text-amber-600 dark:text-amber-400">{{ stats.onHoldParts }}</span>
       </div>
     </div>
 
