@@ -245,6 +245,18 @@ const handleResidentClick = (row: any) => {
   }
 }
 
+// Count how many residents have a non-zero balance in each aging bucket
+const agingResidentCounts = computed(() => {
+  const residents = delinquentResidents.value || []
+  return {
+    total: residents.length,
+    days_0_30:   residents.filter(r => (r.days_0_30   || 0) > 0).length,
+    days_31_60:  residents.filter(r => (r.days_31_60  || 0) > 0).length,
+    days_61_90:  residents.filter(r => (r.days_61_90  || 0) > 0).length,
+    days_90_plus: residents.filter(r => (r.days_90_plus || 0) > 0).length,
+  }
+})
+
 </script>
 
 <template>
@@ -507,6 +519,37 @@ const handleResidentClick = (row: any) => {
       </div>
       <div v-else class="h-48 flex items-center justify-center text-gray-400 italic bg-gray-50 rounded-lg">
         Keep uploading daily reports to generate your trend map.
+      </div>
+    </UCard>
+
+    <!-- Active Delinquency Counts by Aging Bucket -->
+    <UCard v-if="delinquentResidents?.length || residentsStatus === 'pending'" class="mb-4">
+      <div class="grid grid-cols-5 divide-x divide-gray-100 dark:divide-gray-800">
+        <!-- Total -->
+        <div class="flex flex-col items-center justify-center py-3 px-4">
+          <span class="text-3xl font-black text-gray-900 dark:text-white">{{ agingResidentCounts.total }}</span>
+          <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-0.5">Active Cases</span>
+        </div>
+        <!-- 0-30 -->
+        <div class="flex flex-col items-center justify-center py-3 px-4">
+          <span class="text-2xl font-black text-blue-600 dark:text-blue-400">{{ agingResidentCounts.days_0_30 }}</span>
+          <span class="text-[10px] font-bold uppercase tracking-widest text-blue-400 mt-0.5">0–30 Days</span>
+        </div>
+        <!-- 31-60 -->
+        <div class="flex flex-col items-center justify-center py-3 px-4">
+          <span class="text-2xl font-black text-yellow-600 dark:text-yellow-400">{{ agingResidentCounts.days_31_60 }}</span>
+          <span class="text-[10px] font-bold uppercase tracking-widest text-yellow-500 mt-0.5">31–60 Days</span>
+        </div>
+        <!-- 61-90 -->
+        <div class="flex flex-col items-center justify-center py-3 px-4">
+          <span class="text-2xl font-black text-orange-600 dark:text-orange-400">{{ agingResidentCounts.days_61_90 }}</span>
+          <span class="text-[10px] font-bold uppercase tracking-widest text-orange-500 mt-0.5">61–90 Days</span>
+        </div>
+        <!-- 90+ -->
+        <div class="flex flex-col items-center justify-center py-3 px-4">
+          <span class="text-2xl font-black text-red-600 dark:text-red-400">{{ agingResidentCounts.days_90_plus }}</span>
+          <span class="text-[10px] font-bold uppercase tracking-widest text-red-500 mt-0.5">90+ Days</span>
+        </div>
       </div>
     </UCard>
 

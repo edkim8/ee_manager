@@ -32,6 +32,16 @@ const notificationTypeOptions = [
   { label: 'Audit Report', value: 'audit' }
 ]
 
+function toggleNotificationType(type: string, checked: boolean) {
+  if (checked) {
+    if (!newRecipient.value.notification_types.includes(type)) {
+      newRecipient.value.notification_types.push(type)
+    }
+  } else {
+    newRecipient.value.notification_types = newRecipient.value.notification_types.filter(t => t !== type)
+  }
+}
+
 const propertyOptions = PROPERTY_LIST.map(p => ({
   label: `${p.code} - ${p.name}`,
   value: p.code
@@ -263,36 +273,36 @@ const columns: TableColumn[] = [
         </template>
         
         <form @submit.prevent="addRecipient" class="space-y-4">
-          <UFormGroup label="Email Address">
-            <UInput 
-              v-model="newRecipient.email" 
-              type="email" 
-              placeholder="user@example.com" 
+          <UFormField label="Email Address">
+            <UInput
+              v-model="newRecipient.email"
+              type="email"
+              placeholder="user@example.com"
               icon="i-heroicons-envelope"
               required
             />
-          </UFormGroup>
+          </UFormField>
 
-          <UFormGroup label="Property">
+          <UFormField label="Property">
             <USelectMenu
               v-model="newRecipient.property_code"
               :items="propertyOptions"
               value-key="value"
               placeholder="Select a property"
             />
-          </UFormGroup>
+          </UFormField>
 
-          <UFormGroup label="Notification Types">
+          <UFormField label="Notification Types">
             <div class="flex gap-4 pt-1">
               <UCheckbox
                 v-for="opt in notificationTypeOptions"
                 :key="opt.value"
-                v-model="newRecipient.notification_types"
-                :value="opt.value"
+                :model-value="newRecipient.notification_types.includes(opt.value)"
                 :label="opt.label"
+                @update:model-value="toggleNotificationType(opt.value, $event)"
               />
             </div>
-          </UFormGroup>
+          </UFormField>
 
           <UButton
             type="submit"

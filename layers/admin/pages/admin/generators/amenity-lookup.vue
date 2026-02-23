@@ -149,15 +149,15 @@ const testResult = computed(() => {
       <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
         <h3 class="font-bold mb-4">Verify Lookup Integration</h3>
         <div class="flex gap-4 items-end">
-          <UFormGroup label="Property Code">
+          <UFormField label="Property Code">
             <UInput v-model="testProp" placeholder="e.g. CV" />
-          </UFormGroup>
-          <UFormGroup label="Identifier">
+          </UFormField>
+          <UFormField label="Identifier">
             <UInput v-model="testKey" placeholder="e.g. POOLD" />
-          </UFormGroup>
-          <UFormGroup label="Type">
-            <USelect v-model="testType" :options="['code', 'name', 'label']" />
-          </UFormGroup>
+          </UFormField>
+          <UFormField label="Type">
+            <USelectMenu v-model="testType" :items="['code', 'name', 'label']" />
+          </UFormField>
           <div class="mb-1">
             <div class="text-sm text-gray-500">Resolved UUID:</div>
             <div :class="testResult ? 'text-green-600 font-mono text-xs' : 'text-gray-400 italic text-xs'">

@@ -408,7 +408,7 @@ const handleSolve = async () => {
   
               <div class="space-y-4 mb-6">
                 <!-- Upfront Concession -->
-                <UFormGroup label="Upfront Concession ($)" help="One-time dollar concession (e.g., $500 off first month)">
+                <UFormField label="Upfront Concession ($)" help="One-time dollar concession (e.g., $500 off first month)">
                   <UInput
                     v-model="concessionUpfront"
                     type="number"
@@ -417,10 +417,10 @@ const handleSolve = async () => {
                     placeholder="0"
                     :min="0"
                   />
-                </UFormGroup>
-  
+                </UFormField>
+
                 <!-- Free Rent Period -->
-                <UFormGroup
+                <UFormField
                   label="Free Rent Period (days)"
                   :help="`Currently: ${formatFreeDays(concessionFreeDays)} • Quick values: 7 days = 1 week, 14 days = 2 weeks, 30 days = 1 month`"
                 >
@@ -432,7 +432,7 @@ const handleSolve = async () => {
                     placeholder="0"
                     :min="0"
                   />
-                </UFormGroup>
+                </UFormField>
   
                 <!-- Quick Preset Buttons -->
                 <div class="flex flex-wrap gap-2">
@@ -512,9 +512,9 @@ const handleSolve = async () => {
              <p class="text-[10px] text-indigo-600 dark:text-indigo-400 mb-6 leading-tight uppercase font-bold">Find best amenities to reach target rent</p>
              
              <div class="space-y-4">
-                <UFormGroup label="Target Offered Rent">
+                <UFormField label="Target Offered Rent">
                    <UInput v-model="targetRentInput" type="number" icon="i-heroicons-banknotes" size="lg" placeholder="e.g. 2450" />
-                </UFormGroup>
+                </UFormField>
                 
                 <UButton 
                     block 

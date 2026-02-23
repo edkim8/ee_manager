@@ -220,27 +220,27 @@ const saveAmenity = async () => {
       width="max-w-lg"
     >
         <div class="space-y-4 py-2">
-          <UFormGroup label="Amount" help="Default monthly amount for this amenity.">
+          <UFormField label="Amount" help="Default monthly amount for this amenity.">
             <UInput v-model="selectedAmenity.amount" type="number" step="0.01" icon="i-heroicons-banknotes" />
-          </UFormGroup>
+          </UFormField>
 
-          <UFormGroup label="Type">
-            <USelect 
-                v-model="selectedAmenity.type" 
-                :options="['Fixed', 'Premium', 'Discount']" 
+          <UFormField label="Type">
+            <USelectMenu
+                v-model="selectedAmenity.type"
+                :items="['Fixed', 'Premium', 'Discount']"
             />
-          </UFormGroup>
+          </UFormField>
 
-          <UFormGroup label="Description">
+          <UFormField label="Description">
             <UTextarea v-model="selectedAmenity.description" placeholder="Internal notes..." />
-          </UFormGroup>
+          </UFormField>
 
-          <UFormGroup label="Status">
+          <UFormField label="Status">
             <div class="flex items-center gap-3">
               <UToggle v-model="selectedAmenity.active" />
               <span class="text-sm text-gray-500 font-medium">{{ selectedAmenity.active ? 'Active' : 'Inactive' }}</span>
             </div>
-          </UFormGroup>
+          </UFormField>
         </div>
 
         <template #footer>

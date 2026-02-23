@@ -2,6 +2,8 @@
 const user = useSupabaseUser()
 const { userContext } = usePropertyState()
 
+const { showWidgets } = useDashboardWidgets()
+
 const {
   activeProperty,
   latestRun,
@@ -314,15 +316,29 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- RIGHT: Last Sync Card (replaces static "Premium Status") -->
-      <div class="flex items-center gap-4 bg-white/40 dark:bg-black/40 backdrop-blur-xl px-5 py-4 rounded-2xl border border-white/20 shadow-inner shrink-0 self-start">
-        <div :class="['p-3 rounded-xl shadow-lg', syncCard.bgClass]">
-          <UIcon :name="syncCard.icon" class="w-6 h-6 text-white" />
+      <!-- RIGHT: Sync Card + Widgets Toggle -->
+      <div class="flex flex-col items-end gap-3 shrink-0 self-start">
+        <!-- Sync Card -->
+        <div class="flex items-center gap-4 bg-white/40 dark:bg-black/40 backdrop-blur-xl px-5 py-4 rounded-2xl border border-white/20 shadow-inner">
+          <div :class="['p-3 rounded-xl shadow-lg', syncCard.bgClass]">
+            <UIcon :name="syncCard.icon" class="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <div class="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{{ syncCard.title }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 whitespace-nowrap">{{ syncCard.sub }}</div>
+          </div>
         </div>
-        <div>
-          <div class="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{{ syncCard.title }}</div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 whitespace-nowrap">{{ syncCard.sub }}</div>
-        </div>
+
+        <!-- View Toggle: Monitors ↔ Widgets -->
+        <UButton
+          size="sm"
+          :icon="showWidgets ? 'i-heroicons-squares-2x2' : 'i-heroicons-puzzle-piece'"
+          :label="showWidgets ? 'Show Monitors' : 'Show Widgets'"
+          color="primary"
+          variant="solid"
+          class="w-full justify-center shadow-lg shadow-primary-500/40 font-black uppercase tracking-wider text-xs"
+          @click="showWidgets = !showWidgets"
+        />
       </div>
 
     </div>

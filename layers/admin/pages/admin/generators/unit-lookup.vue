@@ -205,12 +205,12 @@ async function verifyAgainstDb() {
       <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
         <h3 class="font-bold mb-4">Verify Lookup Integration</h3>
         <div class="flex gap-4 items-end">
-          <UFormGroup label="Property Code">
+          <UFormField label="Property Code">
             <UInput v-model="testProp" placeholder="e.g. CV" />
-          </UFormGroup>
-          <UFormGroup label="Unit Name">
+          </UFormField>
+          <UFormField label="Unit Name">
             <UInput v-model="testUnit" placeholder="e.g. 101" />
-          </UFormGroup>
+          </UFormField>
           <div class="mb-1">
             <div class="text-sm text-gray-500">Resolved UUID:</div>
             <div :class="testResult ? 'text-green-600 font-mono text-xs' : 'text-gray-400 italic text-xs'">
