@@ -1318,8 +1318,11 @@ export const useSolverEngine = () => {
                         
                         console.log(`[Solver DEBUG] Found ${tenancies?.length || 0} tenancies for ${pCode}`)
                         
-                        // Filter by status in code to avoid 400 Bad Request
-                        const validStatuses = ['Current', 'Notice', 'Future', 'Applicant', 'Eviction']
+                        // Only match outgoing/current residents for Notices processing.
+                        // Future/Applicant = incoming residents — must never be corrected to Notice.
+                        // Without this guard, units with overlapping outgoing+incoming tenancies
+                        // would corrupt the incoming resident's status on every daily run.
+                        const validStatuses = ['Current', 'Notice', 'Eviction']
                         tenancies?.filter((t: any) => validStatuses.includes(t.status))
                             .forEach((t: any) => tenancyMap.set(t.unit_id, t))
                     }
