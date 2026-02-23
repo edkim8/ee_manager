@@ -278,6 +278,38 @@ async function handleRevokeAccess(accessId: string) {
   }
 }
 
+async function handleDeleteUser() {
+  if (!state.selectedUser) return
+  
+  if (!confirm(`Are you sure you want to delete ${state.selectedUser.email}? This action cannot be undone.`)) {
+    return
+  }
+
+  state.isLoading = true
+  try {
+    const { error } = await supabase.rpc('delete_user_v1', { target_user_id: state.selectedUser.id })
+    if (error) throw error
+
+    toast.add({
+      title: 'Success',
+      description: 'User deleted successfully.',
+      color: 'success'
+    })
+
+    emit('updated', state.selectedUser.id)
+    state.selectedUser = null
+  } catch (error: any) {
+    console.error('[AdminUserEdit] Delete error:', error)
+    toast.add({
+      title: 'Error',
+      description: error.message || 'Failed to delete user.',
+      color: 'error'
+    })
+  } finally {
+    state.isLoading = false
+  }
+}
+
 // Computed for table rows with property names
 const accessRows = computed(() => {
   return state.propertyAccess.map(access => ({
@@ -367,10 +399,34 @@ const accessRows = computed(() => {
             <UCheckbox v-model="editForm.is_super_admin" />
           </div>
 
-          <div class="pt-2">
+          <div class="pt-2 flex flex-col gap-3">
             <UButton type="submit" color="primary" icon="i-heroicons-check" :loading="state.isLoading" block>
               Save Changes
             </UButton>
+            
+            <!-- CRITICAL: DANGER ZONE -->
+            <div class="mt-12 p-6 border-2 border-red-500/50 rounded-2xl bg-red-50/50 dark:bg-red-900/10">
+              <div class="flex items-center gap-3 mb-4 text-red-600 dark:text-red-400">
+                <UIcon name="i-heroicons-exclamation-triangle" class="w-8 h-8" />
+                <h3 class="text-lg font-black uppercase tracking-tighter">Danger Zone: Account Deletion</h3>
+              </div>
+              
+              <p class="text-sm text-red-700 dark:text-red-300 mb-6 font-bold uppercase">
+                Warning: This will permanently delete the user and all property access.
+              </p>
+              
+              <UButton 
+                color="error" 
+                variant="solid" 
+                icon="i-heroicons-trash" 
+                size="lg"
+                label="PERMANENTLY DELETE USER ACCOUNT"
+                :loading="state.isLoading" 
+                block
+                class="font-black"
+                @click="handleDeleteUser"
+              />
+            </div>
           </div>
         </UForm>
       </UCard>
