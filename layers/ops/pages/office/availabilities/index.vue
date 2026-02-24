@@ -10,7 +10,7 @@ import AmenityComparisonModal from '../../../components/modals/AmenityComparison
 import type { ComparisonRow } from '../../../components/modals/AmenityComparisonModal.vue'
 import { useParseAvailablesAudit, AVAILABLES_AUDIT_REQUIRED_HEADERS } from '../../../../parsing/composables/parsers/useParseAvailablesAudit'
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
-import { allColumns } from '../../../../../configs/table-configs/availabilities-complete.generated'
+import { allColumns, filterGroups } from '../../../../../configs/table-configs/availabilities-complete.generated'
 import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
 
 const supabase = useSupabaseClient()
@@ -21,8 +21,18 @@ definePageMeta({
 })
 
 // Display filters (must be defined before computed properties that use them)
-const displayFilter = ref('All')
+const displayFilter = ref('Available')
 const displayOptions = ['All', 'Available', 'Applied', 'Leased']
+
+// Department filters for Admin/Managers
+const departmentOptions = ['All', 'Management', 'Leasing', 'Maintenance']
+const selectedDepartment = ref(userContext.value?.profile?.department || 'All')
+
+const canSwitchDepartment = computed(() => {
+  const role = activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null
+  const adminRoles = ['Asset', 'RPM', 'Manager']
+  return userContext.value?.access?.is_super_admin || (role && adminRoles.includes(role))
+})
 
 // Fetch Active Property Name for Header
 const { data: activePropertyRecord } = await useAsyncData('active-property-header-avail', async () => {
@@ -55,7 +65,7 @@ const { data: availabilities, status, error, refresh: refreshAvailabilities } = 
 
   const { data, error } = await supabase
     .from('view_leasing_pipeline')
-    .select('*')
+    .select('*, market_base_rent:calculated_market_rent')
     .eq('property_code', activeProperty.value)
     .order(defaultSortField.value, { ascending: defaultSortDirection.value === 'asc' })
 
@@ -67,11 +77,31 @@ const { data: availabilities, status, error, refresh: refreshAvailabilities } = 
 
 // Dynamic columns from Excel configuration based on filter + role/dept access
 const columns = computed(() => {
-  return filterColumnsByAccess(allColumns, {
+  // 1. Get base columns that pass role/dept access
+  const accessFiltered = filterColumnsByAccess(allColumns, {
     userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
-    userDepartment: userContext.value?.profile?.department,
+    userDepartment: selectedDepartment.value,
     isSuperAdmin: !!userContext.value?.access?.is_super_admin,
     filterGroup: displayFilter.value.toLowerCase()
+  })
+
+  // 2. Further filter by the definitive filterGroups map from the config
+  const groupName = displayFilter.value.toLowerCase() as keyof typeof filterGroups
+  const allowedKeys = filterGroups[groupName]
+
+  if (!allowedKeys) return accessFiltered
+
+  // 3. Filter by the keys in the group and DEDUPLICATE
+  // (e.g. if 'available_date' matches both 'Available' and 'Make Ready' labels, pick the first permitted one)
+  const seenKeys = new Set<string>()
+  return accessFiltered.filter(col => {
+    if (!allowedKeys.includes(col.key)) return false
+    
+    // Deduplicate: If we've already included this key in the current view, skip subsequent ones
+    if (seenKeys.has(col.key)) return false
+    seenKeys.add(col.key)
+    
+    return true
   })
 })
 
@@ -167,6 +197,37 @@ const getVacancyColor = (days: number | null) => {
   if (vc <= config.scheduled.threshold) return config.scheduled.color    // 51-75 days → Green (ready in 2-3 months)
 
   return config.default.color  // 76+ days → Blue (ready in distant future)
+}
+
+// ===== DYNAMIC CONCESSION COLORING =====
+
+/**
+ * Calculate concession stats (min/max) for the active list
+ */
+const concessionStats = computed(() => {
+  const data = filteredData.value
+  if (!data || data.length === 0) return { min: 0, max: 0 }
+  const values = data.map((u: any) => 
+    Math.abs(u.market_base_rent > 0 ? ((u.rent_offered - u.market_base_rent) / u.market_base_rent) : 0)
+  )
+  return {
+    min: Math.min(...values),
+    max: Math.max(...values)
+  }
+})
+
+/**
+ * Get dynamic color class based on where a value sits in the current range
+ */
+const getDynamicConcessionColor = (value: number) => {
+    const { min, max } = concessionStats.value
+    if (max === 0 || min === max) return 'text-gray-900 dark:text-white'
+    
+    const range = max - min
+    if (value >= min + (range * 0.85)) return 'text-red-600 dark:text-red-400 font-bold'
+    if (value <= min + (range * 0.15)) return 'text-green-600 dark:text-green-400 font-bold'
+    
+    return 'text-gray-900 dark:text-white'
 }
 
 // Search filter
@@ -487,227 +548,291 @@ const handleFileUpload = async (event: Event) => {
       <p class="text-sm">{{ error.message }}</p>
     </div>
 
-    <GenericDataTable
-      :key="displayFilter"
-      :data="filteredData"
-      :columns="columns"
-      :loading="status === 'pending'"
-      row-key="unit_id"
-      enable-pagination
-      :page-size="25"
-      :default-sort-field="defaultSortField"
-      :default-sort-direction="defaultSortDirection"
-      clickable
-      striped
-      enable-export
-      export-filename="availabilities"
-      @row-click="handleRowClick"
-    >
-      <template #toolbar>
-        <div class="flex items-center gap-4">
-          <UInput
-            v-model="searchQuery"
-            icon="i-heroicons-magnifying-glass"
-            placeholder="Search availabilities..."
-            class="w-64"
-          />
-          <span class="text-sm text-gray-500">
-            {{ filteredData.length }} {{ filteredData.length === 1 ? 'unit' : 'units' }}
-          </span>
-        </div>
-      </template>
-
-      <template #toolbar-actions>
-        <div class="flex items-center gap-2 pr-2 border-r border-gray-200 mr-2">
-          <span class="text-xs text-gray-500 uppercase font-semibold tracking-wider">Show:</span>
-          <div class="flex gap-1 p-1 bg-gray-50 rounded-lg border border-gray-100">
-            <UButton
-              v-for="opt in displayOptions"
-              :key="opt"
-              :label="opt"
-              :variant="displayFilter === opt ? 'solid' : 'ghost'"
-              :color="displayFilter === opt ? 'primary' : 'neutral'"
-              size="xs"
-              :class="displayFilter !== opt ? 'text-gray-500 font-medium' : ''"
-              @click="displayFilter = opt"
+    <ClientOnly>
+      <GenericDataTable
+        :key="displayFilter"
+        :data="filteredData"
+        :columns="columns"
+        :loading="status === 'pending'"
+        row-key="unit_id"
+        enable-pagination
+        :page-size="25"
+        :default-sort-field="defaultSortField"
+        :default-sort-direction="defaultSortDirection"
+        clickable
+        striped
+        enable-export
+        export-filename="availabilities"
+        @row-click="handleRowClick"
+      >
+        <template #toolbar>
+          <div class="flex items-center gap-4">
+            <UInput
+              v-model="searchQuery"
+              icon="i-heroicons-magnifying-glass"
+              placeholder="Search availabilities..."
+              class="w-64"
             />
+            <span class="text-sm text-gray-500">
+              {{ filteredData.length }} {{ filteredData.length === 1 ? 'unit' : 'units' }}
+            </span>
           </div>
-          <UButton
-            icon="i-heroicons-cog-6-tooth"
-            color="neutral"
-            variant="ghost"
-            label="Configure"
-            @click="openConfig"
+        </template>
+
+        <template #toolbar-actions>
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 pr-2 border-r border-gray-200">
+              <span class="text-xs text-gray-500 uppercase font-semibold tracking-wider">Show:</span>
+              <div class="flex gap-1 p-1 bg-gray-50 rounded-lg border border-gray-100">
+                <UButton
+                  v-for="opt in displayOptions"
+                  :key="opt"
+                  :label="opt"
+                  :variant="displayFilter === opt ? 'solid' : 'ghost'"
+                  :color="displayFilter === opt ? 'primary' : 'neutral'"
+                  size="xs"
+                  :class="displayFilter !== opt ? 'text-gray-500 font-medium' : ''"
+                  @click="displayFilter = opt"
+                />
+              </div>
+            </div>
+
+            <!-- Department Switcher (Admin/Managers Only) -->
+            <div v-if="canSwitchDepartment" class="flex items-center gap-2 pr-2 border-r border-gray-200">
+              <span class="text-xs text-gray-500 uppercase font-semibold tracking-wider">Dept:</span>
+              <div class="flex gap-1 p-1 bg-gray-50 rounded-lg border border-gray-100">
+                <UButton
+                  v-for="dept in departmentOptions"
+                  :key="dept"
+                  :label="dept"
+                  :variant="selectedDepartment === dept ? 'solid' : 'ghost'"
+                  :color="selectedDepartment === dept ? 'primary' : 'neutral'"
+                  size="xs"
+                  :class="selectedDepartment !== dept ? 'text-gray-500 font-medium' : ''"
+                  @click="selectedDepartment = dept"
+                />
+              </div>
+              <UButton
+                icon="i-heroicons-cog-6-tooth"
+                color="neutral"
+                variant="ghost"
+                label="Configure"
+                @click="openConfig"
+              />
+            </div>
+          </div>
+        </template>
+
+        <!-- Unit Link (Color-coded by Vacancy) -->
+        <template #cell-unit_name="{ value, row }">
+          <NuxtLink
+            v-if="value"
+            :to="`/assets/units/${row.unit_id}`"
+            class="inline-block px-2 py-1 rounded-md text-gray-950 font-black text-xs min-w-[60px] shadow-sm transition-all hover:brightness-110 active:scale-95 text-center"
+            :style="{ backgroundColor: getVacancyColor(row.vacant_days) }"
+            @click.stop
+          >
+            {{ value }}
+          </NuxtLink>
+          <span v-else class="text-gray-400">-</span>
+        </template>
+
+        <!-- Building Link -->
+        <template #cell-building_name="{ value, row }">
+          <CellsLinkCell
+            v-if="value"
+            :value="value"
+            :to="`/assets/buildings/${row.building_id}`"
           />
-        </div>
-      </template>
+          <span v-else class="text-gray-400">-</span>
+        </template>
 
-      <!-- Unit Link (Color-coded by Vacancy) -->
-      <template #cell-unit_name="{ value, row }">
-        <NuxtLink
-          v-if="value"
-          :to="`/assets/units/${row.unit_id}`"
-          class="inline-block px-2 py-1 rounded-md text-gray-950 font-black text-xs min-w-[60px] shadow-sm transition-all hover:brightness-110 active:scale-95 text-center"
-          :style="{ backgroundColor: getVacancyColor(row.vacant_days) }"
-          @click.stop
-        >
-          {{ value }}
-        </NuxtLink>
-        <span v-else class="text-gray-400">-</span>
-      </template>
+        <!-- Floor Plan -->
+        <template #cell-floor_plan_name="{ value }">
+          <span class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ value || '-' }}</span>
+        </template>
 
-      <!-- Building Link -->
-      <template #cell-building_name="{ value, row }">
-        <CellsLinkCell
-          v-if="value"
-          :value="value"
-          :to="`/assets/buildings/${row.building_id}`"
-        />
-        <span v-else class="text-gray-400">-</span>
-      </template>
+        <!-- SF -->
+        <template #cell-sf="{ value }">
+          <span class="font-mono text-sm text-gray-600 dark:text-gray-300">{{ value?.toLocaleString() || '-' }}</span>
+        </template>
 
-      <!-- Floor Plan -->
-      <template #cell-floor_plan_name="{ value }">
-        <span class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ value || '-' }}</span>
-      </template>
+        <!-- Bedroom Count -->
+        <template #cell-bedroom_count="{ value }">
+          <span class="font-mono text-sm text-gray-600 dark:text-gray-300">{{ value || '-' }}</span>
+        </template>
+        
+        <!-- Market Rent -->
+        <template #cell-market_base_rent="{ value }">
+          <CellsCurrencyCell
+            v-if="value"
+            :value="value"
+            class="text-gray-500 font-mono"
+          />
+          <span v-else class="text-gray-400">-</span>
+        </template>
 
-      <!-- SF -->
-      <template #cell-sf="{ value }">
-        <span class="font-mono text-sm text-gray-600 dark:text-gray-300">{{ value?.toLocaleString() || '-' }}</span>
-      </template>
+        <!-- Rent -->
+        <template #cell-rent_offered="{ value }">
+          <CellsCurrencyCell
+            v-if="value"
+            :value="value"
+            class="font-bold text-primary-600"
+          />
+          <span v-else class="text-gray-400">-</span>
+        </template>
 
-      <!-- Bedroom Count -->
-      <template #cell-bedroom_count="{ value }">
-        <span class="font-mono text-sm text-gray-600 dark:text-gray-300">{{ value || '-' }}</span>
-      </template>
+        <!-- Temp Amenities -->
+        <template #cell-temp_amenities_total="{ value }">
+          <CellsCurrencyCell
+            v-if="value"
+            :value="Number(value)"
+            class="text-gray-500 font-mono"
+          />
+          <span v-else class="text-gray-400">-</span>
+        </template>
 
-      <!-- Rent -->
-      <template #cell-rent_offered="{ value }">
-        <CellsCurrencyCell
-          v-if="value"
-          :value="value"
-          class="font-bold text-primary-600"
-        />
-        <span v-else class="text-gray-400">-</span>
-      </template>
+        <!-- Concessions (Dynamic Colors) -->
+        <template #cell-concession_total_pct="{ row }">
+           <CellsPercentCell 
+             :value="Math.abs(row.market_base_rent > 0 ? ((row.rent_offered - row.market_base_rent) / row.market_base_rent) : 0)" 
+             :color-class="getDynamicConcessionColor(Math.abs(row.market_base_rent > 0 ? ((row.rent_offered - row.market_base_rent) / row.market_base_rent) : 0))"
+             class="font-mono"
+           />
+        </template>
 
-      <!-- Status Badge (Link to Detail) -->
-      <template #cell-operational_status="{ value, row }">
-        <NuxtLink :to="`/office/availabilities/${row.unit_id}`" @click.stop>
+        <template #cell-concession_display_calc="{ row }">
+           <span :class="['font-mono text-xs', getDynamicConcessionColor(Math.abs(row.market_base_rent > 0 ? ((row.rent_offered - row.market_base_rent) / row.market_base_rent) : 0))]">
+              {{ row.concession_display_calc || '-' }}
+           </span>
+        </template>
+
+        <!-- Status Badge (Link to Detail) -->
+        <template #cell-operational_status="{ value, row }">
+          <NuxtLink :to="`/office/availabilities/${row.unit_id}`" @click.stop>
+            <CellsBadgeCell
+              :text="value"
+              :color="statusColors[value] || 'neutral'"
+              variant="subtle"
+              class="hover:ring-2 hover:ring-primary-500 transition-all cursor-pointer"
+            />
+          </NuxtLink>
+        </template>
+
+        <!-- Metrics with Color Coding -->
+        <template #cell-vacant_days="{ value }">
+          <span
+            class="font-mono font-bold"
+            :style="{ color: getVacancyColor(value) }"
+          >
+            {{ value ?? 0 }}
+          </span>
+        </template>
+
+        <template #cell-turnover_days="{ value }">
+          <span class="font-mono text-gray-500 dark:text-gray-400">
+            {{ value ?? 0 }}
+          </span>
+        </template>
+
+        <!-- Date formatting -->
+        <template #cell-available_date="{ value }">
+          <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
+          <span v-else class="text-gray-400 dark:text-gray-500 italic">Not set</span>
+        </template>
+
+        <template #cell-move_out_date="{ value }">
+          <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
+          <span v-else class="text-gray-400 dark:text-gray-500">-</span>
+        </template>
+
+        <template #cell-move_in_date="{ value }">
+          <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
+          <span v-else class="text-gray-400 dark:text-gray-500 italic text-xs">Unleased</span>
+        </template>
+
+        <!-- Resident Name -->
+        <template #cell-resident_name="{ value }">
+          <span v-if="value" class="text-sm font-semibold text-gray-900 dark:text-white">{{ value }}</span>
+          <span v-else class="text-gray-400 dark:text-gray-500">-</span>
+        </template>
+
+        <!-- Resident Email -->
+        <template #cell-resident_email="{ value }">
+          <a v-if="value" :href="`mailto:${value}`" class="text-xs text-primary-600 dark:text-primary-400 hover:underline">
+            {{ value }}
+          </a>
+          <span v-else class="text-gray-400 dark:text-gray-500 text-xs">-</span>
+        </template>
+
+        <!-- Status Badge -->
+        <template #cell-status="{ value }">
           <CellsBadgeCell
             :text="value"
             :color="statusColors[value] || 'neutral'"
             variant="subtle"
-            class="hover:ring-2 hover:ring-primary-500 transition-all cursor-pointer"
           />
-        </NuxtLink>
-      </template>
+        </template>
 
-      <!-- Metrics with Color Coding -->
-      <template #cell-vacant_days="{ value }">
-        <span
-          class="font-mono font-bold"
-          :style="{ color: getVacancyColor(value) }"
-        >
-          {{ value ?? 0 }}
-        </span>
-      </template>
+        <!-- Leasing Agent -->
+        <template #cell-leasing_agent="{ value }">
+          <span v-if="value" class="text-sm text-gray-700 dark:text-gray-200">{{ value }}</span>
+          <span v-else class="text-gray-400 dark:text-gray-500">-</span>
+        </template>
 
-      <template #cell-turnover_days="{ value }">
-        <span class="font-mono text-gray-500 dark:text-gray-400">
-          {{ value ?? 0 }}
-        </span>
-      </template>
+        <!-- Lease Dates -->
+        <template #cell-lease_start_date="{ value }">
+          <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
+          <span v-else class="text-gray-400 dark:text-gray-500">-</span>
+        </template>
 
-      <!-- Date formatting -->
-      <template #cell-available_date="{ value }">
-        <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
-        <span v-else class="text-gray-400 dark:text-gray-500 italic">Not set</span>
-      </template>
+        <template #cell-lease_end_date="{ value }">
+          <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
+          <span v-else class="text-gray-400 dark:text-gray-500">-</span>
+        </template>
 
-      <template #cell-move_out_date="{ value }">
-        <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
-        <span v-else class="text-gray-400 dark:text-gray-500">-</span>
-      </template>
+        <!-- Lease Rent -->
+        <template #cell-lease_rent_amount="{ value }">
+          <CellsCurrencyCell
+            v-if="value"
+            :value="value"
+            class="font-bold text-success-600 dark:text-success-400"
+          />
+          <span v-else class="text-gray-400 dark:text-gray-500">-</span>
+        </template>
 
-      <template #cell-move_in_date="{ value }">
-        <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
-        <span v-else class="text-gray-400 dark:text-gray-500 italic text-xs">Unleased</span>
-      </template>
+        <!-- Application Date -->
+        <template #cell-application_date="{ value }">
+          <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
+          <span v-else class="text-gray-400 dark:text-gray-500">-</span>
+        </template>
 
-      <!-- Resident Name -->
-      <template #cell-resident_name="{ value }">
-        <span v-if="value" class="text-sm font-semibold text-gray-900 dark:text-white">{{ value }}</span>
-        <span v-else class="text-gray-400 dark:text-gray-500">-</span>
-      </template>
+        <!-- Screening Result -->
+        <template #cell-screening_result="{ value }">
+          <CellsBadgeCell
+            v-if="value"
+            :text="value"
+            :color="value === 'Accepted' || value === 'Approved' ? 'primary' : value === 'Conditional' ? 'warning' : value === 'Denied' || value === 'Rejected' ? 'error' : 'neutral'"
+            variant="subtle"
+            size="sm"
+          />
+          <span v-else class="text-gray-400 dark:text-gray-500 text-xs italic">Pending</span>
+        </template>
 
-      <!-- Resident Email -->
-      <template #cell-resident_email="{ value }">
-        <a v-if="value" :href="`mailto:${value}`" class="text-xs text-primary-600 dark:text-primary-400 hover:underline">
-          {{ value }}
-        </a>
-        <span v-else class="text-gray-400 dark:text-gray-500 text-xs">-</span>
+        <!-- Sync Verification -->
+        <template #cell-sync_alerts="{ value }">
+          <CellsAlertCell :alerts="value" />
+        </template>
+      </GenericDataTable>
+      <template #fallback>
+        <div class="p-8 flex justify-center items-center min-h-[400px]">
+          <div class="flex flex-col items-center gap-4">
+            <UIcon name="i-heroicons-table-cells" class="w-12 h-12 text-gray-200 animate-pulse" />
+            <p class="text-gray-400 text-sm animate-pulse">Initializing table components...</p>
+          </div>
+        </div>
       </template>
-
-      <!-- Status Badge -->
-      <template #cell-status="{ value }">
-        <CellsBadgeCell
-          :text="value"
-          :color="statusColors[value] || 'neutral'"
-          variant="subtle"
-        />
-      </template>
-
-      <!-- Leasing Agent -->
-      <template #cell-leasing_agent="{ value }">
-        <span v-if="value" class="text-sm text-gray-700 dark:text-gray-200">{{ value }}</span>
-        <span v-else class="text-gray-400 dark:text-gray-500">-</span>
-      </template>
-
-      <!-- Lease Dates -->
-      <template #cell-lease_start_date="{ value }">
-        <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
-        <span v-else class="text-gray-400 dark:text-gray-500">-</span>
-      </template>
-
-      <template #cell-lease_end_date="{ value }">
-        <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
-        <span v-else class="text-gray-400 dark:text-gray-500">-</span>
-      </template>
-
-      <!-- Lease Rent -->
-      <template #cell-lease_rent_amount="{ value }">
-        <CellsCurrencyCell
-          v-if="value"
-          :value="value"
-          class="font-bold text-success-600 dark:text-success-400"
-        />
-        <span v-else class="text-gray-400 dark:text-gray-500">-</span>
-      </template>
-
-      <!-- Application Date -->
-      <template #cell-application_date="{ value }">
-        <span v-if="value" class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ new Date(value).toLocaleDateString() }}</span>
-        <span v-else class="text-gray-400 dark:text-gray-500">-</span>
-      </template>
-
-      <!-- Screening Result -->
-      <template #cell-screening_result="{ value }">
-        <CellsBadgeCell
-          v-if="value"
-          :text="value"
-          :color="value === 'Accepted' || value === 'Approved' ? 'primary' : value === 'Conditional' ? 'warning' : value === 'Denied' || value === 'Rejected' ? 'error' : 'neutral'"
-          variant="subtle"
-          size="sm"
-        />
-        <span v-else class="text-gray-400 dark:text-gray-500 text-xs italic">Pending</span>
-      </template>
-
-      <!-- Sync Verification -->
-      <template #cell-sync_alerts="{ value }">
-        <CellsAlertCell :alerts="value" />
-      </template>
-    </GenericDataTable>
+    </ClientOnly>
 
     <ConstantsModal
       v-if="showConfig"

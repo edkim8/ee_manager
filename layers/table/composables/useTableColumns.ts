@@ -34,24 +34,31 @@ export function canShowColumn(
   userDepartment?: string,
   isSuperAdmin = false
 ): boolean {
-  // Super admin bypasses all restrictions
-  if (isSuperAdmin) return true
+  // Super admin bypasses all restrictions unless we are specifically filtering
+  // (We'll handle specific filters by passing 'all' if we want bypass)
+  if (isSuperAdmin && (!userDepartment || userDepartment.toLowerCase() === 'all')) return true
 
-  // Get column restrictions (default to 'all' if not specified)
-  const allowedRoles = column.roles || ['all']
-  const allowedDepts = column.departments || ['all']
+  // Get column restrictions (normalized to lowercase)
+  const allowedRoles = (column.roles || ['all']).map(s => s.toLowerCase())
+  const allowedDepts = (column.departments || ['all']).map(s => s.toLowerCase())
 
-  // Check role restriction (OR logic within array)
+  const simRole = (userRole || 'all').toLowerCase()
+  const simDept = (userDepartment || 'all').toLowerCase()
+
+  // Check role restriction
   const roleCheck =
+    isSuperAdmin || // Super admin always passes role checks
     allowedRoles.includes('all') ||
-    (userRole && allowedRoles.includes(userRole))
+    simRole === 'all' ||
+    allowedRoles.includes(simRole)
 
-  // Check department restriction (OR logic within array)
+  // Check department restriction
   const deptCheck =
     allowedDepts.includes('all') ||
-    (userDepartment && allowedDepts.includes(userDepartment))
+    simDept === 'all' ||
+    allowedDepts.includes(simDept)
 
-  // Must pass BOTH checks (AND logic between role and department)
+  // Must pass BOTH checks
   return roleCheck && deptCheck
 }
 

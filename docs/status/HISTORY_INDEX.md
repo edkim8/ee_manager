@@ -1,6 +1,6 @@
 # History Index: Technical Decision Log
 
-This file tracks key architectural decisions and completed milestones. **Latest Update**: [2026-02-23] H-055: Admin User Delete & Dashboard Access — Implemented secure RPC deletion, auto-confirmed user creation, and expanded dashboard access for Asset roles. Read this at the start of a session to "download" past wisdom without reading the full archives.
+This file tracks key architectural decisions and completed milestones. **Latest Update**: [2026-02-23] H-056: Table Engine & Pricing Polish — Implemented sticky headers, premium loading state, null-safe sorting, and standardized pricing views. Read this at the start of a session to "download" past wisdom without reading the full archives.
 
 | ID | Module | Key Decisions | Archive Link |
 |----|--------|---------------|--------------|
@@ -58,4 +58,5 @@ This file tracks key architectural decisions and completed milestones. **Latest 
 | H-053 | Daily Audit (2026-02-23) | Performed daily solver audit for batch `a46cf280`. Fixed W1 corruption loop in `useSolverEngine.ts` (overlapping tenancies). Resolved W4 stale debug artifact via migration `20260223000003`. | [DAILY_AUDIT](DAILY_AUDIT_2026_02_23.md) |
 | H-054 | Admin Bug Fixes & UX | Fixed Nuxt UI v4 regressions (linked checkboxes, JSON error). Improved Work Orders/Delinquencies UX. Implemented Dashboard Monitors↔Widgets toggle. | [SESSION_LOG](../archive/SESSION_2026_02_23_ADMIN_BUG_FIXES_AND_DASHBOARD.md) |
 | H-055 | Admin & Dashboard | Implemented `delete_user_v1` secure RPC and UI (Danger Zone). Fixed user creation auto-confirmation bug. Granted dashboard monitor access (7 widgets) to Asset and RPM roles. | [LATEST_UPDATE](LATEST_UPDATE.md) |
+| H-056 | Table Engine Polish | Implemented sticky headers, premium loading state (Ping/Spin), and null-safe sorting with numeric coercion. Standardized Pricing Manager floor plans with Excel-based configs and dynamic concession coloring. | [LATEST_UPDATE](LATEST_UPDATE.md) |
 

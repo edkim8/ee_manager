@@ -10,9 +10,12 @@ const props = withDefaults(defineProps<{
   value: number
   /** Number of decimal places */
   decimals?: number
+  /** Optional color class override (e.g. 'text-green-600') */
+  colorClass?: string
 }>(), {
   value: 0,
-  decimals: 1
+  decimals: 1,
+  colorClass: undefined
 })
 
 const formatted = computed(() => {
@@ -24,11 +27,13 @@ const formatted = computed(() => {
   }).format(percentValue)
 })
 
-const textClass = computed(() =>
-  props.value < 0
+const textClass = computed(() => {
+  if (props.colorClass) return props.colorClass
+  
+  return props.value < 0
     ? 'text-red-500 dark:text-red-400 font-semibold'
     : 'text-gray-900 dark:text-white'
-)
+})
 </script>
 
 <template>

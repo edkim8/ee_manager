@@ -271,7 +271,7 @@ const exportMenuItems = computed(() => [[
           Each <th> can be customized via #header-{key} slot.
           Sortable columns show cursor pointer and sort indicators.
         -->
-        <thead class="bg-gray-50 dark:bg-gray-800">
+        <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
           <tr>
             <th
               v-for="column in columns"
@@ -343,11 +343,14 @@ const exportMenuItems = computed(() => [[
           <tr v-if="loading">
             <td
               :colspan="columns.length"
-              class="px-4 py-12 text-center text-gray-500 dark:text-gray-400"
+              class="relative px-4 py-24 text-center"
             >
-              <div class="flex items-center justify-center gap-2">
-                <UIcon name="i-heroicons-arrow-path-20-solid" class="w-5 h-5 animate-spin" />
-                <span>Loading...</span>
+              <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/60 dark:bg-gray-900/60 backdrop-blur-[2px] transition-opacity duration-300">
+                 <div class="relative flex items-center justify-center">
+                   <div class="absolute w-12 h-12 border-4 border-primary-500/20 rounded-full animate-ping"></div>
+                   <div class="w-10 h-10 border-4 border-t-primary-500 border-r-transparent border-b-primary-500/20 border-l-transparent rounded-full animate-spin"></div>
+                 </div>
+                 <span class="text-sm font-black uppercase tracking-[0.2em] text-primary-600 dark:text-primary-400 animate-pulse">Loading Engine</span>
               </div>
             </td>
           </tr>

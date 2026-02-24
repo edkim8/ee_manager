@@ -7,12 +7,17 @@ import SimpleModal from '../../../../../base/components/SimpleModal.vue'
 import AmenityAdjustmentModal from '../../../../components/modals/AmenityAdjustmentModal.vue'
 import SyncDiscrepanciesModal from '../../../../components/modals/SyncDiscrepanciesModal.vue'
 
+// ===== EXCEL-BASED TABLE CONFIGURATION =====
+import { allColumns as availablesColumnsRaw, roleColumns as availablesRoleColumns } from '../../../../../../configs/table-configs/availabilities_availables-complete.generated'
+import { allColumns as applicantsColumnsRaw, roleColumns as applicantsRoleColumns } from '../../../../../../configs/table-configs/availabilities_applicants_futures-complete.generated'
+import { filterColumnsByAccess } from '../../../../../table/composables/useTableColumns'
+
 definePageMeta({
   layout: 'dashboard'
 })
 
 const supabase = useSupabaseClient()
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
 const route = useRoute()
 const router = useRouter()
 
@@ -75,8 +80,6 @@ const { data: floorPlanSummaries, status: summaryStatus } = await useAsyncData(
       return (a.floor_plan_name || '').localeCompare(b.floor_plan_name || '')
     })
 
-    console.log('[Floor Plans] Sorted by SF:', sortedSummaries.map((s: any) => ({ name: s.floor_plan_name, sf: s.area_sqft })))
-
     return sortedSummaries
   },
   {
@@ -89,8 +92,6 @@ const { data: floorPlanSummaries, status: summaryStatus } = await useAsyncData(
 // 2. Select Active Floor Plan from Query Param or First Available
 const selectedFloorPlanId = computed(() => {
   const firstPlan = floorPlanSummaries.value?.[0]
-  console.log('[DEBUG] First floor plan:', firstPlan)
-  console.log('[DEBUG] Available keys:', firstPlan ? Object.keys(firstPlan) : 'no data')
   return (route.query.floor_plan_id as string) || firstPlan?.floor_plan_id || null
 })
 
@@ -102,7 +103,6 @@ const { data: fallbackFloorPlan } = await useAsyncData(
     if (!urlFloorPlanId) return null
     if (floorPlanSummaries.value && floorPlanSummaries.value.length > 0) return null
 
-    console.log('[DEBUG] Fetching fallback floor plan data for:', urlFloorPlanId)
 
     const { data, error } = await supabase
       .from('view_floor_plan_pricing_summary')
@@ -115,11 +115,9 @@ const { data: fallbackFloorPlan } = await useAsyncData(
       return null
     }
 
-    console.log('[DEBUG] Fallback floor plan fetched:', data)
 
     // If we got a floor plan, set the active property from it
     if (data && data.property_code && !activeProperty.value) {
-      console.log('[DEBUG] Setting active property from fallback floor plan:', data.property_code)
       activeProperty.value = data.property_code
     }
 
@@ -132,7 +130,6 @@ const { data: fallbackFloorPlan } = await useAsyncData(
 
 const activeFloorPlan = computed(() => {
   const found = floorPlanSummaries.value?.find((fp: any) => fp.floor_plan_id === selectedFloorPlanId.value)
-  console.log('[DEBUG] Active floor plan:', { selectedId: selectedFloorPlanId.value, found, fallback: fallbackFloorPlan.value })
 
   // Use fallback if summaries don't have the floor plan
   return found || fallbackFloorPlan.value
@@ -144,28 +141,24 @@ const selectFloorPlan = (id: string) => {
 
 // 3. Fetch Units for the selected Floor Plan
 const { data: units, status: unitsStatus, refresh: refreshUnits } = await useAsyncData(`fp-units-${selectedFloorPlanId.value}`, async () => {
-    console.log('[DEBUG] Fetching units for floor plan:', selectedFloorPlanId.value)
 
     if (!selectedFloorPlanId.value) {
-        console.log('[DEBUG] No selected floor plan, returning empty array')
         return []
     }
 
     // 1. Fetch Pipeline data (to get status, rent_offered from Yardi)
     const { data: pipelineData, error: pipelineError } = await supabase
         .from('view_leasing_pipeline')
-        .select('*')
+        .select('*, market_base_rent:calculated_market_rent')
         .eq('floor_plan_id', selectedFloorPlanId.value)
         .order('unit_name')
 
-    console.log('[DEBUG] Pipeline data response:', { count: pipelineData?.length, error: pipelineError })
 
     if (pipelineError) {
         console.error('[DEBUG] Pipeline data error:', pipelineError)
         throw pipelineError
     }
     if (!pipelineData || pipelineData.length === 0) {
-        console.log('[DEBUG] No pipeline data found, returning empty array')
         return []
     }
 
@@ -271,18 +264,10 @@ const { data: units, status: unitsStatus, refresh: refreshUnits } = await useAsy
 })
 
 // Add watcher to log when units change
-watch(units, (newUnits) => {
-    console.log('[DEBUG] Units data updated:', {
-        count: newUnits?.length,
-        hasData: !!newUnits,
-        firstUnit: newUnits?.[0]
-    })
-}, { immediate: true })
 
 // Split units into Available and Applicant/Future
 const availableUnits = computed(() => {
     const filtered = units.value?.filter((u: any) => u.status === 'Available') || []
-    console.log('[DEBUG] Available units:', { total: units.value?.length, available: filtered.length })
     return filtered
 })
 
@@ -294,7 +279,6 @@ const applicantFutureUnits = computed(() => {
             if (!b.application_date) return -1
             return new Date(a.application_date).getTime() - new Date(b.application_date).getTime()
         }) || []
-    console.log('[DEBUG] Applicant/Future units:', { count: filtered.length })
     return filtered
 })
 
@@ -323,32 +307,57 @@ const availableUnitsMetrics = computed(() => {
     }
 })
 
-// Columns for Available Units Table
-const availableColumns: TableColumn[] = [
-  { key: 'unit_name', label: 'Unit', sortable: true, width: '100px', align: 'center' },
-  { key: 'sync_alerts', label: 'Sync', width: '80px', align: 'center' },
-  { key: 'base_rent', label: 'Base', sortable: true, align: 'right' },
-  { key: 'calculated_market_rent', label: 'Market', sortable: true, align: 'right' },
-  { key: 'calculated_offered_rent', label: 'Offered', sortable: true, align: 'right' },
-  { key: 'rent_offered', label: 'Yardi Offered Rent', sortable: true, align: 'right' },
-  { key: 'concession_percent', label: '% Concession', sortable: true, align: 'right' },
-  { key: 'actions', label: '', width: '60px', align: 'right' }
-]
+// Columns for Available Units Table (Dynamic from Excel)
+const availableColumns = computed(() => {
+    return filterColumnsByAccess(availablesColumnsRaw, {
+        userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+        isSuperAdmin: !!userContext.value?.access?.is_super_admin
+    })
+})
 
-// Columns for Applicant/Future Units Table (History)
-const applicantFutureColumns: TableColumn[] = [
-  { key: 'unit_name', label: 'Unit', sortable: true, width: '100px', align: 'center' },
-  { key: 'status', label: 'Status', sortable: true, width: '120px', align: 'center' },
-  { key: 'application_date', label: 'Application Date', sortable: true, align: 'center' },
-  { key: 'base_rent', label: 'Base', sortable: true, align: 'right' },
-  { key: 'calculated_market_rent', label: 'Market', sortable: true, align: 'right' },
-  { key: 'leased_rent', label: 'Leased Rent', sortable: true, align: 'right' },
-  { key: 'concession_percent', label: '% Concession', sortable: true, align: 'right' }
-]
+// Columns for Applicant/Future Units Table (Dynamic from Excel)
+const applicantFutureColumns = computed(() => {
+    return filterColumnsByAccess(applicantsColumnsRaw, {
+        userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+        isSuperAdmin: !!userContext.value?.access?.is_super_admin
+    })
+})
 
-const formatCurrency = (val: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val)
+// ===== DYNAMIC CONCESSION COLORING =====
+
+/**
+ * Calculate concession stats (min/max) for a unit list
+ */
+const getConcessionStats = (data: any[]) => {
+  if (!data || data.length === 0) return { min: 0, max: 0 }
+  const values = data.map(u => 
+    Math.abs(u.market_base_rent > 0 ? ((u.calculated_offered_rent - u.market_base_rent) / u.market_base_rent) : 0)
+  )
+  return {
+    min: Math.min(...values),
+    max: Math.max(...values)
+  }
 }
+
+const availableConcessionStats = computed(() => getConcessionStats(availableUnits.value))
+const applicantsConcessionStats = computed(() => getConcessionStats(applicantFutureUnits.value))
+
+/**
+ * Get dynamic color class based on where a value sits in the current range
+ * RED: Top 15% (highest concessions)
+ * GREEN: Bottom 15% (lowest concessions)
+ */
+const getDynamicConcessionColor = (value: number, stats: { min: number, max: number }) => {
+    const { min, max } = stats
+    if (max === 0 || min === max) return 'text-gray-900 dark:text-white'
+    
+    const range = max - min
+    if (value >= min + (range * 0.85)) return 'text-red-600 dark:text-red-400 font-bold'
+    if (value <= min + (range * 0.15)) return 'text-green-600 dark:text-green-400 font-bold'
+    
+    return 'text-gray-900 dark:text-white'
+}
+
 
 // Modal state (use v-model pattern)
 const showPricingModal = ref(false)
@@ -357,13 +366,11 @@ const selectedUnit = ref<any>(null)
 const showSyncModal = ref(false)
 
 const openIndividualOverride = (unit: any) => {
-  console.log('[openIndividualOverride] Opening modal for unit:', unit)
   selectedUnit.value = unit
   showPricingModal.value = true
 }
 
 const handleModalClose = async (saved: boolean) => {
-  console.log('[handleModalClose] Closing modal, saved:', saved)
   showPricingModal.value = false
   if (saved) {
     await refreshUnits()
@@ -440,25 +447,30 @@ const handleSyncModalClose = () => {
           </UTooltip>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <UCard>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Avg Market Rent</p>
-            <p class="text-xl font-black">{{ formatCurrency(activeFloorPlan.avg_market_rent) }}</p>
+          <UCard class="relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border-white/5 dark:border-white/10 shadow-xl rounded-2xl">
+            <div class="absolute inset-0 bg-gradient-to-br from-gray-500/5 to-transparent pointer-events-none" />
+            <p class="relative z-10 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Avg Market Rent</p>
+            <CellsCurrencyCell :value="activeFloorPlan.avg_market_rent" class="relative z-10 text-2xl font-black" />
           </UCard>
-          <UCard>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Avg Offered Rent</p>
-            <p class="text-xl font-black text-primary-600">{{ formatCurrency(activeFloorPlan.avg_offered_rent) }}</p>
+          <UCard class="relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border-primary-500/20 shadow-xl shadow-primary-500/5 rounded-2xl bg-primary-50/50 dark:bg-primary-950/20">
+            <div class="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-transparent pointer-events-none" />
+            <p class="relative z-10 text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest mb-1">Avg Offered Rent</p>
+            <CellsCurrencyCell :value="activeFloorPlan.avg_offered_rent" class="relative z-10 text-2xl font-black text-primary-600 dark:text-primary-400" />
           </UCard>
-          <UCard>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Concessions</p>
-            <p
-              class="text-xl font-black"
-              :class="activeFloorPlan.rent_discrepancy > 0 ? 'text-green-600' : activeFloorPlan.rent_discrepancy < 0 ? 'text-red-600' : ''"
-            >
-              {{ activeFloorPlan.rent_discrepancy > 0 ? '+' : '' }}{{ formatCurrency(activeFloorPlan.rent_discrepancy) }}
-              <span class="text-xs font-bold opacity-70 ml-1">
+          <UCard class="relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border-white/5 dark:border-white/10 shadow-xl rounded-2xl">
+            <div class="absolute inset-0 bg-gradient-to-br from-gray-500/5 to-transparent pointer-events-none" />
+            <p class="relative z-10 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Concessions</p>
+            <div class="relative z-10 flex items-baseline gap-2">
+              <CellsCurrencyCell 
+                :value="activeFloorPlan.rent_discrepancy" 
+                :is-error="activeFloorPlan.rent_discrepancy < 0"
+                class="text-2xl font-black"
+                :class="activeFloorPlan.rent_discrepancy > 0 ? 'text-green-600' : ''"
+              />
+              <span class="text-xs font-bold opacity-70" :class="activeFloorPlan.rent_discrepancy > 0 ? 'text-green-600' : activeFloorPlan.rent_discrepancy < 0 ? 'text-red-600' : ''">
                 ({{ activeFloorPlan.avg_market_rent > 0 ? ((activeFloorPlan.rent_discrepancy / activeFloorPlan.avg_market_rent) * 100).toFixed(1) : '0.0' }}%)
               </span>
-            </p>
+            </div>
           </UCard>
         </div>
       </div>
@@ -472,25 +484,30 @@ const handleSyncModalClose = () => {
           </UTooltip>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <UCard>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Avg Market Rent</p>
-            <p class="text-xl font-black">{{ formatCurrency(availableUnitsMetrics.avgMarket) }}</p>
+          <UCard class="relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border-white/5 dark:border-white/10 shadow-xl rounded-2xl">
+            <div class="absolute inset-0 bg-gradient-to-br from-gray-500/5 to-transparent pointer-events-none" />
+            <p class="relative z-10 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Avg Market Rent</p>
+            <CellsCurrencyCell :value="availableUnitsMetrics.avgMarket" class="relative z-10 text-2xl font-black" />
           </UCard>
-          <UCard>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Avg Offered Rent</p>
-            <p class="text-xl font-black text-primary-600">{{ formatCurrency(availableUnitsMetrics.avgOffered) }}</p>
+          <UCard class="relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border-primary-500/20 shadow-xl shadow-primary-500/5 rounded-2xl bg-primary-50/50 dark:bg-primary-950/20">
+            <div class="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-transparent pointer-events-none" />
+            <p class="relative z-10 text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest mb-1">Avg Offered Rent</p>
+            <CellsCurrencyCell :value="availableUnitsMetrics.avgOffered" class="relative z-10 text-2xl font-black text-primary-600 dark:text-primary-400" />
           </UCard>
-          <UCard>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Concessions</p>
-            <p
-              class="text-xl font-black"
-              :class="availableUnitsMetrics.concessions > 0 ? 'text-green-600' : availableUnitsMetrics.concessions < 0 ? 'text-red-600' : ''"
-            >
-              {{ availableUnitsMetrics.concessions > 0 ? '+' : '' }}{{ formatCurrency(availableUnitsMetrics.concessions) }}
-              <span class="text-xs font-bold opacity-70 ml-1">
+          <UCard class="relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border-white/5 dark:border-white/10 shadow-xl rounded-2xl">
+            <div class="absolute inset-0 bg-gradient-to-br from-gray-500/5 to-transparent pointer-events-none" />
+            <p class="relative z-10 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Concessions</p>
+            <div class="relative z-10 flex items-baseline gap-2">
+              <CellsCurrencyCell 
+                :value="availableUnitsMetrics.concessions" 
+                :is-error="availableUnitsMetrics.concessions < 0"
+                class="text-2xl font-black"
+                :class="availableUnitsMetrics.concessions > 0 ? 'text-green-600' : ''"
+              />
+              <span class="text-xs font-bold opacity-70" :class="availableUnitsMetrics.concessions > 0 ? 'text-green-600' : availableUnitsMetrics.concessions < 0 ? 'text-red-600' : ''">
                 ({{ availableUnitsMetrics.concessionPct.toFixed(1) }}%)
               </span>
-            </p>
+            </div>
           </UCard>
         </div>
       </div>
@@ -526,31 +543,33 @@ const handleSyncModalClose = () => {
               />
           </template>
 
-          <!-- Rent Columns -->
-          <template #cell-base_rent="{ value }">
-              <span class="text-sm text-gray-400 font-mono">{{ formatCurrency(value) }}</span>
+          <!-- Rent Columns (Mapped to Excel Keys) -->
+          <template #cell-market_base_rent="{ value }">
+              <CellsCurrencyCell :value="value" class="font-bold text-gray-700 dark:text-gray-300 font-mono" />
           </template>
-
-          <template #cell-calculated_market_rent="{ value }">
-              <span class="text-sm font-bold text-gray-700 dark:text-gray-300 font-mono">{{ formatCurrency(value) }}</span>
-          </template>
-
-          <template #cell-calculated_offered_rent="{ value }">
-              <span class="text-sm font-black text-primary-600 font-mono">{{ formatCurrency(value) }}</span>
-          </template>
-
           <template #cell-rent_offered="{ value }">
-              <span class="text-sm font-black text-gray-950 dark:text-white font-mono">{{ formatCurrency(Number(value)) }}</span>
+              <CellsCurrencyCell :value="Number(value)" class="font-black text-primary-600 font-mono" />
           </template>
 
-          <!-- Concession Percentage -->
-          <template #cell-concession_percent="{ row }">
-              <span
-                  class="text-sm font-bold font-mono"
-                  :class="(row.calculated_offered_rent - row.calculated_market_rent) > 0 ? 'text-green-600' : (row.calculated_offered_rent - row.calculated_market_rent) < 0 ? 'text-red-600' : 'text-gray-500'"
-              >
-                  {{ row.calculated_market_rent > 0 ? (((row.calculated_offered_rent - row.calculated_market_rent) / row.calculated_market_rent) * 100).toFixed(1) : '0.0' }}%
-              </span>
+          <!-- Amenities -->
+          <template #cell-temp_amenities_total="{ value }">
+              <CellsCurrencyCell :value="Number(value)" class="text-gray-500 font-mono" />
+          </template>
+
+          <!-- Concession Percentage (Mapped to Excel Key) -->
+          <!-- Concession Percentage (Dynamic Colors) -->
+          <template #cell-concession_total_pct="{ row }">
+              <CellsPercentCell 
+                :value="Math.abs(row.market_base_rent > 0 ? ((row.calculated_offered_rent - row.market_base_rent) / row.market_base_rent) : 0)" 
+                :color-class="getDynamicConcessionColor(Math.abs(row.market_base_rent > 0 ? ((row.calculated_offered_rent - row.market_base_rent) / row.market_base_rent) : 0), availableConcessionStats)"
+                class="font-mono"
+              />
+          </template>
+
+          <template #cell-concession_display_calc="{ row }">
+             <span :class="['font-mono text-xs', getDynamicConcessionColor(Math.abs(row.market_base_rent > 0 ? ((row.calculated_offered_rent - row.market_base_rent) / row.market_base_rent) : 0), availableConcessionStats)]">
+                {{ row.concession_display_calc }}
+             </span>
           </template>
 
           <!-- Individual Action -->
@@ -596,33 +615,34 @@ const handleSyncModalClose = () => {
               />
           </template>
 
-          <!-- Application Date -->
-          <template #cell-application_date="{ value }">
-              <span class="text-sm text-gray-600 dark:text-gray-400">
-                  {{ value ? new Date(value).toLocaleDateString() : '-' }}
-              </span>
+          <!-- Rent Columns (Mapped to Excel Keys) -->
+          <template #cell-market_base_rent="{ value }">
+              <CellsCurrencyCell :value="value" class="font-bold text-gray-700 dark:text-gray-300 font-mono" />
           </template>
 
-          <template #cell-base_rent="{ value }">
-              <span class="text-sm text-gray-400 font-mono">{{ formatCurrency(value) }}</span>
+          <template #cell-lease_rent_amount="{ value }">
+              <CellsCurrencyCell :value="value" class="font-black text-green-700 dark:text-green-500 font-mono" />
           </template>
 
-          <template #cell-concession_percent="{ row }">
-              <span
-                  class="text-sm font-bold font-mono"
-                  :class="(row.leased_rent - row.calculated_market_rent) > 0 ? 'text-green-600' : (row.leased_rent - row.calculated_market_rent) < 0 ? 'text-red-600' : 'text-gray-500'"
-              >
-                  {{ row.calculated_market_rent > 0 ? (((row.leased_rent - row.calculated_market_rent) / row.calculated_market_rent) * 100).toFixed(1) : '0.0' }}%
-              </span>
+          <!-- Amenities -->
+          <template #cell-temp_amenities_total="{ value }">
+              <CellsCurrencyCell :value="Number(value)" class="text-gray-500 font-mono" />
           </template>
 
-          <template #cell-calculated_market_rent="{ value }">
-              <span class="text-sm font-bold text-gray-700 dark:text-gray-300 font-mono">{{ formatCurrency(value) }}</span>
+          <!-- Concession Percentage (Mapped to Excel Key) -->
+          <!-- Concession Percentage (Dynamic Colors) -->
+          <template #cell-concession_total_pct="{ row }">
+              <CellsPercentCell 
+                :value="Math.abs(row.market_base_rent > 0 ? ((row.calculated_offered_rent - row.market_base_rent) / row.market_base_rent) : 0)" 
+                :color-class="getDynamicConcessionColor(Math.abs(row.market_base_rent > 0 ? ((row.calculated_offered_rent - row.market_base_rent) / row.market_base_rent) : 0), applicantsConcessionStats)"
+                class="font-mono"
+              />
           </template>
 
-          <!-- Leased Rent -->
-          <template #cell-leased_rent="{ value }">
-              <span class="text-sm font-black text-green-700 dark:text-green-500 font-mono">{{ formatCurrency(value) }}</span>
+          <template #cell-concession_display_calc="{ row }">
+             <span :class="['font-mono text-xs', getDynamicConcessionColor(Math.abs(row.market_base_rent > 0 ? ((row.calculated_offered_rent - row.market_base_rent) / row.market_base_rent) : 0), applicantsConcessionStats)]">
+                {{ row.concession_display_calc }}
+             </span>
           </template>
       </GenericDataTable>
     </div>

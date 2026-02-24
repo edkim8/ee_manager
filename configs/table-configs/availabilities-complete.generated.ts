@@ -1,8 +1,6 @@
-// ============================================================
-// AUTO-GENERATED from availabilities.xlsx
-// Generated: 2026-02-20
 // DO NOT EDIT MANUALLY - Edit Excel and regenerate
 // ============================================================
+import type { TableColumn } from '../../layers/table/types'
 
 const allColumns: TableColumn[] = [
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -111,10 +109,7 @@ const allColumns: TableColumn[] = [
     label: 'Market Rent',
     sortable: true,
     width: '80px',
-    align: 'right',
-    departments: ['Management', 'Leasing'],
-    class: 'max-lg:hidden',
-    headerClass: 'max-lg:hidden'
+    align: 'right'
   },
   {
     key: 'rent_offered',
@@ -337,10 +332,10 @@ const allColumns: TableColumn[] = [
 
 // Filter Groups
 const filterGroups = {
-  all: ['unit_name', 'sync_alerts', 'floor_plan_name', 'sf', 'b_b', 'status', 'available_date', 'available_date', 'vacant_days', 'turnover_days', 'market_base_rent', 'rent_offered', 'temp_amenities_total', 'concession_total_pct', 'concession_upfront_amount', 'concession_free_rent_days', 'concession_display_calc', 'pricing_comment', 'move_out_date', 'building_name'],
-  available: ['unit_name', 'sync_alerts', 'floor_plan_name', 'sf', 'b_b', 'status', 'available_date', 'available_date', 'vacant_days', 'turnover_days', 'market_base_rent', 'rent_offered', 'temp_amenities_total', 'concession_total_pct', 'concession_upfront_amount', 'concession_free_rent_days', 'concession_display_calc', 'pricing_comment', 'move_out_date', 'building_name'],
-  applied: ['unit_name', 'sync_alerts', 'floor_plan_name', 'sf', 'b_b', 'status', 'available_date', 'available_date', 'vacant_days', 'turnover_days', 'market_base_rent', 'rent_offered', 'temp_amenities_total', 'concession_total_pct', 'concession_upfront_amount', 'concession_free_rent_days', 'concession_display_calc', 'pricing_comment', 'resident_name', 'application_date', 'screening_result', 'move_out_date', 'move_in_date', 'leasing_agent', 'building_name', 'resident_email', 'resident_phone'],
-  leased: ['unit_name', 'sync_alerts', 'floor_plan_name', 'sf', 'b_b', 'status', 'available_date', 'available_date', 'vacant_days', 'turnover_days', 'market_base_rent', 'rent_offered', 'temp_amenities_total', 'concession_total_pct', 'concession_upfront_amount', 'concession_free_rent_days', 'concession_display_calc', 'pricing_comment', 'resident_name', 'move_out_date', 'move_in_date', 'leasing_agent', 'lease_start_date', 'lease_end_date', 'lease_rent_amount', 'building_name', 'resident_email', 'resident_phone']
+  all: ['unit_name', 'sync_alerts', 'floor_plan_name', 'sf', 'b_b', 'status', 'available_date', 'vacant_days', 'turnover_days', 'market_base_rent', 'rent_offered', 'temp_amenities_total', 'concession_total_pct', 'concession_upfront_amount', 'concession_free_rent_days', 'concession_display_calc', 'pricing_comment', 'move_out_date', 'building_name'],
+  available: ['unit_name', 'sync_alerts', 'floor_plan_name', 'sf', 'b_b', 'status', 'available_date', 'vacant_days', 'turnover_days', 'market_base_rent', 'rent_offered', 'temp_amenities_total', 'concession_total_pct', 'concession_upfront_amount', 'concession_free_rent_days', 'concession_display_calc', 'pricing_comment', 'move_out_date', 'building_name'],
+  applied: ['unit_name', 'sync_alerts', 'floor_plan_name', 'sf', 'b_b', 'status', 'available_date', 'vacant_days', 'turnover_days', 'market_base_rent', 'rent_offered', 'temp_amenities_total', 'concession_total_pct', 'concession_upfront_amount', 'concession_free_rent_days', 'concession_display_calc', 'pricing_comment', 'resident_name', 'application_date', 'screening_result', 'move_out_date', 'move_in_date', 'leasing_agent', 'building_name', 'resident_email', 'resident_phone'],
+  leased: ['unit_name', 'sync_alerts', 'floor_plan_name', 'sf', 'b_b', 'status', 'available_date', 'vacant_days', 'turnover_days', 'market_base_rent', 'rent_offered', 'temp_amenities_total', 'concession_total_pct', 'concession_upfront_amount', 'concession_free_rent_days', 'concession_display_calc', 'pricing_comment', 'resident_name', 'move_out_date', 'move_in_date', 'leasing_agent', 'lease_start_date', 'lease_end_date', 'lease_rent_amount', 'building_name', 'resident_email', 'resident_phone']
 }
 
 // Role-based column visibility
