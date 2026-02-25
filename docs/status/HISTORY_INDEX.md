@@ -59,4 +59,5 @@ This file tracks key architectural decisions and completed milestones. **Latest 
 | H-054 | Admin Bug Fixes & UX | Fixed Nuxt UI v4 regressions (linked checkboxes, JSON error). Improved Work Orders/Delinquencies UX. Implemented Dashboard Monitors↔Widgets toggle. | [SESSION_LOG](../archive/SESSION_2026_02_23_ADMIN_BUG_FIXES_AND_DASHBOARD.md) |
 | H-055 | Admin & Dashboard | Implemented `delete_user_v1` secure RPC and UI (Danger Zone). Fixed user creation auto-confirmation bug. Granted dashboard monitor access (7 widgets) to Asset and RPM roles. | [LATEST_UPDATE](LATEST_UPDATE.md) |
 | H-056 | Table Engine Polish | Implemented sticky headers, premium loading state (Ping/Spin), and null-safe sorting with numeric coercion. Standardized Pricing Manager floor plans with Excel-based configs and dynamic concession coloring. | [LATEST_UPDATE](LATEST_UPDATE.md) |
+| H-057 | Owner's Module | Builder-Ready Planning for the new Owners Module. Detailed SQL migrations, Excel-based table configs, and UI/UX "Golden Specs" ready for implementation. | [PLANNING](../../brain/87a5f028-ead9-4928-aa36-503a15db774a/implementation_plan.md) |
 

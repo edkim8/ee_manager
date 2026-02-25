@@ -387,6 +387,39 @@ const tableDefinitions = [
     ]
   },
 
+  // 13. Ownership Entities
+  {
+    table_name: 'ownership_entities',
+    file_path: 'layers/owners/pages/owners/entities.vue',
+    has_filter_groups: false,
+    default_sort_field: 'name',
+    columns: [
+      { key: 'name',            label: 'Entity Name',     width: 200, sortable: true,  notes: 'Legal or trade name of the ownership entity' },
+      { key: 'entity_type',     label: 'Type',            width: 110, sortable: true,  align: 'center', notes: 'LLC, Corporation, Individual, Partnership, REIT' },
+      { key: 'actions',         label: '',                width: 60,  sortable: false, align: 'center', notes: 'Edit action button' },
+      { key: 'legal_title',     label: 'Legal Title',     width: 200, sortable: true,  notes: 'Full legal name if different from entity name' },
+      { key: 'tax_id',          label: 'Tax ID',          width: 120, sortable: false, notes: 'EIN or SSN (XX-XXXXXXX format)' },
+      { key: 'address',         label: 'Address',         width: 220, sortable: false, notes: 'Combined address (line1, line2, city, state, zip)' },
+      { key: 'distribution_gl', label: 'Distribution GL', width: 120, sortable: false, align: 'center', roles: 'Asset', notes: 'Yardi GL code for distributions (e.g. 300-0000)' },
+      { key: 'contribution_gl', label: 'Contribution GL', width: 120, sortable: false, align: 'center', roles: 'Asset', notes: 'Yardi GL code for contributions (e.g. 310-0000)' },
+    ]
+  },
+
+  // 14. Property Ownership (Entity ↔ Property MTM)
+  {
+    table_name: 'property_ownership',
+    file_path: 'layers/owners/pages/owners/property-ownership.vue',
+    has_filter_groups: false,
+    default_sort_field: 'property_code',
+    columns: [
+      { key: 'property_code', label: 'Property',         width: 180, sortable: true,  notes: 'Property code and name' },
+      { key: 'entity_name',   label: 'Ownership Entity', width: 200, sortable: true,  notes: 'Name of the owning entity' },
+      { key: 'equity_pct',    label: 'Equity %',         width: 90,  sortable: true,  align: 'right', notes: 'Entity ownership percentage (0–100)' },
+      { key: 'actions',       label: '',                 width: 80,  sortable: false, align: 'center', notes: 'Edit/delete action buttons' },
+      { key: 'notes',         label: 'Notes',            width: 220, sortable: false, notes: 'Optional notes about the ownership arrangement' },
+    ]
+  },
+
   // 12. Renewals Items (Month-to-Month)
   {
     table_name: 'renewal_items_mtm',

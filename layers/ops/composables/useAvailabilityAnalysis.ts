@@ -162,23 +162,33 @@ export function useAvailabilityAnalysis() {
 
     loading.value = true
     try {
-      // Two separate queries to avoid PostgREST 3-level join disambiguation issues
-      // 1. Units with floor plan names for this property
+      // Two separate queries to avoid PostgREST join disambiguation issues
+      // 1a. Units for this property (floor_plan_id only — avoid ambiguous FK join)
       const { data: unitsData, error: unitsErr } = await supabase
         .from('units')
-        .select('id, floor_plan_id, floor_plans(name)')
+        .select('id, floor_plan_id')
         .eq('property_code', pCode)
-        .eq('is_active', true)
 
       if (unitsErr) throw unitsErr
+
+      // 1b. Floor plan names — query by IDs found in units (floor_plans has no property_code column)
+      const fpIds = [...new Set((unitsData || []).map((u: any) => u.floor_plan_id).filter(Boolean))]
+      const { data: floorPlansData } = await supabase
+        .from('floor_plans')
+        .select('id, marketing_name')
+        .in('id', fpIds.length > 0 ? fpIds : ['00000000-0000-0000-0000-000000000000'])
+
+      const fpNameMap = new Map<string, string>()
+      for (const fp of (floorPlansData || [])) {
+        fpNameMap.set(fp.id, fp.marketing_name)
+      }
 
       // Build unit → floor plan lookup
       const unitFpMap = new Map<string, { floor_plan_id: string; floor_plan_name: string }>()
       for (const u of (unitsData || [])) {
-        const fp = u.floor_plans as any
         unitFpMap.set(u.id, {
           floor_plan_id:   u.floor_plan_id || 'unknown',
-          floor_plan_name: fp?.name || 'Unknown Floor Plan'
+          floor_plan_name: fpNameMap.get(u.floor_plan_id) || 'Unknown Floor Plan'
         })
       }
 
@@ -253,7 +263,7 @@ export function useAvailabilityAnalysis() {
         .order('created_at', { ascending: true })
 
       if (err) throw err
-      priceChangeEvents.value = (data || []).map(e => ({
+      priceChangeEvents.value = (data || []).map((e: any) => ({
         id:            e.id,
         property_code: e.property_code,
         event_type:    e.event_type,

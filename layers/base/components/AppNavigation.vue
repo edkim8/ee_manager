@@ -276,6 +276,34 @@ const navigationItems = computed(() => {
     ],
   })
 
+  // Add Owners menu (super admin or any Asset role)
+  const propertyRoles = Object.values(userContext.value?.access?.property_roles || {})
+  const showOwners = userContext.value?.access?.is_super_admin || propertyRoles.includes('Asset')
+  if (showOwners) {
+    items.push({
+      label: 'Owners',
+      icon: 'i-heroicons-building-library',
+      to: '/owners/entities',
+      children: [
+        {
+          label: 'Ownership Entities',
+          icon: 'i-heroicons-identification',
+          to: '/owners/entities',
+        },
+        {
+          label: 'Property Ownership',
+          icon: 'i-heroicons-link',
+          to: '/owners/property-ownership',
+        },
+        {
+          label: 'Individual Owners',
+          icon: 'i-heroicons-user-group',
+          to: '/owners/individual-owners',
+        },
+      ],
+    })
+  }
+
   // Add Admin menu
   if (userContext.value?.access?.is_super_admin) {
     items.push({

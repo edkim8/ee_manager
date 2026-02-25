@@ -3,25 +3,79 @@ import { serverSupabaseServiceRole } from '#supabase/server'
 import { Database } from '../../../../../types/supabase'
 
 function generateAuditHtml(content: string, date: string, batchId: string): string {
-  // Light markdown → HTML conversion for audit report email
+  // Apply inline markdown transforms (bold, inline code) to a text string
+  function applyInline(text: string): string {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`(.+?)`/g, '<code>$1</code>')
+  }
+
+  // Detect a markdown separator row: |---|---| or |:---|---:|
+  function isSeparatorRow(line: string): boolean {
+    const cells = line.trim().slice(1, -1).split('|')
+    return cells.every(cell => /^[\s:|-]+$/.test(cell))
+  }
+
+  // Render a collected block of consecutive pipe-lines as a styled <table>
+  function renderTable(tableLines: string[]): string {
+    const dataLines = tableLines.filter(l => !isSeparatorRow(l))
+    if (dataLines.length === 0) return ''
+
+    const parseRow = (line: string): string[] =>
+      line.trim().slice(1, -1).split('|').map(cell => cell.trim())
+
+    const [headerLine, ...bodyLines] = dataLines
+    const headers = parseRow(headerLine)
+
+    const headerHtml = headers
+      .map(h => `<th>${applyInline(h)}</th>`)
+      .join('')
+
+    const bodyHtml = bodyLines
+      .map((row, idx) => {
+        const cells = parseRow(row)
+        const bg = idx % 2 === 0 ? '#f8fafc' : '#ffffff'
+        return `<tr>${cells.map(c => `<td style="background:${bg}">${applyInline(c)}</td>`).join('')}</tr>`
+      })
+      .join('\n')
+
+    return `<table class="audit-table"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`
+  }
+
+  // Block-based processing — groups consecutive pipe lines into tables
   const lines = content.split('\n')
-  const htmlLines = lines.map(line => {
+  const parts: string[] = []
+  let i = 0
+
+  while (i < lines.length) {
+    const line = lines[i]
+
+    // Table block: collect all consecutive | lines
+    if (line.trim().startsWith('|')) {
+      const tableLines: string[] = []
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        tableLines.push(lines[i])
+        i++
+      }
+      parts.push(renderTable(tableLines))
+      continue
+    }
+
     // Headers
-    if (line.startsWith('### ')) return `<h3>${line.slice(4)}</h3>`
-    if (line.startsWith('## ')) return `<h2>${line.slice(3)}</h2>`
-    if (line.startsWith('# ')) return `<h1>${line.slice(2)}</h1>`
+    if (line.startsWith('### ')) { parts.push(`<h3>${applyInline(line.slice(4))}</h3>`); i++; continue }
+    if (line.startsWith('## '))  { parts.push(`<h2>${applyInline(line.slice(3))}</h2>`);  i++; continue }
+    if (line.startsWith('# '))   { parts.push(`<h1>${applyInline(line.slice(2))}</h1>`);   i++; continue }
+
     // Horizontal rule
-    if (line.trim() === '---') return '<hr>'
-    // Table rows — render as preformatted to preserve alignment
-    if (line.trim().startsWith('|')) return `<code style="display:block;font-size:12px;white-space:pre">${line}</code>`
-    // Blank lines
-    if (line.trim() === '') return '<br>'
-    // Inline bold
-    const withBold = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    // Code backtick
-    const withCode = withBold.replace(/`(.+?)`/g, '<code>$1</code>')
-    return `<p style="margin:2px 0">${withCode}</p>`
-  })
+    if (line.trim() === '---') { parts.push('<hr>'); i++; continue }
+
+    // Blank line
+    if (line.trim() === '') { parts.push('<br>'); i++; continue }
+
+    // Default paragraph
+    parts.push(`<p style="margin:2px 0">${applyInline(line)}</p>`)
+    i++
+  }
 
   return `<!DOCTYPE html>
 <html>
@@ -41,6 +95,11 @@ function generateAuditHtml(content: string, date: string, batchId: string): stri
   p { font-size: 13px; line-height: 1.6; color: #374151; }
   code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px; background: #f1f5f9; padding: 1px 4px; border-radius: 3px; color: #0f172a; }
   strong { color: #111827; }
+  .audit-table { width: 100%; border-collapse: collapse; margin: 10px 0 16px; font-size: 12px; }
+  .audit-table thead tr { background: #1e40af; }
+  .audit-table th { color: #ffffff; padding: 7px 10px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .audit-table td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; color: #374151; vertical-align: top; }
+  .audit-table tbody tr:last-child td { border-bottom: none; }
   .footer { padding: 16px 32px; background: #f8f9fa; border-top: 1px solid #e2e8f0; font-size: 11px; color: #9ca3af; }
 </style>
 </head>
@@ -51,7 +110,7 @@ function generateAuditHtml(content: string, date: string, batchId: string): stri
     <p>Batch: ${batchId} &nbsp;|&nbsp; Tier 2 Data Architect Report</p>
   </div>
   <div class="body">
-    ${htmlLines.join('\n')}
+    ${parts.join('\n')}
   </div>
   <div class="footer">
     Generated by EE Manager &nbsp;|&nbsp; Automated Audit System

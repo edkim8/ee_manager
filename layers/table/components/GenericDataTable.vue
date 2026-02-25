@@ -250,7 +250,7 @@ const exportMenuItems = computed(() => [[
         Enables horizontal scroll on narrow screens.
       -->
       <div class="overflow-x-auto">
-        <table class="w-full divide-y divide-gray-200 dark:divide-gray-700 zebra-table">
+        <table class="w-full divide-y divide-gray-200 dark:divide-gray-700 zebra-table" style="table-layout: fixed">
         <!--
           COLGROUP
           ========
