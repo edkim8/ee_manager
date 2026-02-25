@@ -1,24 +1,23 @@
-# Field Report - February 23, 2026 (Shift 2)
+# Field Report - February 25, 2026
 
 ## Overview
-Improved the core Table Engine for premium interaction and robust data handling. Standardized the Pricing Manager floor plan views to follow the high-performance configuration pattern.
+Performed the Daily Solver Audit (Batch `944858eb`) for 2026-02-25. No fatal errors. 7 warnings (5 persistent, 2 new). Two new OB anomalies identified: a $250 price spike on S099 and 1 silently-dropped tenancy with unidentified unit.
 
 ## Technical Changes
 
-### 🧱 Table Engine Core (`layers/table`)
-- **Sticky Headers**: Added `sticky top-0` and `z-10` to `thead` in `GenericDataTable.vue` for consistent navigation during long scrolls.
-- **Premium Loading**: Implemented a backdrop-blurred overlay with dual `ping` and `spin` animations for a refined "Loading Engine" state.
-- **Numeric Sorting**: Updated `useTableSort.ts` to automatically detect number-like strings and sort them numerically (e.g., "10" now follows "2").
-- **Null-Safety**: Enhanced sorting logic to push `null` or `undefined` values to the bottom regardless of direction.
-
-### 💰 Pricing Manager Polish (`layers/ops`)
-- **Excel Standardization**: Migrated `office/pricing/floor-plans/index.vue` to use `filterColumnsByAccess` and generated column exports for consistency with the rest of the app.
-- **Dynamic Coloring**: Implemented a "Concession Outlier" coloring system. The highest and lowest 15% of concessions in the current view are highlighted in Red/Green font.
-- **UI Refinement**: Upgraded metrics cards with glassmorphism gradients and consistent padding. Replaced manual currency formatting with the `CellsCurrencyCell` library.
-- **Cleanup**: Removed all legacy `console.log` debug statements.
+### 📅 Daily Audit & Solver Health
+- **W1 Fix Verified (Day 3):** Jeffers/Kenton/Poorman processed as Future tenancies — zero `Future → Notice` auto-corrections. Fix from 2026-02-23 confirmed stable.
+- **CV C213 Escalation:** Now **21 days** overdue — 4 consecutive audit days with no Yardi response. Physical escalation to CV property manager required.
+- **CV C311/C217:** 6 and 5 days overdue respectively — escalating.
+- **RS Alert Churn Resolved:** Yesterday's 6-removal spike was a one-time batch clearance. Today normalized (2 added, 1 removed).
+- **RS Delinquency Trend Improving:** 1 resolved today, ending 2-day zero-resolution streak.
+- **OB S099 Price Spike:** +$250 (+13.3%) — not AIRM-related. Pending OB manager confirmation.
+- **OB Silently-Dropped Tenancy:** 1 tenancy canceled silently, unit reset to Available. Unit ID not surfaced in log — pending DB verification.
+- **OB S093/S042/S170:** 2027 ready dates unchanged — Day 4 unconfirmed by OB manager.
+- **CV AIRM:** Day 4 — 8 units with micro-decrements (C419 newly added). Normal behavior.
+- **Flat Renewals (RS/SB):** Burton, Eva ($1,400) and Thomas, Kyra ($1,569) both renewed flat — third consecutive day of flat renewals across properties.
 
 ## Verification Result
-- [x] Verified sticky header alignment and shadow.
-- [x] Verified numeric sorting on Pricing and Availabilities tables.
-- [x] Verified dynamic coloring responsive to active floor plan selection.
-- [x] Verified premium loading transition state.
+- [x] Verified Daily Audit email delivery (ekim@lehbros.com, elliot.hess@gmail.com).
+- [x] Verified W1 fix stable — Day 3 clean run.
+- [x] Audit committed and pushed to main (`511f89c`).
