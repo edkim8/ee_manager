@@ -39,6 +39,11 @@ WORKFLOW PHASE 1: EVALUATION
      MakeReady units overdue > 7 days, duplicated resident names in a single batch.
    - Check "Micro Price Changes": Price shifts of $1–$2 across multiple units
      simultaneously are likely rounding artifacts — flag for confirmation.
+   - ALWAYS capture ALL availability price changes in the audit report, whether few or
+     many. Include a table (Unit | Property | Old Rent | New Rent | Change | % Change).
+     These reflect per-property operational decisions (market repricing) and are valuable
+     trend data — NOT bugs or corrections. CV $1–$2 daily decrements are AIRM (normal).
+     All other properties pricing changes are manual; note them without requiring action.
 
 3. OPERATIONAL AUDIT:
    - Check for any error messages or failed phases in the console log.
@@ -46,6 +51,12 @@ WORKFLOW PHASE 1: EVALUATION
    - Note any alert churn (> 3 adds or removes at a single property in one run).
    - Code Efficiency Sweep: Flag if any unit is resolved multiple times (duplicate TRACE
      logs for same unit ID) — potential redundant DB calls.
+   - "Silently-Dropped Tenancies": When the solver detects a tenancy that disappeared from
+     Yardi without a normal status transition, it transitions it to → Canceled and resets
+     the unit to Available. The standard term is ALWAYS "Canceled" — we cannot distinguish
+     Canceled vs. Denied from the data and this is intentional by design (including denied
+     applications would add unnecessary noise). Log the count and affected units (if
+     surfaced in the log); flag if > 1 at any single property in one run.
 
 4. INITIAL EVALUATION REPORT:
    - Present a concise summary of findings in the terminal.
