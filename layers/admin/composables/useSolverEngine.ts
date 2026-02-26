@@ -2222,28 +2222,44 @@ export const useSolverEngine = () => {
                         const avgConcessionDays   = withConcDays.length   ? withConcDays.reduce((s, a)   => s + Number(a.concession_free_rent_days), 0)   / withConcDays.length   : null
                         const avgConcessionAmount = withConcAmount.length ? withConcAmount.reduce((s, a) => s + Number(a.concession_upfront_amount), 0) / withConcAmount.length : null
 
+                        // Contracted rent average: avg rent_amount from active leases
+                        const { data: leasesData } = await supabase
+                            .from('leases')
+                            .select('rent_amount')
+                            .eq('property_code', pCode)
+                            .eq('is_active', true)
+
+                        const withRentAmount = (leasesData || []).filter(l => l.rent_amount && l.rent_amount > 0)
+                        const avgContractedRent = withRentAmount.length
+                            ? withRentAmount.reduce((s, l) => s + Number(l.rent_amount), 0) / withRentAmount.length
+                            : null
+
                         // Price changes from current run summary
                         const priceChangesCount = result.summary[pCode]?.priceChanges ?? 0
 
-                        await supabase.from('availability_snapshots').upsert({
-                            solver_run_id:        result.runId,
-                            property_code:        pCode,
-                            snapshot_date:        snapshotDate,
-                            available_count:      availableCount,
-                            applied_count:        appliedCount,
-                            leased_count:         leasedCount,
-                            occupied_count:       occupiedCount,
-                            total_active_count:   avails.length,
-                            total_units:          totalUnits ?? 0,
-                            avg_market_rent:      avgMarketRent   ? Math.round(avgMarketRent  * 100) / 100 : null,
-                            avg_offered_rent:     avgOfferedRent  ? Math.round(avgOfferedRent * 100) / 100 : null,
-                            avg_days_on_market:   avgDaysOnMarket,
-                            avg_concession_days:  avgConcessionDays   ? Math.round(avgConcessionDays   * 10) / 10 : null,
-                            avg_concession_amount: avgConcessionAmount ? Math.round(avgConcessionAmount * 100) / 100 : null,
-                            price_changes_count:  priceChangesCount
-                        }, { onConflict: 'property_code,snapshot_date', ignoreDuplicates: true })
+                        await $fetch('/api/solver/save-snapshot', {
+                            method: 'POST',
+                            body: {
+                                solver_run_id:         result.runId,
+                                property_code:         pCode,
+                                snapshot_date:         snapshotDate,
+                                available_count:       availableCount,
+                                applied_count:         appliedCount,
+                                leased_count:          leasedCount,
+                                occupied_count:        occupiedCount,
+                                total_active_count:    avails.length,
+                                total_units:           totalUnits ?? 0,
+                                avg_market_rent:       avgMarketRent      ? Math.round(avgMarketRent      * 100) / 100 : null,
+                                avg_offered_rent:      avgOfferedRent     ? Math.round(avgOfferedRent     * 100) / 100 : null,
+                                avg_contracted_rent:   avgContractedRent  ? Math.round(avgContractedRent  * 100) / 100 : null,
+                                avg_days_on_market:    avgDaysOnMarket,
+                                avg_concession_days:   avgConcessionDays   ? Math.round(avgConcessionDays   * 10) / 10 : null,
+                                avg_concession_amount: avgConcessionAmount ? Math.round(avgConcessionAmount * 100) / 100 : null,
+                                price_changes_count:   priceChangesCount
+                            }
+                        })
 
-                        console.log(`[Solver] ✓ Availability snapshot saved for ${pCode} (${snapshotDate}): available=${availableCount}, applied=${appliedCount}, leased=${leasedCount}`)
+                        console.log(`[Solver] ✓ Availability snapshot saved for ${pCode} (${snapshotDate}): available=${availableCount}, applied=${appliedCount}, leased=${leasedCount}, contracted_rent=${avgContractedRent ? `$${Math.round(avgContractedRent)}` : 'n/a'}`)
                     } catch (snapErr) {
                         console.error(`[Solver] Snapshot failed for ${pCode}:`, snapErr)
                         // Non-fatal — continue to next property
