@@ -23,7 +23,40 @@ Performed the Daily Solver Audit (Batch `4ab52458`) for 2026-02-26. No fatal err
 - **Price Changes:** New standing rule — always capture ALL availability price changes in every audit report as a table. Operational decisions, not bugs.
 - **Silent Drops:** New standing rule — standard term is always "Canceled." Cannot distinguish Canceled vs. Denied by design. Flag if > 1 at any single property.
 
+### 🔧 Snapshot RLS Fix — Two-Layer Approach (PENDING CONFIRMATION)
+
+**IMPORTANT FOR TOMORROW'S AUDIT AGENT — READ THIS BEFORE EVALUATING SNAPSHOTS.**
+
+Two fixes were applied in sequence today. Both are currently active. Do NOT remove either until Option B is confirmed by tomorrow's live run.
+
+**Option A — Applied first** (`20260226000001_fix_availability_snapshots_rls_write.sql`, commit `c2894ee`):
+- Adds `authenticated_can_write_availability_snapshots` FOR ALL policy on `availability_snapshots`
+- Status: **ACTIVE** — stays in place as safety net until Option B is confirmed
+
+**Option B — Applied second** (`layers/admin/server/api/solver/save-snapshot.post.ts`, commit `a55c613`):
+- Moves snapshot writes from browser-side `useSolverEngine.ts` to a server API route using `service_role`
+- `useSolverEngine.ts:2240` now calls `$fetch('/api/solver/save-snapshot', ...)` instead of `supabase.from(...).upsert(...)`
+- Status: **DEPLOYED BUT UNCONFIRMED** — first live run is tomorrow morning
+
+**Option B Confirmation Checklist (check during tomorrow's audit):**
+- [ ] Zero `403 Forbidden` errors in the browser console for `availability_snapshots`
+- [ ] All 5 properties show `✓ Availability snapshot saved` log lines
+- [ ] Analysis page at `/office/availabilities/analysis` shows today's data correctly
+
+**After confirmation — cleanup step:**
+Run a new migration to drop the now-redundant Option A policy:
+```sql
+DROP POLICY "authenticated_can_write_availability_snapshots" ON public.availability_snapshots;
+```
+Do NOT run this until the confirmation checklist is fully passed.
+
+**If Option B fails:**
+Revert `useSolverEngine.ts:2240–2260` to the original `supabase.from('availability_snapshots').upsert(...)` call.
+Option A policy remains active — Solver resumes working immediately on the next run.
+
 ## Verification Result
 - [x] Verified Daily Audit email delivery (ekim@lehbros.com, elliot.hess@gmail.com).
 - [x] Verified W1 fix stable — Day 4 clean run.
 - [x] Audit committed and pushed to main (`1202103`).
+- [x] Option A migration applied and pushed (`c2894ee`).
+- [x] Option B implemented and pushed (`a55c613`) — awaiting tomorrow's run for confirmation.

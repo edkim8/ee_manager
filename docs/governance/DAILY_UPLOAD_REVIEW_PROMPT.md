@@ -46,6 +46,13 @@ WORKFLOW PHASE 1: EVALUATION
      All other properties pricing changes are manual; note them without requiring action.
 
 3. OPERATIONAL AUDIT:
+   - SNAPSHOT RLS CHECK: Read `docs/status/LATEST_UPDATE.md` for any pending
+     "Option B Confirmation Checklist." If one exists, evaluate it explicitly:
+     (a) Were there any 403 errors on availability_snapshots in the log?
+     (b) Did all 5 properties log `✓ Availability snapshot saved`?
+     If BOTH pass → mark Option B confirmed, note the cleanup migration to run.
+     If EITHER fails → note Option B failed, revert instructions are in LATEST_UPDATE.md.
+     Once confirmed, remove the checklist block from LATEST_UPDATE.md.
    - Check for any error messages or failed phases in the console log.
    - Evaluate pipeline health: available / applied / leased counts per property.
    - Note any alert churn (> 3 adds or removes at a single property in one run).
