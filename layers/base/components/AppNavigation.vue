@@ -283,22 +283,32 @@ const navigationItems = computed(() => {
     items.push({
       label: 'Owners',
       icon: 'i-heroicons-building-library',
-      to: '/owners/entities',
+      to: '/owners/individual-entities',
       children: [
         {
-          label: 'Ownership Entities',
+          label: 'Personal Entities',
           icon: 'i-heroicons-identification',
-          to: '/owners/entities',
-        },
-        {
-          label: 'Property Ownership',
-          icon: 'i-heroicons-link',
-          to: '/owners/property-ownership',
+          to: '/owners/individual-entities',
         },
         {
           label: 'Individual Owners',
           icon: 'i-heroicons-user-group',
           to: '/owners/individual-owners',
+        },
+        {
+          label: 'Entity Interests',
+          icon: 'i-heroicons-arrow-trending-up',
+          to: '/owners/entity-interests',
+        },
+        {
+          label: 'Property Entities',
+          icon: 'i-heroicons-building-office',
+          to: '/owners/entities',
+        },
+        {
+          label: 'Property Ownership',
+          icon: 'i-heroicons-building-office-2',
+          to: '/owners/property-ownership',
         },
       ],
     })

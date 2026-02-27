@@ -126,8 +126,11 @@ const profileItems = computed(() =>
   (profiles.value as any[] || []).map((p: any) => ({ label: `${p.name} — ${p.email}`, value: p.id }))
 )
 
+// Only personal entities (Trust / Individual) — Layer 2 in the ownership chain
 const entityItems = computed(() =>
-  (entities.value as any[] || []).map((e: any) => ({ label: e.name, value: e.id }))
+  (entities.value as any[] || [])
+    .filter((e: any) => e.entity_type === 'Trust' || e.entity_type === 'Individual')
+    .map((e: any) => ({ label: `${e.name}${e.entity_type ? ` (${e.entity_type})` : ''}`, value: e.id }))
 )
 
 function roleBadgeColor(role: string): string {
@@ -275,16 +278,19 @@ function roleBadgeColor(role: string): string {
           />
         </UFormField>
 
-        <!-- Entity -->
-        <UFormField label="Ownership Entity" required>
+        <!-- Personal Entity -->
+        <UFormField label="Personal Entity" required>
           <USelectMenu
             v-model="form.owner_id"
             :items="entityItems"
             value-key="value"
-            placeholder="Select entity"
+            placeholder="Select Trust or Individual entity"
             :disabled="!isCreating"
             class="w-full"
           />
+          <template #hint>
+            <span class="text-xs text-gray-400">Trust or Individual — e.g. Joanna_Trust1</span>
+          </template>
         </UFormField>
 
         <!-- Role & Equity -->

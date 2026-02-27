@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useSupabaseClient, usePropertyState } from '#imports'
 
 export interface AvailabilitySnapshot {
@@ -22,6 +22,7 @@ export interface AvailabilitySnapshot {
 }
 
 export interface AvailabilityDailyTrend extends AvailabilitySnapshot {
+  avg_contracted_rent: number | null
   vacancy_rate: number
   rent_spread_pct: number
 }
@@ -49,6 +50,10 @@ export interface AvailabilityWeeklyTrend {
 export interface FloorPlanBreakdown {
   floor_plan_id: string
   floor_plan_name: string
+  bedrooms: number | null
+  bathrooms: number | null
+  area_sqft: number | null
+  total_units: number
   available: number
   applied: number
   leased: number
@@ -85,14 +90,31 @@ export function useAvailabilityAnalysis() {
   const floorPlanBreakdown = ref<FloorPlanBreakdown[]>([])
   const priceChangeEvents  = ref<PriceChangeEvent[]>([])
   const allPropertySnapshots = ref<AllPropertySnapshot[]>([])
-  const loading = ref(false)
-  const error   = ref<string | null>(null)
+
+  const loadingSnapshot       = ref(false)
+  const loadingDailyTrend     = ref(false)
+  const loadingWeeklyTrend    = ref(false)
+  const loadingFloorPlan      = ref(false)
+  const loadingPriceChanges   = ref(false)
+  const loadingAllProperties  = ref(false)
+
+  // True if any fetch is in flight — used for the Refresh button spinner
+  const loading = computed(() =>
+    loadingSnapshot.value ||
+    loadingDailyTrend.value ||
+    loadingWeeklyTrend.value ||
+    loadingFloorPlan.value ||
+    loadingPriceChanges.value ||
+    loadingAllProperties.value
+  )
+
+  const error = ref<string | null>(null)
 
   async function fetchLatestSnapshot(propertyCode?: string) {
     const pCode = propertyCode || activeProperty.value
     if (!pCode) return
 
-    loading.value = true
+    loadingSnapshot.value = true
     try {
       const { data, error: err } = await supabase
         .from('availability_snapshots')
@@ -108,7 +130,7 @@ export function useAvailabilityAnalysis() {
       console.error('Error fetching latest availability snapshot:', err)
       error.value = err.message
     } finally {
-      loading.value = false
+      loadingSnapshot.value = false
     }
   }
 
@@ -116,7 +138,7 @@ export function useAvailabilityAnalysis() {
     const pCode = propertyCode || activeProperty.value
     if (!pCode) return
 
-    loading.value = true
+    loadingDailyTrend.value = true
     try {
       const { data, error: err } = await supabase
         .from('view_availability_daily_trend')
@@ -130,7 +152,7 @@ export function useAvailabilityAnalysis() {
       console.error('Error fetching availability daily trend:', err)
       error.value = err.message
     } finally {
-      loading.value = false
+      loadingDailyTrend.value = false
     }
   }
 
@@ -138,7 +160,7 @@ export function useAvailabilityAnalysis() {
     const pCode = propertyCode || activeProperty.value
     if (!pCode) return
 
-    loading.value = true
+    loadingWeeklyTrend.value = true
     try {
       const { data, error: err } = await supabase
         .from('view_availability_weekly_trend')
@@ -152,7 +174,7 @@ export function useAvailabilityAnalysis() {
       console.error('Error fetching availability weekly trend:', err)
       error.value = err.message
     } finally {
-      loading.value = false
+      loadingWeeklyTrend.value = false
     }
   }
 
@@ -160,7 +182,7 @@ export function useAvailabilityAnalysis() {
     const pCode = propertyCode || activeProperty.value
     if (!pCode) return
 
-    loading.value = true
+    loadingFloorPlan.value = true
     try {
       // Two separate queries to avoid PostgREST join disambiguation issues
       // 1a. Units for this property (floor_plan_id only — avoid ambiguous FK join)
@@ -175,20 +197,37 @@ export function useAvailabilityAnalysis() {
       const fpIds = [...new Set((unitsData || []).map((u: any) => u.floor_plan_id).filter(Boolean))]
       const { data: floorPlansData } = await supabase
         .from('floor_plans')
-        .select('id, marketing_name')
+        .select('id, marketing_name, bedroom_count, bathroom_count, area_sqft')
         .in('id', fpIds.length > 0 ? fpIds : ['00000000-0000-0000-0000-000000000000'])
 
-      const fpNameMap = new Map<string, string>()
+      const fpMetaMap = new Map<string, { name: string; bedrooms: number | null; bathrooms: number | null; area_sqft: number | null }>()
       for (const fp of (floorPlansData || [])) {
-        fpNameMap.set(fp.id, fp.marketing_name)
+        fpMetaMap.set(fp.id, {
+          name:      fp.marketing_name,
+          bedrooms:  fp.bedroom_count ?? null,
+          bathrooms: fp.bathroom_count ?? null,
+          area_sqft: fp.area_sqft ?? null,
+        })
+      }
+
+      // Count total units per floor plan (from the already-fetched unitsData)
+      const fpUnitCount = new Map<string, number>()
+      for (const u of (unitsData || [])) {
+        if (u.floor_plan_id) {
+          fpUnitCount.set(u.floor_plan_id, (fpUnitCount.get(u.floor_plan_id) ?? 0) + 1)
+        }
       }
 
       // Build unit → floor plan lookup
-      const unitFpMap = new Map<string, { floor_plan_id: string; floor_plan_name: string }>()
+      const unitFpMap = new Map<string, { floor_plan_id: string; floor_plan_name: string; bedrooms: number | null; bathrooms: number | null; area_sqft: number | null }>()
       for (const u of (unitsData || [])) {
+        const meta = fpMetaMap.get(u.floor_plan_id)
         unitFpMap.set(u.id, {
           floor_plan_id:   u.floor_plan_id || 'unknown',
-          floor_plan_name: fpNameMap.get(u.floor_plan_id) || 'Unknown Floor Plan'
+          floor_plan_name: meta?.name || 'Unknown Floor Plan',
+          bedrooms:        meta?.bedrooms ?? null,
+          bathrooms:       meta?.bathrooms ?? null,
+          area_sqft:       meta?.area_sqft ?? null,
         })
       }
 
@@ -206,6 +245,9 @@ export function useAvailabilityAnalysis() {
       const grouped = new Map<string, {
         floor_plan_id: string
         floor_plan_name: string
+        bedrooms: number | null
+        bathrooms: number | null
+        area_sqft: number | null
         available: number
         applied: number
         leased: number
@@ -213,7 +255,7 @@ export function useAvailabilityAnalysis() {
       }>()
 
       for (const row of (availsData || [])) {
-        const fpInfo = unitFpMap.get(row.unit_id) ?? { floor_plan_id: 'unknown', floor_plan_name: 'Unknown Floor Plan' }
+        const fpInfo = unitFpMap.get(row.unit_id) ?? { floor_plan_id: 'unknown', floor_plan_name: 'Unknown Floor Plan', bedrooms: null, bathrooms: null, area_sqft: null }
         const key = fpInfo.floor_plan_id
 
         if (!grouped.has(key)) {
@@ -233,6 +275,10 @@ export function useAvailabilityAnalysis() {
       floorPlanBreakdown.value = Array.from(grouped.values()).map(g => ({
         floor_plan_id:   g.floor_plan_id,
         floor_plan_name: g.floor_plan_name,
+        bedrooms:        g.bedrooms,
+        bathrooms:       g.bathrooms,
+        area_sqft:       g.area_sqft,
+        total_units:     fpUnitCount.get(g.floor_plan_id) ?? 0,
         available:       g.available,
         applied:         g.applied,
         leased:          g.leased,
@@ -242,7 +288,7 @@ export function useAvailabilityAnalysis() {
       console.error('Error fetching floor plan breakdown:', err)
       error.value = err.message
     } finally {
-      loading.value = false
+      loadingFloorPlan.value = false
     }
   }
 
@@ -250,7 +296,7 @@ export function useAvailabilityAnalysis() {
     const pCode = propertyCode || activeProperty.value
     if (!pCode) return
 
-    loading.value = true
+    loadingPriceChanges.value = true
     try {
       const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
@@ -274,14 +320,14 @@ export function useAvailabilityAnalysis() {
       console.error('Error fetching price change events:', err)
       error.value = err.message
     } finally {
-      loading.value = false
+      loadingPriceChanges.value = false
     }
   }
 
   async function fetchAllPropertySnapshots(propertyCodes: string[]) {
     if (!propertyCodes.length) return
 
-    loading.value = true
+    loadingAllProperties.value = true
     try {
       const { data, error: err } = await supabase
         .from('view_availability_daily_trend')
@@ -307,7 +353,7 @@ export function useAvailabilityAnalysis() {
       console.error('Error fetching all property snapshots:', err)
       error.value = err.message
     } finally {
-      loading.value = false
+      loadingAllProperties.value = false
     }
   }
 
@@ -318,6 +364,14 @@ export function useAvailabilityAnalysis() {
     floorPlanBreakdown,
     priceChangeEvents,
     allPropertySnapshots,
+    // Per-section loading states
+    loadingSnapshot,
+    loadingDailyTrend,
+    loadingWeeklyTrend,
+    loadingFloorPlan,
+    loadingPriceChanges,
+    loadingAllProperties,
+    // True if any fetch is in flight (for the Refresh button)
     loading,
     error,
     fetchLatestSnapshot,

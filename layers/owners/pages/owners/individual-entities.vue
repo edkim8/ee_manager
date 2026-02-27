@@ -10,7 +10,7 @@ definePageMeta({
 const toast = useToast()
 
 // --- Data ---
-const { data: entities, status, refresh } = await useAsyncData('ownership-entities', () =>
+const { data: entities, status, refresh } = await useAsyncData('personal-entities', () =>
   $fetch('/api/owners/entities'),
   { server: false }
 )
@@ -20,13 +20,12 @@ const searchQuery = ref('')
 
 const filteredData = computed(() => {
   const list = (entities.value as any[] || [])
-    .filter((e: any) => !['Trust', 'Individual'].includes(e.entity_type))
+    .filter((e: any) => e.entity_type === 'Trust' || e.entity_type === 'Individual')
   if (!searchQuery.value) return list
   const q = searchQuery.value.toLowerCase()
   return list.filter((r: any) =>
     r.name?.toLowerCase().includes(q) ||
     r.legal_title?.toLowerCase().includes(q) ||
-    r.entity_type?.toLowerCase().includes(q) ||
     r.tax_id?.toLowerCase().includes(q)
   )
 })
@@ -36,19 +35,21 @@ const showEditModal = ref(false)
 const isCreating = ref(false)
 const saving = ref(false)
 
-const ENTITY_TYPES = ['LP', 'LLC', 'Corporation', 'Partnership', 'REIT']
+const ENTITY_TYPES = ['Trust', 'Individual']
 
 const emptyForm = () => ({
-  id:            '',
-  name:          '',
-  legal_title:   '',
-  entity_type:   '',
-  tax_id:        '',
-  address_line1: '',
-  address_line2: '',
-  address_city:  '',
-  address_state: '',
-  address_zip:   '',
+  id:              '',
+  name:            '',
+  legal_title:     '',
+  entity_type:     '',
+  tax_id:          '',
+  address_line1:   '',
+  address_line2:   '',
+  address_city:    '',
+  address_state:   '',
+  address_zip:     '',
+  distribution_gl: '',
+  contribution_gl: '',
 })
 
 const form = ref(emptyForm())
@@ -61,16 +62,18 @@ function openCreate() {
 
 function openEdit(row: any) {
   form.value = {
-    id:            row.id            ?? '',
-    name:          row.name          ?? '',
-    legal_title:   row.legal_title   ?? '',
-    entity_type:   row.entity_type   ?? '',
-    tax_id:        row.tax_id        ?? '',
-    address_line1: row.address_line1 ?? '',
-    address_line2: row.address_line2 ?? '',
-    address_city:  row.address_city  ?? '',
-    address_state: row.address_state ?? '',
-    address_zip:   row.address_zip   ?? '',
+    id:              row.id              ?? '',
+    name:            row.name            ?? '',
+    legal_title:     row.legal_title     ?? '',
+    entity_type:     row.entity_type     ?? '',
+    tax_id:          row.tax_id          ?? '',
+    address_line1:   row.address_line1   ?? '',
+    address_line2:   row.address_line2   ?? '',
+    address_city:    row.address_city    ?? '',
+    address_state:   row.address_state   ?? '',
+    address_zip:     row.address_zip     ?? '',
+    distribution_gl: row.distribution_gl ?? '',
+    contribution_gl: row.contribution_gl ?? '',
   }
   isCreating.value = false
   showEditModal.value = true
@@ -107,11 +110,8 @@ function formatAddress(row: any): string {
 
 function entityTypeBadgeColor(type: string): string {
   const map: Record<string, string> = {
-    'LP':          'sky',
-    'LLC':         'teal',
-    'Corporation': 'blue',
-    'Partnership': 'cyan',
-    'REIT':        'orange',
+    'Trust':      'indigo',
+    'Individual': 'violet',
   }
   return map[type] || 'neutral'
 }
@@ -122,13 +122,13 @@ function entityTypeBadgeColor(type: string): string {
     <!-- Header -->
     <div class="mb-2 flex items-center justify-between">
       <div class="flex items-baseline gap-3">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Property Entities</h1>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Personal Entities</h1>
         <span class="text-lg text-gray-500 font-medium">· {{ filteredData.length }} entities</span>
       </div>
       <UButton icon="i-heroicons-plus" label="Add Entity" color="primary" @click="openCreate" />
     </div>
     <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-      LP, LLC, Corporation, and REIT entities that directly own properties.
+      Trust and Individual entities that hold Yardi GL codes. These sit between individual owners and property entities.
     </p>
 
     <ClientOnly>
@@ -136,20 +136,19 @@ function entityTypeBadgeColor(type: string): string {
         :data="filteredData"
         :loading="status === 'pending'"
         :columns="[
-          { key: 'name',        label: 'Entity Name',  sortable: true,  width: '200px' },
-          { key: 'entity_type', label: 'Type',         sortable: true,  width: '100px', align: 'center' },
-          { key: 'legal_title', label: 'Legal Title',  sortable: true,  width: '200px', class: 'max-md:hidden', headerClass: 'max-md:hidden' },
-          { key: 'tax_id',      label: 'Tax ID',       sortable: false, width: '120px', class: 'max-lg:hidden', headerClass: 'max-lg:hidden' },
-          { key: 'address',     label: 'Address',      sortable: false, width: '300px', class: 'max-xl:hidden', headerClass: 'max-xl:hidden' },
-          { key: 'actions',     label: '',             sortable: false, width: '60px',  align: 'center' },
+          { key: 'name',            label: 'Entity Name',     sortable: true,  width: '180px' },
+          { key: 'entity_type',     label: 'Type',            sortable: true,  width: '100px', align: 'center' },
+          { key: 'distribution_gl', label: 'Dist GL',         sortable: false, width: '120px', align: 'center', class: 'max-md:hidden', headerClass: 'max-md:hidden' },
+          { key: 'contribution_gl', label: 'Contrib GL',      sortable: false, width: '120px', align: 'center', class: 'max-md:hidden', headerClass: 'max-md:hidden' },
+          { key: 'tax_id',          label: 'Tax ID',          sortable: false, width: '120px', class: 'max-lg:hidden', headerClass: 'max-lg:hidden' },
+          { key: 'address',         label: 'Address',         sortable: false, width: '300px', class: 'max-xl:hidden', headerClass: 'max-xl:hidden' },
+          { key: 'actions',         label: '',                sortable: false, width: '60px',  align: 'center' },
         ]"
         row-key="id"
-        enable-pagination
-        :page-size="25"
         default-sort-field="name"
         striped
         enable-export
-        export-filename="property-entities"
+        export-filename="personal-entities"
       >
         <template #toolbar>
           <UInput
@@ -164,15 +163,24 @@ function entityTypeBadgeColor(type: string): string {
           <span class="font-semibold text-gray-900 dark:text-white">{{ value }}</span>
         </template>
 
-        <template #cell-legal_title="{ value }">
-          <span v-if="value" class="text-sm text-gray-600 dark:text-gray-400 italic">{{ value }}</span>
-          <span v-else class="text-gray-400">—</span>
-        </template>
-
         <template #cell-entity_type="{ value }">
           <UBadge v-if="value" :color="entityTypeBadgeColor(value)" variant="subtle" size="sm">
             {{ value }}
           </UBadge>
+          <span v-else class="text-gray-400">—</span>
+        </template>
+
+        <template #cell-distribution_gl="{ value }">
+          <span v-if="value" class="font-mono text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
+            {{ value }}
+          </span>
+          <span v-else class="text-gray-400">—</span>
+        </template>
+
+        <template #cell-contribution_gl="{ value }">
+          <span v-if="value" class="font-mono text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2 py-0.5 rounded">
+            {{ value }}
+          </span>
           <span v-else class="text-gray-400">—</span>
         </template>
 
@@ -200,7 +208,7 @@ function entityTypeBadgeColor(type: string): string {
     <!-- Edit / Create Modal -->
     <SimpleModal
       v-model="showEditModal"
-      :title="isCreating ? 'New Property Entity' : 'Edit Property Entity'"
+      :title="isCreating ? 'New Personal Entity' : 'Edit Personal Entity'"
       :description="isCreating ? '' : form.name"
       width="w-full max-w-2xl"
     >
@@ -208,7 +216,7 @@ function entityTypeBadgeColor(type: string): string {
         <!-- Name & Legal Title -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UFormField label="Entity Name" required>
-            <UInput v-model="form.name" placeholder="e.g. Whispering Oaks LP" class="w-full" />
+            <UInput v-model="form.name" placeholder="e.g. Joanna_Trust1" class="w-full" />
           </UFormField>
           <UFormField label="Legal Title">
             <UInput v-model="form.legal_title" placeholder="Full legal name if different" class="w-full" />
@@ -230,6 +238,20 @@ function entityTypeBadgeColor(type: string): string {
           </UFormField>
         </div>
 
+        <!-- Yardi GL Codes -->
+        <div>
+          <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Yardi GL Codes</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <UFormField label="Distribution GL">
+              <UInput v-model="form.distribution_gl" placeholder="e.g. 300-0000" maxlength="9" class="w-full font-mono" />
+            </UFormField>
+            <UFormField label="Contribution GL">
+              <UInput v-model="form.contribution_gl" placeholder="e.g. 310-0000" maxlength="9" class="w-full font-mono" />
+            </UFormField>
+          </div>
+          <p class="mt-2 text-xs text-gray-400">GL codes used in Yardi for distributions and contributions from this entity.</p>
+        </div>
+
         <!-- Address -->
         <div>
           <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Address</p>
@@ -238,7 +260,7 @@ function entityTypeBadgeColor(type: string): string {
               <UInput v-model="form.address_line1" placeholder="123 Main St" class="w-full" />
             </UFormField>
             <UFormField label="Line 2">
-              <UInput v-model="form.address_line2" placeholder="C/O Pacific Trust Co, Suite 400, Attn: ..." class="w-full" />
+              <UInput v-model="form.address_line2" placeholder="C/O Pacific Trust Co, Suite 400" class="w-full" />
             </UFormField>
             <div class="grid grid-cols-3 gap-3">
               <UFormField label="City" class="col-span-1">
