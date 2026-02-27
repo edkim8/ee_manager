@@ -60,3 +60,15 @@ Option A policy remains active — Solver resumes working immediately on the nex
 - [x] Audit committed and pushed to main (`1202103`).
 - [x] Option A migration applied and pushed (`c2894ee`).
 - [x] Option B implemented and pushed (`a55c613`) — awaiting tomorrow's run for confirmation.
+
+## 🔑 Owners Module Refinement & PDF Pipeline (H-062)
+- **Entity Interests Engine**: Implemented full M2M stake management. New API routes (`GET`, `POST`, `PATCH`, `DELETE`) and UI components for managing granular equity splits.
+- **PDF Generation Pipeline**: Established a production-ready Chrome headless pattern. Documented in `memory/pdf-generation.md` for future agents.
+- **Ownership Reference**: Produced `docs/owners/OWNERSHIP_REFERENCE.pdf` capturing the live ownership hierarchy across all properties.
+- **Database Hardening**:
+  - `20260225000003`: Capture average contracted rent in snapshots.
+  - `20260225000004`: Security definer views for multi-tenant isolation.
+  - `20260225000006`: Entity-to-Entity recursive ownership support.
+  - `20260225000007`: High-precision equity splits (NUMERIC 15,4).
+- **Memory Initialization**: Bootstrapped `memory/` directory to store long-lived architectural patterns (Solver, PDF, and general Project Memory).
+
