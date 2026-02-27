@@ -142,3 +142,28 @@ This is the first step in a Solver server-side migration path:
 | `a55c613` | feat(solver): move availability snapshot writes to server-side API (Option B) |
 | `c6f2296` | docs: document Option B pending confirmation and snapshot RLS cleanup steps |
 | `943a438` | docs: update HISTORY_INDEX.md for H-060 and H-061 |
+| `ce98e9e` | feat(owners): implement owners module scaffold and feb 24 daily audit |
+| `a84750a` | feat(owners): owners module refinement, entity interests API, and pdf generation pipeline (H-062) |
+| `3b23bca` | docs: finalize H-062 status updates and project memory |
+
+---
+
+## Part 4 — Owners Module Refinement & PDF Pipeline (H-062)
+
+### Entity Interests Engine
+- Implemented full M2M stake management. 
+- New API routes (`GET`, `POST`, `PATCH`, `DELETE`) and UI components for managing granular equity splits.
+- High-precision equity splits (NUMERIC 15,4).
+
+### PDF Generation Pipeline
+- Established a production-ready **Chrome Headless** pattern.
+- Documented in `memory/pdf-generation.md` for future agents.
+- Produced `docs/owners/OWNERSHIP_REFERENCE.pdf` capturing the live ownership hierarchy.
+
+### Database Hardening
+- **H-062 Migrations**:
+  - `20260225000003`: Capture average contracted rent in snapshots.
+  - `20260225000004`: Security definer views for multi-tenant isolation.
+  - `20260225000006`: Entity-to-Entity recursive ownership support.
+  - `20260225000007`: High-precision equity splits.
+
