@@ -53,6 +53,31 @@ const activeUnitData = computed(() =>
   activeUnit.value ? unitByCode(activeUnit.value) : null
 )
 
+const STATUS_SLOT = {
+  Available: {
+    active:   'bg-emerald-500 border-emerald-500 text-white shadow-lg scale-[1.02]',
+    inactive: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:border-emerald-400',
+  },
+  Applied: {
+    active:   'bg-sky-500 border-sky-500 text-white shadow-lg scale-[1.02]',
+    inactive: 'bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:border-sky-400',
+  },
+} as const
+
+const slotClass = (code: string, isActive: boolean) => {
+  const status = unitByCode(code)?.status as keyof typeof STATUS_SLOT | undefined
+  const map = STATUS_SLOT[status ?? 'Available'] ?? STATUS_SLOT.Available
+  return isActive ? map.active : map.inactive
+}
+
+const STATUS_BADGE = {
+  Available: 'bg-emerald-500 text-white',
+  Applied:   'bg-sky-500 text-white',
+} as const
+
+const badgeClass = (status: string) =>
+  STATUS_BADGE[status as keyof typeof STATUS_BADGE] ?? 'bg-gray-400 text-white'
+
 const today = new Date().toISOString().slice(0, 10)
 
 const fmt = (n: number | null) => n != null ? `$${Number(n).toLocaleString()}` : '—'
@@ -72,14 +97,16 @@ const fmtDate = (d: string | null) => {
       <div class="flex items-center gap-2 mb-2">
         <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Tour Shortlist</span>
         <span class="text-[10px] text-gray-300 dark:text-gray-600">{{ selectedUnits.length }}/{{ MAX_TOUR_SLOTS }}</span>
-        <button
-          v-if="selectedUnits.length > 0"
-          type="button"
-          class="ml-auto text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 font-medium transition-colors"
-          @click="clear"
-        >
-          Clear all
-        </button>
+        <div class="ml-auto flex items-center gap-3">
+          <span class="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Available
+          </span>
+          <span class="flex items-center gap-1 text-[10px] text-sky-600 dark:text-sky-400">
+            <span class="w-2 h-2 rounded-full bg-sky-500 inline-block" />
+            Applied
+          </span>
+        </div>
       </div>
 
       <div class="grid gap-2" :style="`grid-template-columns: repeat(${MAX_TOUR_SLOTS}, 1fr)`">
@@ -89,11 +116,7 @@ const fmtDate = (d: string | null) => {
           :key="i"
           type="button"
           class="flex flex-col items-center justify-center rounded-xl border-2 px-2 py-2 transition-all min-w-0"
-          :class="code
-            ? activeUnit === code
-              ? 'bg-primary-500 border-primary-500 text-white shadow-lg scale-[1.02]'
-              : 'bg-primary-50 dark:bg-primary-950/30 border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 hover:border-primary-400'
-            : 'border-dashed border-gray-200 dark:border-gray-700 cursor-default'"
+          :class="code ? slotClass(code, activeUnit === code) : 'border-dashed border-gray-200 dark:border-gray-700 cursor-default'"
           @click="code ? setActive(code) : undefined"
         >
           <template v-if="code">
@@ -111,8 +134,8 @@ const fmtDate = (d: string | null) => {
       </p>
     </div>
 
-    <!-- ── Filter Tabs ────────────────────────────────────────── -->
-    <div class="flex-shrink-0 flex gap-1 px-4 py-2 bg-slate-50 dark:bg-slate-950 border-b border-gray-200 dark:border-gray-800">
+    <!-- ── Filter Tabs + Clear All ──────────────────────────── -->
+    <div class="flex-shrink-0 flex items-center gap-1 px-4 py-2 bg-slate-50 dark:bg-slate-950 border-b border-gray-200 dark:border-gray-800">
       <button
         v-for="opt in (['Available', 'Applied', 'All'] as const)"
         :key="opt"
@@ -126,6 +149,16 @@ const fmtDate = (d: string | null) => {
         {{ opt }}
         <span class="ml-1 opacity-60 font-normal">{{ tabCount(opt) }}</span>
       </button>
+
+      <UButton
+        v-if="selectedUnits.length > 0"
+        label="Clear Shortlist"
+        color="error"
+        variant="soft"
+        size="xs"
+        class="ml-auto"
+        @click="clear"
+      />
     </div>
 
     <!-- ── Split View ─────────────────────────────────────────── -->
@@ -171,10 +204,10 @@ const fmtDate = (d: string | null) => {
                 <div
                   class="w-6 h-6 rounded-md flex items-center justify-center transition-all mx-auto"
                   :class="isSelected(unit.unit_name)
-                    ? 'bg-primary-500 text-white'
+                    ? unit.status === 'Applied' ? 'bg-sky-500 text-white' : 'bg-emerald-500 text-white'
                     : isFull
                       ? 'bg-gray-100 dark:bg-gray-800 text-gray-300 cursor-not-allowed'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-400 hover:bg-primary-100 hover:text-primary-600 dark:hover:bg-primary-900/30'"
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-400 hover:bg-emerald-100 hover:text-emerald-600 dark:hover:bg-emerald-900/30'"
                 >
                   <UIcon
                     :name="isSelected(unit.unit_name) ? 'i-heroicons-check' : 'i-heroicons-plus'"
@@ -217,15 +250,6 @@ const fmtDate = (d: string | null) => {
           <!-- Photo placeholder -->
           <div class="h-52 bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-950/40 dark:to-primary-900/30 flex items-center justify-center flex-shrink-0 relative">
             <UIcon name="i-heroicons-photo" class="w-14 h-14 text-primary-200 dark:text-primary-800" />
-            <!-- Status badge overlay -->
-            <span
-              class="absolute top-4 right-4 text-xs font-bold px-3 py-1 rounded-full"
-              :class="activeUnitData.status === 'Available'
-                ? 'bg-emerald-500 text-white'
-                : 'bg-sky-500 text-white'"
-            >
-              {{ activeUnitData.status }}
-            </span>
           </div>
 
           <!-- Detail content -->
