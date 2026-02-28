@@ -4,6 +4,7 @@ import { useSupabaseUser, useSupabaseClient, useRouter, useRoute, useColorMode, 
 import { usePropertyState } from '../composables/usePropertyState'
 import { useLayoutWidth } from '../composables/useLayoutWidth'
 import { useTheme } from '../composables/useTheme'
+import { useAppMode } from '../composables/useAppMode'
 import ConstantsModal from './modals/ConstantsModal.vue'
 
 const user = useSupabaseUser()
@@ -13,13 +14,18 @@ const route = useRoute()
 const colorMode = useColorMode()
 
 // Use shared property state
-const { 
-  activeProperty: active_property, 
-  propertyOptions, 
+const {
+  activeProperty: active_property,
+  propertyOptions,
   userContext,
+  contextOverride,
+  availableDownshiftRoles,
+  canUseDevTools,
   fetchProperties,
   setProperty,
-  resetProperty 
+  resetProperty,
+  setOverride,
+  clearOverride,
 } = usePropertyState()
 
 // Mobile menu state
@@ -48,6 +54,43 @@ const { isWide, toggleWidth } = useLayoutWidth()
 
 // Color theme
 const { THEMES, currentThemeId, setTheme } = useTheme()
+
+// App mode
+const { appMode, toggleMode } = useAppMode()
+
+// Developer Tools — Context Impersonation (super admin only)
+const DEPT_ITEMS = [
+  { label: 'Management', value: 'Management' },
+  { label: 'Leasing', value: 'Leasing' },
+  { label: 'Maintenance', value: 'Maintenance' },
+  { label: 'Invest', value: 'Invest' },
+]
+// Role items are dynamic: only roles ranked below the user's actual role are shown
+const roleItems = computed(() =>
+  availableDownshiftRoles.value.map(r => ({ label: r, value: r }))
+)
+const devDept = ref<string>(contextOverride.value.dept || '')
+const devRole = ref<string>(contextOverride.value.role || '')
+
+// Keep local refs in sync when override is cleared externally
+watch(contextOverride, (val) => {
+  devDept.value = val.dept || ''
+  devRole.value = val.role || ''
+}, { deep: true })
+
+const hasOverride = computed(() => !!(contextOverride.value.dept || contextOverride.value.role))
+
+const applyOverride = () => {
+  setOverride(devDept.value || null, devRole.value || null)
+  window.location.reload()
+}
+
+const handleClearOverride = () => {
+  clearOverride()
+  devDept.value = ''
+  devRole.value = ''
+  window.location.reload()
+}
 
 // Force page reload on property change to clear stale data
 watch(active_property, (newVal, oldVal) => {
@@ -115,6 +158,18 @@ const userMenuItems = computed(() => [
   ],
   [
     {
+      label: appMode.value === 'app' ? 'Switch to Web Mode' : 'Switch to App Mode',
+      icon: appMode.value === 'app' ? 'i-heroicons-computer-desktop' : 'i-heroicons-device-phone-mobile',
+      onSelect: () => toggleMode(),
+    },
+  ],
+  ...(canUseDevTools.value ? [[{
+    label: 'Developer Tools',
+    slot: 'devtools',
+    disabled: true,
+  }]] : []),
+  [
+    {
       label: 'Sign Out',
       icon: 'i-heroicons-arrow-left-on-rectangle',
       onSelect: async () => {
@@ -152,216 +207,114 @@ const handleConstantsClose = () => {
 
 // Navigation items
 const navigationItems = computed(() => {
-  const items: { label: string; icon: string; to?: string; onSelect?:Function; children?: any[] }[] = [
+  const ctx = userContext.value
+  const isSuperAdmin = ctx?.access?.is_super_admin ?? false
+  // dept is null when no override is active — null means "no filter, show all"
+  const dept = ctx?.profile?.department ?? null
+
+  // Department-based visibility helpers.
+  // null dept = super admin / no dept configured → show everything role-appropriate.
+  const showLeasingModules = !dept || ['Management', 'Leasing'].includes(dept)
+  const showOperations    = !dept || ['Management', 'Leasing', 'Maintenance'].includes(dept)
+
+  // Owners: role gate (super admin OR has any Asset role) AND dept gate (Invest or no dept)
+  const propertyRoles = Object.values(ctx?.access?.property_roles || {})
+  const hasOwnerAccess = isSuperAdmin || propertyRoles.includes('Asset')
+  const showOwners = hasOwnerAccess && (!dept || dept === 'Invest')
+
+  const items: { label: string; icon: string; to?: string; onSelect?: Function; children?: any[] }[] = [
+    // Dashboard & Assets — always visible
     {
       label: 'Dashboard',
       icon: 'i-heroicons-home',
       to: '/',
     },
+    {
+      label: 'Assets',
+      icon: 'i-heroicons-building-library',
+      to: '/assets/properties',
+      children: [
+        { label: 'Properties', icon: 'i-heroicons-building-office', to: '/assets/properties' },
+        { label: 'Buildings', icon: 'i-heroicons-home-modern', to: '/assets/buildings' },
+        { label: 'Floor Plans', icon: 'i-heroicons-map', to: '/assets/floor-plans' },
+        { label: 'Units', icon: 'i-heroicons-key', to: '/assets/units' },
+        { label: 'Locations', icon: 'i-heroicons-map-pin', to: '/assets/locations' },
+      ],
+    },
   ]
 
-  // Add Assets menu
-  items.push({
-    label: 'Assets',
-    icon: 'i-heroicons-building-library',
-    to: '/assets/properties',
-    children: [
-      {
-        label: 'Properties',
-        icon: 'i-heroicons-building-office',
-        to: '/assets/properties',
-      },
-      {
-        label: 'Buildings',
-        icon: 'i-heroicons-home-modern',
-        to: '/assets/buildings',
-      },
-      {
-        label: 'Floor Plans',
-        icon: 'i-heroicons-map',
-        to: '/assets/floor-plans',
-      },
-      {
-        label: 'Units',
-        icon: 'i-heroicons-key',
-        to: '/assets/units',
-      },
-      {
-        label: 'Locations',
-        icon: 'i-heroicons-map-pin',
-        to: '/assets/locations',
-      },
-    ],
-  })
+  // Leasing & Residents — Management, Leasing (or no dept)
+  if (showLeasingModules) {
+    items.push({
+      label: 'Leasing',
+      icon: 'i-heroicons-clipboard-document-list',
+      to: '/office/availabilities',
+      children: [
+        { label: 'Availabilities', icon: 'i-heroicons-clipboard-document-list', to: '/office/availabilities' },
+        { label: 'Availability Analysis', icon: 'i-heroicons-chart-bar', to: '/office/availabilities/analysis' },
+        { label: 'Notices', icon: 'i-heroicons-bell', to: '/office/notices' },
+        { label: 'Renewals', icon: 'i-heroicons-arrow-path-rounded-square', to: '/office/renewals' },
+      ],
+    })
+    items.push({
+      label: 'Residents',
+      icon: 'i-heroicons-users',
+      to: '/office/residents',
+      children: [
+        { label: 'Residents', icon: 'i-heroicons-users', to: '/office/residents' },
+        { label: 'Leases', icon: 'i-heroicons-document-text', to: '/office/leases' },
+        { label: 'Delinquencies', icon: 'i-heroicons-chart-bar', to: '/office/delinquencies' },
+      ],
+    })
+  }
 
-  // Add Leasing menu
-  items.push({
-    label: 'Leasing',
-    icon: 'i-heroicons-clipboard-document-list',
-    to: '/office/availabilities',
-    children: [
-      {
-        label: 'Availabilities',
-        icon: 'i-heroicons-clipboard-document-list',
-        to: '/office/availabilities',
-      },
-      {
-        label: 'Availability Analysis',
-        icon: 'i-heroicons-chart-bar',
-        to: '/office/availabilities/analysis',
-      },
-      {
-        label: 'Notices',
-        icon: 'i-heroicons-bell',
-        to: '/office/notices',
-      },
-      {
-        label: 'Renewals',
-        icon: 'i-heroicons-arrow-path-rounded-square',
-        to: '/office/renewals',
-      },
-    ],
-  })
+  // Operations — Management, Leasing, Maintenance (or no dept)
+  if (showOperations) {
+    items.push({
+      label: 'Operations',
+      icon: 'i-heroicons-wrench-screwdriver',
+      to: '/office/alerts',
+      children: [
+        { label: 'Alerts', icon: 'i-heroicons-bell-alert', to: '/office/alerts' },
+        { label: 'Work Orders', icon: 'i-heroicons-clipboard-document-check', to: '/maintenance/work-orders' },
+        { label: 'Make Ready', icon: 'i-heroicons-home-modern', to: '/office/make-ready' },
+        { label: 'Inventory', icon: 'i-heroicons-archive-box', to: '/office/inventory' },
+      ],
+    })
+  }
 
-  // Add Residents menu
-  items.push({
-    label: 'Residents',
-    icon: 'i-heroicons-users',
-    to: '/office/residents',
-    children: [
-      {
-        label: 'Residents',
-        icon: 'i-heroicons-users',
-        to: '/office/residents',
-      },
-      {
-        label: 'Leases',
-        icon: 'i-heroicons-document-text',
-        to: '/office/leases',
-      },
-      {
-        label: 'Delinquencies',
-        icon: 'i-heroicons-chart-bar',
-        to: '/office/delinquencies',
-      },
-    ],
-  })
-
-  // Add Operations menu
-  items.push({
-    label: 'Operations',
-    icon: 'i-heroicons-wrench-screwdriver',
-    to: '/office/alerts',
-    children: [
-      {
-        label: 'Alerts',
-        icon: 'i-heroicons-bell-alert',
-        to: '/office/alerts',
-      },
-      {
-        label: 'Work Orders',
-        icon: 'i-heroicons-clipboard-document-check',
-        to: '/maintenance/work-orders',
-      },
-      {
-        label: 'Make Ready',
-        icon: 'i-heroicons-home-modern',
-        to: '/office/make-ready',
-      },
-      {
-        label: 'Inventory',
-        icon: 'i-heroicons-archive-box',
-        to: '/office/inventory',
-      },
-    ],
-  })
-
-  // Add Owners menu (super admin or any Asset role)
-  const propertyRoles = Object.values(userContext.value?.access?.property_roles || {})
-  const showOwners = userContext.value?.access?.is_super_admin || propertyRoles.includes('Asset')
+  // Owners — role gate (super admin / Asset) AND dept gate (Invest or no dept)
   if (showOwners) {
     items.push({
       label: 'Owners',
       icon: 'i-heroicons-building-library',
       to: '/owners/individual-entities',
       children: [
-        {
-          label: 'Personal Entities',
-          icon: 'i-heroicons-identification',
-          to: '/owners/individual-entities',
-        },
-        {
-          label: 'Individual Owners',
-          icon: 'i-heroicons-user-group',
-          to: '/owners/individual-owners',
-        },
-        {
-          label: 'Entity Interests',
-          icon: 'i-heroicons-arrow-trending-up',
-          to: '/owners/entity-interests',
-        },
-        {
-          label: 'Property Entities',
-          icon: 'i-heroicons-building-office',
-          to: '/owners/entities',
-        },
-        {
-          label: 'Property Ownership',
-          icon: 'i-heroicons-building-office-2',
-          to: '/owners/property-ownership',
-        },
+        { label: 'Personal Entities', icon: 'i-heroicons-identification', to: '/owners/individual-entities' },
+        { label: 'Individual Owners', icon: 'i-heroicons-user-group', to: '/owners/individual-owners' },
+        { label: 'Entity Interests', icon: 'i-heroicons-arrow-trending-up', to: '/owners/entity-interests' },
+        { label: 'Property Entities', icon: 'i-heroicons-building-office', to: '/owners/entities' },
+        { label: 'Property Ownership', icon: 'i-heroicons-building-office-2', to: '/owners/property-ownership' },
       ],
     })
   }
 
-  // Add Admin menu
-  if (userContext.value?.access?.is_super_admin) {
+  // Admin — super admin only (uses patched is_super_admin so it hides when impersonating)
+  if (isSuperAdmin) {
     items.push({
       label: 'Admin',
-    icon: 'i-heroicons-cog-6-tooth',
-    to: '/admin/upload',
-    children: [
-      {
-        label: 'Users',
-        icon: 'i-heroicons-users',
-        to: '/admin/users',
-      },
-      {
-        label: 'Solver Engine',
-        icon: 'i-heroicons-cpu-chip',
-        to: '/admin/solver',
-      },
-      {
-        label: 'Solver Inspector',
-        icon: 'i-heroicons-beaker',
-        to: '/admin/solver/inspector',
-      },
-      {
-        label: 'Legacy Import',
-        icon: 'i-heroicons-arrow-up-tray',
-        to: '/admin/upload',
-      },
-      {
-        label: 'Edit Constants',
-        icon: 'i-heroicons-adjustments-horizontal',
-        onSelect: () => openConstantsModal()
-      },
-      {
-        label: 'Parser Engine',
-        icon: 'i-heroicons-document-text',
-        to: '/admin/parse_engine',
-      },
-      {
-        label: 'Unit Lookup Generator',
-        icon: 'i-heroicons-code-bracket',
-        to: '/admin/generators/unit-lookup',
-      },
-      {
-        label: 'Email Notifications',
-        icon: 'i-heroicons-envelope',
-        to: '/admin/notifications',
-      }
-    ],
+      icon: 'i-heroicons-cog-6-tooth',
+      to: '/admin/upload',
+      children: [
+        { label: 'Users', icon: 'i-heroicons-users', to: '/admin/users' },
+        { label: 'Solver Engine', icon: 'i-heroicons-cpu-chip', to: '/admin/solver' },
+        { label: 'Solver Inspector', icon: 'i-heroicons-beaker', to: '/admin/solver/inspector' },
+        { label: 'Legacy Import', icon: 'i-heroicons-arrow-up-tray', to: '/admin/upload' },
+        { label: 'Edit Constants', icon: 'i-heroicons-adjustments-horizontal', onSelect: () => openConstantsModal() },
+        { label: 'Parser Engine', icon: 'i-heroicons-document-text', to: '/admin/parse_engine' },
+        { label: 'Unit Lookup Generator', icon: 'i-heroicons-code-bracket', to: '/admin/generators/unit-lookup' },
+        { label: 'Email Notifications', icon: 'i-heroicons-envelope', to: '/admin/notifications' },
+      ],
     })
   }
 
@@ -388,24 +341,26 @@ const navigationItems = computed(() => {
 
         <!-- Right: Controls and User Menu -->
         <div class="flex items-center gap-3">
-          <!-- Property Switcher -->
-          <div class="hidden lg:block">
-            <div class="flex flex-col items-end">
-              <USelectMenu
-                v-if="propertyOptions.length > 0"
-                v-model="active_property"
-                :items="propertyOptions"
-                value-key="value"
-                class="min-w-[200px]"
-              />
-              <div v-else class="text-xs text-gray-400 italic px-2">
-                No property access
+          <!-- Property Switcher (Client-only to avoid role/property mismatch) -->
+          <ClientOnly>
+            <div class="hidden lg:block">
+              <div class="flex flex-col items-end">
+                <USelectMenu
+                  v-if="propertyOptions.length > 0"
+                  v-model="active_property"
+                  :items="propertyOptions"
+                  value-key="value"
+                  class="min-w-[200px]"
+                />
+                <div v-else class="text-xs text-gray-400 italic px-2">
+                  No property access
+                </div>
+                <span class="text-[10px] text-primary-500 font-mono mt-1 px-1">
+                  DEBUG [Property: {{ active_property || 'NONE' }}]
+                </span>
               </div>
-              <span class="text-[10px] text-primary-500 font-mono mt-1 px-1">
-                DEBUG [Property: {{ active_property || 'NONE' }}]
-              </span>
             </div>
-          </div>
+          </ClientOnly>
 
           <!-- Width Toggle (Desktop) -->
           <div class="hidden lg:block">
@@ -440,6 +395,53 @@ const navigationItems = computed(() => {
                   <p class="text-xs text-gray-500 dark:text-gray-400">
                     {{ profile?.department || 'Staff' }}
                   </p>
+                  <p v-if="hasOverride" class="text-[10px] text-orange-500 font-mono mt-0.5">
+                    IMPERSONATING
+                  </p>
+                </div>
+              </template>
+
+              <template #devtools>
+                <div class="px-1 py-1 space-y-2 min-w-[200px]" @click.stop>
+                  <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Developer Tools</p>
+                  <div>
+                    <p class="text-[10px] text-gray-500 mb-1">Department</p>
+                    <USelectMenu
+                      v-model="devDept"
+                      :items="DEPT_ITEMS"
+                      value-key="value"
+                      placeholder="No override"
+                      size="xs"
+                      class="w-full"
+                    />
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-gray-500 mb-1">Role (active property)</p>
+                    <USelectMenu
+                      v-model="devRole"
+                      :items="roleItems"
+                      value-key="value"
+                      placeholder="No override"
+                      size="xs"
+                      class="w-full"
+                    />
+                  </div>
+                  <UButton
+                    label="Apply Override"
+                    color="primary"
+                    size="xs"
+                    class="w-full"
+                    @click="applyOverride"
+                  />
+                  <UButton
+                    v-if="hasOverride"
+                    label="Clear Overrides"
+                    color="error"
+                    variant="ghost"
+                    size="xs"
+                    class="w-full"
+                    @click="handleClearOverride"
+                  />
                 </div>
               </template>
 
@@ -574,6 +576,63 @@ const navigationItems = computed(() => {
           </div>
 
           <UButton
+            :label="appMode === 'app' ? 'Switch to Web Mode' : 'Switch to App Mode'"
+            :icon="appMode === 'app' ? 'i-heroicons-computer-desktop' : 'i-heroicons-device-phone-mobile'"
+            color="neutral"
+            variant="ghost"
+            class="w-full justify-start"
+            @click="toggleMode"
+          />
+
+          <!-- Developer Tools (any user with downshift options) -->
+          <div v-if="canUseDevTools" class="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">
+              Developer Tools
+              <span v-if="hasOverride" class="text-orange-500 ml-1">● ACTIVE</span>
+            </p>
+            <div class="space-y-2">
+              <div>
+                <p class="text-[10px] text-gray-500 mb-1">Department</p>
+                <USelectMenu
+                  v-model="devDept"
+                  :items="DEPT_ITEMS"
+                  value-key="value"
+                  placeholder="No override"
+                  size="xs"
+                  class="w-full"
+                />
+              </div>
+              <div>
+                <p class="text-[10px] text-gray-500 mb-1">Role (active property)</p>
+                <USelectMenu
+                  v-model="devRole"
+                  :items="roleItems"
+                  value-key="value"
+                  placeholder="No override"
+                  size="xs"
+                  class="w-full"
+                />
+              </div>
+              <UButton
+                label="Apply Override"
+                color="primary"
+                size="xs"
+                class="w-full"
+                @click="applyOverride"
+              />
+              <UButton
+                v-if="hasOverride"
+                label="Clear Overrides"
+                color="error"
+                variant="ghost"
+                size="xs"
+                class="w-full"
+                @click="handleClearOverride"
+              />
+            </div>
+          </div>
+
+          <UButton
             label="Sign Out"
             icon="i-heroicons-arrow-left-on-rectangle"
             color="error"
@@ -595,5 +654,6 @@ const navigationItems = computed(() => {
       :on-close="handleConstantsClose"
       @close="handleConstantsClose"
     />
+
   </header>
 </template>

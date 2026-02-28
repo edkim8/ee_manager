@@ -21,6 +21,21 @@ export const usePropertyState = () => {
     activePropertyCookie.value = newVal
   })
 
+  // --- Context Override (super admin debug tool) ---
+  const contextOverrideCookie = useCookie<{ dept: string | null; role: string | null } | null>('context-override', {
+    maxAge: 60 * 60 * 24, // 1 day — intentionally short for a debug tool
+    sameSite: 'lax',
+  })
+
+  const contextOverride = useState<{ dept: string | null; role: string | null }>('context-override', () =>
+    contextOverrideCookie.value || { dept: null, role: null }
+  )
+
+  watch(contextOverride, (newVal) => {
+    // Clear cookie when both fields are null; otherwise persist
+    contextOverrideCookie.value = (newVal.dept || newVal.role) ? newVal : null
+  }, { deep: true })
+
   // 5. SSR-friendly Fetch
   // We use useAsyncData to fetch the user context. This is awaited on the server.
   const { data: me, refresh: fetchProperties } = useAsyncData('user-me-context', async () => {
@@ -37,14 +52,71 @@ export const usePropertyState = () => {
     immediate: true
   })
 
-  // 6. Derived State - User Context
-  // Instead of a separate useState + watch, we compute this directly from 'me'
-  // This ensures that as soon as 'me' is hydrated from the server, userContext is ready.
+  // Role hierarchy for downshift filtering (highest → lowest)
+  const ROLE_HIERARCHY = ['Owner', 'Asset', 'RPM', 'Manager', 'Staff'] as const
+
+  // Roles available to downshift to: ranked BELOW the user's real role for the active
+  // property. Always reads me.value (unpatched) so the current override never
+  // influences what options are available.
+  const availableDownshiftRoles = computed<string[]>(() => {
+    if (!me.value) return []
+    const actualRole = activeProperty.value
+      ? (me.value.access.property_roles[activeProperty.value] ?? '')
+      : ''
+    const idx = ROLE_HIERARCHY.indexOf(actualRole as any)
+    // Unknown role → show all; otherwise only ranks strictly below current
+    return idx === -1
+      ? [...ROLE_HIERARCHY]
+      : (ROLE_HIERARCHY.slice(idx + 1) as unknown as string[])
+  })
+
+  // True when this user has at least one role to downshift to (eligibility gate)
+  const canUseDevTools = computed(() =>
+    !!(me.value && availableDownshiftRoles.value.length > 0)
+  )
+
+  // 6. Derived State - User Context with optional override patching
+  // Eligible users: super admins AND any role with valid downshift options (Asset, RPM, Manager)
   const userContext = computed(() => {
     if (!me.value) return null
-    return {
+
+    const base = {
       ...me.value.user,
-      access: me.value.access
+      access: me.value.access,
+    }
+
+    const { dept, role } = contextOverride.value
+    if (!dept && !role) return base
+
+    // Must have downshift options to be eligible for impersonation
+    if (availableDownshiftRoles.value.length === 0) return base
+
+    // Anti-upshift guard for non-admins: the requested role must exist in their
+    // valid downshift list. Silently ignore invalid requests.
+    if (role && !me.value.access.is_super_admin) {
+      if (!availableDownshiftRoles.value.includes(role)) return base
+    }
+
+    // Deep-clone the mutable parts to avoid poisoning the cached API response
+    const patchedPropertyRoles = { ...base.access.property_roles }
+    if (role && activeProperty.value) {
+      patchedPropertyRoles[activeProperty.value] = role
+    }
+
+    // If impersonating a non-Owner role, suppress is_super_admin so the Admin
+    // menu and other admin-gated UI disappears as expected
+    const patchedIsSuperAdmin = (!role || role === 'Owner')
+      ? base.access.is_super_admin
+      : false
+
+    return {
+      ...base,
+      profile: dept ? { ...base.profile, department: dept } : base.profile,
+      access: {
+        ...base.access,
+        is_super_admin: patchedIsSuperAdmin,
+        property_roles: patchedPropertyRoles,
+      },
     }
   })
 
@@ -92,12 +164,36 @@ export const usePropertyState = () => {
     me.value = null
   }
 
+  /**
+   * Apply a context override. Available to any user with valid downshift options.
+   * Non-admins are silently blocked from requesting roles above their own.
+   */
+  const setOverride = (dept: string | null, role: string | null) => {
+    if (!canUseDevTools.value) return
+    // Anti-upshift: non-admins may only request roles in their downshift list
+    if (role && !me.value?.access?.is_super_admin) {
+      if (!availableDownshiftRoles.value.includes(role)) return
+    }
+    contextOverride.value = { dept, role }
+  }
+
+  /** Remove all active overrides and clear the cookie. */
+  const clearOverride = () => {
+    contextOverride.value = { dept: null, role: null }
+    contextOverrideCookie.value = null
+  }
+
   return {
     activeProperty,
     propertyOptions, // Still reactive, but derived
     userContext,     // Still reactive, but derived
+    contextOverride,
+    availableDownshiftRoles,
+    canUseDevTools,
     fetchProperties,
     setProperty,
-    resetProperty
+    resetProperty,
+    setOverride,
+    clearOverride,
   }
 }

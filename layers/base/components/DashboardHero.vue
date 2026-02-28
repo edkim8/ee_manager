@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
+import { useSupabaseUser, usePropertyState, useDashboardWidgets, useDashboardData } from '#imports'
+
 const user = useSupabaseUser()
 const { userContext } = usePropertyState()
 
@@ -237,24 +240,29 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="relative overflow-hidden rounded-3xl p-8 md:p-10 mb-8 border border-white/20 shadow-2xl">
+  <div class="relative overflow-hidden rounded-3xl p-6 md:p-10 mb-8 border border-white/20 shadow-2xl">
     <!-- Animated Mesh Background -->
     <div class="absolute inset-0 -z-10 animate-mesh bg-gradient-to-br from-primary-600/30 via-purple-600/20 to-blue-600/30 blur-3xl" />
     <div class="absolute -top-24 -left-24 w-96 h-96 bg-primary-500/20 rounded-full blur-[100px] animate-pulse" />
     <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-500/20 rounded-full blur-[100px] animate-pulse-slow" />
 
-    <div class="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-6">
+    <div class="relative z-10 flex flex-col xl:flex-row xl:items-start justify-between gap-8">
 
       <!-- LEFT: Identity + Dynamic Summary -->
-      <div class="space-y-3 flex-grow">
+      <div class="space-y-4 flex-grow">
 
-        <!-- Greeting -->
-        <h1 class="text-4xl md:text-5xl font-black tracking-tight text-gray-900 dark:text-white drop-shadow-sm">
-          {{ greeting }},
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-600 dark:from-primary-400 dark:to-blue-400">
-            {{ displayName }}
-          </span>
-        </h1>
+        <!-- Greeting (Client-only to avoid time/user hydration mismatch) -->
+        <ClientOnly>
+          <h1 class="text-3xl md:text-5xl font-black tracking-tight text-gray-900 dark:text-white drop-shadow-sm leading-tight">
+            {{ greeting }},
+            <span class="block text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-600 dark:from-primary-400 dark:to-blue-400">
+              {{ displayName }}
+            </span>
+          </h1>
+          <template #fallback>
+            <div class="h-[60px] md:h-[120px]" /> <!-- Spacer to prevent layout shift -->
+          </template>
+        </ClientOnly>
 
         <!-- Department + Role badges -->
         <div class="flex items-center gap-2 flex-wrap">
@@ -268,25 +276,25 @@ onMounted(() => {
         </div>
 
         <!-- Dynamic Summary -->
-        <div class="pt-1 space-y-2">
+        <div class="pt-2 space-y-4 max-w-4xl">
 
           <!-- ADMIN / OPERATIONS: compact 3-group table view -->
           <template v-if="showAllGroups">
             <div
               v-for="group in summaryGroups"
               :key="group.label"
-              class="flex items-start gap-3"
+              class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4"
             >
-              <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 w-24 shrink-0 pt-0.5">
+              <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 w-24 shrink-0 pt-1">
                 {{ group.label }}
               </span>
-              <div class="flex flex-wrap gap-x-5 gap-y-1">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
                 <div
                   v-for="line in group.lines"
                   :key="line.label"
-                  class="flex items-center gap-1.5 text-xs"
+                  class="flex items-center gap-2 text-xs"
                 >
-                  <UIcon :name="line.icon" class="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <UIcon :name="line.icon" class="w-4 h-4 text-gray-400 shrink-0" />
                   <span :class="line.alert ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'">
                     {{ line.value }}
                   </span>
@@ -295,21 +303,27 @@ onMounted(() => {
             </div>
           </template>
 
-          <!-- SINGLE DEPARTMENT: 3 metric rows -->
+          <!-- SINGLE DEPARTMENT: 3 metric rows (enhanced mobile layout) -->
           <template v-else>
-            <div
-              v-for="line in summaryGroups[0]?.lines"
-              :key="line.label"
-              class="flex items-center gap-2 text-sm"
-            >
-              <UIcon
-                :name="line.icon"
-                :class="['w-4 h-4 shrink-0', line.alert ? 'text-orange-500' : 'text-gray-400']"
-              />
-              <span class="text-gray-500 dark:text-gray-400 font-medium">{{ line.label }}:</span>
-              <span :class="['font-bold', line.alert ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300']">
-                {{ line.value }}
-              </span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div
+                v-for="line in summaryGroups[0]?.lines"
+                :key="line.label"
+                class="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10"
+              >
+                <div :class="['p-2 rounded-xl shadow-sm', line.alert ? 'bg-orange-500/10' : 'bg-gray-500/5']">
+                  <UIcon
+                    :name="line.icon"
+                    :class="['w-5 h-5 shrink-0', line.alert ? 'text-orange-500' : 'text-gray-400']"
+                  />
+                </div>
+                <div>
+                  <div class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ line.label }}</div>
+                  <div :class="['text-sm font-bold', line.alert ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300']">
+                    {{ line.value }}
+                  </div>
+                </div>
+              </div>
             </div>
           </template>
 
@@ -317,26 +331,26 @@ onMounted(() => {
       </div>
 
       <!-- RIGHT: Sync Card + Widgets Toggle -->
-      <div class="flex flex-col items-end gap-3 shrink-0 self-start">
+      <div class="flex flex-col sm:flex-row xl:flex-col items-center xl:items-end gap-4 shrink-0 xl:self-start w-full xl:w-auto">
         <!-- Sync Card -->
-        <div class="flex items-center gap-4 bg-white/40 dark:bg-black/40 backdrop-blur-xl px-5 py-4 rounded-2xl border border-white/20 shadow-inner">
+        <div class="flex items-center gap-4 bg-white/40 dark:bg-black/40 backdrop-blur-xl px-5 py-4 rounded-2xl border border-white/20 shadow-inner w-full sm:flex-1 xl:w-auto">
           <div :class="['p-3 rounded-xl shadow-lg', syncCard.bgClass]">
             <UIcon :name="syncCard.icon" class="w-6 h-6 text-white" />
           </div>
-          <div>
-            <div class="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{{ syncCard.title }}</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 whitespace-nowrap">{{ syncCard.sub }}</div>
+          <div class="min-w-0">
+            <div class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ syncCard.title }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{{ syncCard.sub }}</div>
           </div>
         </div>
 
         <!-- View Toggle: Monitors ↔ Widgets -->
         <UButton
-          size="sm"
+          size="lg"
           :icon="showWidgets ? 'i-heroicons-squares-2x2' : 'i-heroicons-puzzle-piece'"
           :label="showWidgets ? 'Show Monitors' : 'Show Widgets'"
           color="primary"
           variant="solid"
-          class="w-full justify-center shadow-lg shadow-primary-500/40 font-black uppercase tracking-wider text-xs"
+          class="w-full sm:w-auto xl:w-full justify-center shadow-lg shadow-primary-500/40 font-black uppercase tracking-wider text-xs h-14 xl:h-12"
           @click="showWidgets = !showWidgets"
         />
       </div>

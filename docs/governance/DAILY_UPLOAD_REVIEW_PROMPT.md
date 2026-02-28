@@ -45,14 +45,15 @@ WORKFLOW PHASE 1: EVALUATION
      trend data — NOT bugs or corrections. CV $1–$2 daily decrements are AIRM (normal).
      All other properties pricing changes are manual; note them without requiring action.
 
-3. OPERATIONAL AUDIT:
-   - SNAPSHOT RLS CHECK: Read `docs/status/LATEST_UPDATE.md` for any pending
-     "Option B Confirmation Checklist." If one exists, evaluate it explicitly:
-     (a) Were there any 403 errors on availability_snapshots in the log?
-     (b) Did all 5 properties log `✓ Availability snapshot saved`?
-     If BOTH pass → mark Option B confirmed, note the cleanup migration to run.
-     If EITHER fails → note Option B failed, revert instructions are in LATEST_UPDATE.md.
-     Once confirmed, remove the checklist block from LATEST_UPDATE.md.
+3. OPERATIONAL AUDIT & REGRESSION CHECK:
+   - READ `docs/status/LATEST_UPDATE.md` for the most recent structural changes to the app
+     (e.g., recent Mobile Infrastructure changes, Auth changes, RLS policy changes).
+   - Verify that these recent structural changes have NOT introduced regressions in the
+     Solver process. Specifically scan for:
+     * 403 or RLS errors (especially common after DB migrations or Auth changes).
+     * Unexpected behavior in role-based logic or department filtering.
+   - YARDI DATE SANITY: Check the lease start dates to ensure there are no year-typos 
+     (e.g., 2102 instead of 2026). If the solver accepted an anomalous future date, flag it.
    - Check for any error messages or failed phases in the console log.
    - Evaluate pipeline health: available / applied / leased counts per property.
    - Note any alert churn (> 3 adds or removes at a single property in one run).
@@ -60,10 +61,8 @@ WORKFLOW PHASE 1: EVALUATION
      logs for same unit ID) — potential redundant DB calls.
    - "Silently-Dropped Tenancies": When the solver detects a tenancy that disappeared from
      Yardi without a normal status transition, it transitions it to → Canceled and resets
-     the unit to Available. The standard term is ALWAYS "Canceled" — we cannot distinguish
-     Canceled vs. Denied from the data and this is intentional by design (including denied
-     applications would add unnecessary noise). Log the count and affected units (if
-     surfaced in the log); flag if > 1 at any single property in one run.
+     the unit to Available. The standard term is ALWAYS "Canceled". Log the count and 
+     affected units (if surfaced in the log); flag if > 1 at any single property.
 
 4. INITIAL EVALUATION REPORT:
    - Present a concise summary of findings in the terminal.

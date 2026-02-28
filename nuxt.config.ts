@@ -21,7 +21,12 @@ export default defineNuxtConfig({
   },
 
   supabase: {
-    redirect: false
+    redirect: false,
+    cookieOptions: {
+      maxAge: 60 * 60 * 24 * 14, // 14 days
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production'
+    }
   },
 
   runtimeConfig: {

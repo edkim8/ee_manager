@@ -104,7 +104,7 @@ const totalChanges = computed(() => {
     </template>
 
     <div v-else class="flex flex-col items-center justify-center py-8 text-center bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
-      <UIcon name="i-heroicons-cloud-slash" class="text-3xl text-gray-300 mb-2" />
+      <UIcon name="i-heroicons-cloud" class="text-3xl text-gray-300 mb-2" />
       <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">No uploads detected today</span>
     </div>
   </div>

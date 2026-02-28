@@ -239,4 +239,38 @@ interface Props {
 
 ---
 
-**Result:** Went from "impossible to use on mobile" to "delightful UX" 🎉
+## Mobile Design Framework 2.0 (The "EE-Mobile" Standard)
+
+This section establishes the visual and functional "model" for all future mobile components, as finalized during the Feb 2026 Mobile UI refinement.
+
+### 1. Glassmorphism Layout Specs
+The mobile shell uses a specialized layout defined in `mobile-app.vue`.
+- **Blur Depth**: `backdrop-blur-2xl`
+- **Transparency**: `bg-white/80` (Light) or `bg-slate-900/80` (Dark)
+- **Borders**: Explicit `border-white/30` or `border-white/10` to define surface edges.
+- **Safe Areas**: All components MUST respect `env(safe-area-inset-*)` using the `.safe-top` and `.pb-safe` utilities.
+
+### 2. High-Visibility Button Model
+Standard buttons often "disappear" on high-density mobile screens with translucent backgrounds. The refined model requires:
+- **Explicit Borders**: `border-2` (minimum) on all primary and secondary actions.
+- **Color Coding**:
+  - `primary`: Interactive/Theme core.
+  - `sky`: Information/Global actions (e.g. Share).
+  - `red`: Destructive actions (e.g. Delete).
+  - `amber`: Warning/Closing actions (e.g. Close Modal).
+- **Typography**: `font-black`, `uppercase`, `tracking-widest` for clear legibility.
+- **Micro-animations**: `active:scale-95` on tap for tactile feedback.
+
+### 3. Department-Aware Hubs
+Dashboard/Grid interactions are dynamically filtered by `userContext.profile.department`.
+- **Maintenance**: Focuses on `Scan`, `Work Orders`, `Inventory`.
+- **Leasing**: Focuses on `Applications`, `Availability`, `Residents`.
+- **Default**: All users see `Locations`, `Alerts`, `Profile`.
+
+### 4. Component Implementation
+- **Modals**: All mobile modals MUST use `SimpleModal.vue`, which functions as a "Bottom Sheet" on screens `< 640px`.
+- **Help/Context**: Floating help bubbles move to `top-right` on mobile to avoid bottom nav collision.
+
+---
+
+**Result:** A robust, consistent mobile design language that prioritizes thumb-accessibility and visual clarity. 📱✨

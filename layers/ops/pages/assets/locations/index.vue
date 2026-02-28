@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { useSupabaseClient, useAsyncData, definePageMeta, useState } from '#imports'
+import { useSupabaseClient, useAsyncData, definePageMeta, useState, setPageLayout } from '#imports'
 // Import SimpleModal instead of UModal
 import SimpleModal from '../../../../base/components/SimpleModal.vue'
+import { useAppMode } from '../../../../base/composables/useAppMode'
 // Fix relative paths: from layers/ops/pages/assets/locations/ to layers/ops/components/map/
 // ../../../components/map/LocationPicker.vue
 import LocationPicker from '../../../components/map/LocationPicker.vue'
@@ -13,9 +14,17 @@ import { useLocationService } from '../../../composables/useLocationService'
 import { usePropertyState } from '../../../../base/composables/usePropertyState'
 
 definePageMeta({
-  layout: 'dashboard',
   alias: ['/office/locations', '/maintenance/locations']
 })
+
+const { isAppMode } = useAppMode()
+
+// Set layout dynamically based on app mode
+if (isAppMode.value) {
+  setPageLayout('mobile-app')
+} else {
+  setPageLayout('dashboard')
+}
 
 const supabase = useSupabaseClient()
 const { fetchLocations } = useLocationService()
@@ -481,45 +490,54 @@ const categorySummary = computed(() => {
             </div>
 
             <!-- Actions -->
-            <div class="space-y-3">
+            <div class="space-y-4">
                 <UButton
                     color="primary"
                     variant="solid"
                     block
+                    size="xl"
+                    class="rounded-2xl border-2 border-primary-600 dark:border-primary-400 font-black uppercase tracking-widest shadow-lg shadow-primary-500/20 active:scale-95 transition-all h-14"
                     @click="viewNotes"
                 >
-                    <UIcon name="i-heroicons-document-text" class="w-4 h-4 mr-2" />
+                    <UIcon name="i-heroicons-document-text" class="w-5 h-5 mr-3" />
                     View Notes
                 </UButton>
 
-                <!-- Share Location Button -->
+                <!-- Share Location Button (Information) -->
                 <UButton
-                    color="green"
-                    variant="solid"
+                    color="sky"
+                    variant="outline"
                     block
+                    size="xl"
+                    class="rounded-2xl border-2 border-sky-500 font-black uppercase tracking-widest active:scale-95 transition-all h-14 bg-sky-50/50 dark:bg-sky-900/10"
                     @click="shareLocation"
                 >
-                    <UIcon name="i-heroicons-share" class="w-4 h-4 mr-2" />
+                    <UIcon name="i-heroicons-share" class="w-5 h-5 mr-3" />
                     Share Location
                 </UButton>
 
-                <!-- Secondary Actions -->
-                <div class="flex gap-3">
+                <!-- Secondary Actions Row -->
+                <div class="flex gap-4">
                     <UButton
                         color="red"
-                        variant="soft"
+                        variant="outline"
                         block
+                        size="xl"
+                        class="flex-1 rounded-2xl border-2 border-red-500 font-black uppercase tracking-widest active:scale-95 transition-all h-14 bg-red-50/50 dark:bg-red-900/10"
                         :loading="isDeleting"
                         @click="handleDelete"
                     >
-                        <UIcon name="i-heroicons-trash" class="w-4 h-4 mr-2" />
-                        Delete Location
+                        <UIcon name="i-heroicons-trash" class="w-5 h-5 mr-2" />
+                        Delete
                     </UButton>
                     <UButton
-                        color="gray"
-                        variant="soft"
+                        color="amber"
+                        variant="outline"
+                        size="xl"
+                        class="flex-1 rounded-2xl border-2 border-amber-500 font-black uppercase tracking-widest active:scale-95 transition-all h-14 bg-amber-50/50 dark:bg-amber-900/10 justify-center"
                         @click="showDetailModal = false"
                     >
+                        <UIcon name="i-heroicons-x-mark" class="w-5 h-5 mr-2" />
                         Close
                     </UButton>
                 </div>
@@ -534,12 +552,13 @@ const categorySummary = computed(() => {
         :location-id="selectedLocation.id"
         :location-name="selectedLocation.icon_type.replace('_', ' ')"
     />
-    <!-- Context Helper (Lazy Loaded) -->
-    <LazyContextHelper 
-      title="Location Manager" 
-      description="Geospatial Asset Tracking & Maintenance"
-    >
-      <div class="space-y-4 text-sm leading-relaxed">
+    <!-- Context Helper (Client-only to avoid positioning hydration mismatch) -->
+    <ClientOnly>
+      <ContextHelper 
+        title="Location Manager" 
+        description="Geospatial Asset Tracking & Maintenance"
+      >
+        <div class="space-y-4 text-sm leading-relaxed">
         <section>
           <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Geospatial Assets</h3>
           <p>
@@ -590,7 +609,8 @@ const categorySummary = computed(() => {
           </p>
         </section>
       </div>
-    </LazyContextHelper>
+      </ContextHelper>
+    </ClientOnly>
   </div>
 </template>
 
