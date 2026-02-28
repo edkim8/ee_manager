@@ -16,6 +16,14 @@ export default defineNuxtConfig({
     }
   },
 
+  // Client-only rendering for device-specific pages.
+  // These are authenticated pages with client-side state (localStorage, UA detection)
+  // that cannot be meaningfully server-rendered without hydration mismatches.
+  routeRules: {
+    '/tour/**':   { ssr: false },
+    '/mobile/**': { ssr: false },
+  },
+
   devServer: {
     port: 3001
   },

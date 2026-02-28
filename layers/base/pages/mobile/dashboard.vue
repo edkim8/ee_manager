@@ -5,7 +5,6 @@ import { usePropertyState } from '../../composables/usePropertyState'
 definePageMeta({
   layout: 'mobile-app',
   middleware: 'auth',
-  ssr: false,
 })
 
 const { userContext } = usePropertyState()

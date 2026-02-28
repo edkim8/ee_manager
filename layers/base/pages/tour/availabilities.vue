@@ -7,7 +7,6 @@ import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
 definePageMeta({
   layout: 'tour',
   middleware: 'auth',
-  ssr: false,
 })
 
 const { activeProperty } = usePropertyState()

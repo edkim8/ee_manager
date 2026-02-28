@@ -7,7 +7,6 @@ import { useSupabaseClient, useAsyncData, definePageMeta, navigateTo } from '#im
 definePageMeta({
   layout: 'tour',
   middleware: 'auth',
-  ssr: false,
 })
 
 const { activeProperty, userContext } = usePropertyState()
