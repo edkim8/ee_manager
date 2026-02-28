@@ -11,11 +11,13 @@
 
 | Status | Count |
 |---|---|
-| ✅ CLEAN | 8 |
-| ⚠️ WARNING | 4 |
+| ✅ CLEAN | 9 |
+| ⚠️ WARNING | 3 |
 | 🔴 FATAL | 0 |
 
 System healthy. All 5 snapshots saved (Option B Day 2 confirmed). Notices fix stable (Day 5). Two urgent MakeReady flags resolved by ops. No fatal errors or auth failures.
+
+> **Correction (post-audit):** W2 (originally "SB Unit 3125 stale MakeReady") was a misidentification. `3125: ready=2026-02-28` belongs to **RS unit 3125** (status: Past — legitimate vacant unit), not SB. SB unit 3125 is not in any MakeReady staging data. No false flag risk exists. W2 has been removed and RS-3125 is noted as expected behavior below.
 
 ---
 
@@ -160,17 +162,7 @@ Leasing team has been notified. Correction expected by **Monday, 2026-03-02**. M
 
 ---
 
-### W2 — SB Unit 3125: Stale MakeReady Will Fire Tomorrow
-
-Unit is now occupied by McShan, Toya (transfer from 2015, 2026-02-28). MakeReady record shows `ready=2026-02-28` — overdue=false today. Tomorrow's run will compute `overdue=true` and create a false flag.
-
-**Action required:** Manually deactivate/resolve the MakeReady flag for SB-3125 in the system before tomorrow's solver run.
-
-**Code gap noted:** The solver does not automatically resolve MakeReady records when a renewal/transfer is archived for the same unit. This is a low-priority enhancement — solver should deactivate MakeReady when a lease archive event (renewal or transfer move-in) is detected for the unit.
-
----
-
-### W3 — SB Work Orders: 9 Deactivated vs. 6 Processed (Day 3 Pattern)
+### W2 — SB Work Orders: 9 Deactivated vs. 6 Processed (Day 3 Pattern)
 
 | Date | Processed | Deactivated |
 |---|---|---|
@@ -182,7 +174,7 @@ Third consecutive day with SB deactivations exceeding active work orders. Likely
 
 ---
 
-### W4 — Transfer Flag "UNKNOWN" Property Lookup Bug
+### W3 — Transfer Flag "UNKNOWN" Property Lookup Bug
 
 ```
 [Solver] No new transfer flags to create for UNKNOWN (all already exist)
@@ -233,6 +225,7 @@ No flags firing (correctly, as dates are future). OB manager confirmation still 
 | 2007 | RS | 2026-02-26 | 2 days | New flag — monitor |
 | 1027 | RS | 2026-02-26 | 2 days | ✅ Confirmed ready (Sas, Anna Sun 3/2) |
 | 3061 | RS | 2026-02-26 | 2 days | New flag — monitor |
+| 3125 | RS | 2026-02-28 | 0 days today → 1 day tomorrow | Legitimate vacant unit (status: Past) — flag expected tomorrow |
 | S081 | OB | 2026-02-24 | 4 days | Existing flag — escalate |
 
 ---
@@ -251,9 +244,7 @@ Today's SB-3125 scenario exposed a gap: when the solver archives a lease as Past
 
 **For next session (2026-03-01):**
 
-1. **SB-3125 MakeReady (W2):** Manually deactivate before tomorrow's solver run or a false overdue flag will be created. Priority: before 7 AM Sunday.
-
-2. **OB S100 / Arreola Garcia (W1):** Yardi correction expected Monday 2026-03-02. Confirm in Monday's audit. Deadline is before the 2026-03-10 make-ready date.
+1. **OB S100 / Arreola Garcia (W1):** Yardi correction expected Monday 2026-03-02. Confirm in Monday's audit. Deadline is before the 2026-03-10 make-ready date.
 
 3. **CV C311/C217:** 9 and 8 days overdue respectively. Still no Yardi response. Escalate alongside C213 follow-up.
 
