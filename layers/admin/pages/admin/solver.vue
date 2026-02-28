@@ -161,7 +161,7 @@ async function processBatch() {
             const groupedData: Record<string, any[]> = {}
             for (const row of result.data) {
                 const r = row as any
-                const pCode = r.property_code || 'UNKNOWN'
+                const pCode = r.property_code || r.from_property_code || 'UNKNOWN'
                 if (!groupedData[pCode]) groupedData[pCode] = []
                 groupedData[pCode].push(row)
             }
