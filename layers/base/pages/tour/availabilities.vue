@@ -29,17 +29,27 @@ const { data: allUnits, pending } = await useAsyncData(
   { watch: [activeProperty] }
 )
 
-const units = computed(() => {
+// Deduplicate by unit_name (view can return multiple rows per unit)
+const deduped = computed(() => {
   if (!allUnits.value) return []
+  const seen = new Set<string>()
+  return allUnits.value.filter((u: any) => {
+    if (seen.has(u.unit_name)) return false
+    seen.add(u.unit_name)
+    return true
+  })
+})
+
+const units = computed(() => {
   if (statusFilter.value === 'All')
-    return allUnits.value.filter((u: any) => ['Available', 'Applied'].includes(u.status))
-  return allUnits.value.filter((u: any) => u.status === statusFilter.value)
+    return deduped.value.filter((u: any) => ['Available', 'Applied'].includes(u.status))
+  return deduped.value.filter((u: any) => u.status === statusFilter.value)
 })
 
 const tabCount = (opt: string) =>
-  allUnits.value?.filter((u: any) =>
+  deduped.value.filter((u: any) =>
     opt === 'All' ? ['Available', 'Applied'].includes(u.status) : u.status === opt
-  ).length ?? 0
+  ).length
 
 // Slot array — always MAX_TOUR_SLOTS entries, null = empty
 const slots = computed(() =>

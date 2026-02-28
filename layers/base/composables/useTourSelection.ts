@@ -1,14 +1,33 @@
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useState } from '#imports'
 
 export const MAX_TOUR_SLOTS = 4
 
-export const useTourSelection = () => {
-  // Selected unit codes — persists across page navigation within the session
-  const selectedUnits = useState<string[]>('tour-selected-units', () => [])
+const STORAGE_KEY = 'ee-tour-shortlist'
 
-  // Currently highlighted unit (drives table row highlight when clicking a slot button)
+export const useTourSelection = () => {
+  const selectedUnits = useState<string[]>('tour-selected-units', () => [])
   const activeUnit = useState<string | null>('tour-active-unit', () => null)
+
+  // ── localStorage persistence (client-only) ─────────────────────────────
+  if (import.meta.client) {
+    // Hydrate from localStorage on first load if state is empty
+    if (selectedUnits.value.length === 0) {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (raw) selectedUnits.value = JSON.parse(raw)
+      } catch {}
+    }
+
+    // Save to localStorage whenever selection changes
+    watch(
+      selectedUnits,
+      (val) => {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(val)) } catch {}
+      },
+      { deep: true }
+    )
+  }
 
   const isSelected = (unitCode: string) => selectedUnits.value.includes(unitCode)
 
@@ -33,6 +52,9 @@ export const useTourSelection = () => {
   const clear = () => {
     selectedUnits.value = []
     activeUnit.value = null
+    if (import.meta.client) {
+      try { localStorage.removeItem(STORAGE_KEY) } catch {}
+    }
   }
 
   return {
