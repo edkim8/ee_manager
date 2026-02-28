@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { usePropertyState } from '../../composables/usePropertyState'
 import { useTourSelection, MAX_TOUR_SLOTS } from '../../composables/useTourSelection'
 import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
@@ -12,6 +12,9 @@ definePageMeta({
 const { activeProperty } = usePropertyState()
 const supabase = useSupabaseClient()
 const { selectedUnits, activeUnit, isSelected, isFull, toggle, setActive, clear } = useTourSelection()
+
+const isHydrated = ref(false)
+onMounted(() => { isHydrated.value = true })
 
 const statusFilter = ref<'Available' | 'Applied' | 'All'>('Available')
 
@@ -139,7 +142,7 @@ const fmtDate = (d: string | null) => {
         </button>
       </div>
 
-      <p v-if="isFull" class="text-[10px] text-amber-500 font-medium mt-2">
+      <p v-if="isHydrated && isFull" class="text-[10px] text-amber-500 font-medium mt-2">
         Shortlist full — remove a unit to add another.
       </p>
     </div>
@@ -161,7 +164,7 @@ const fmtDate = (d: string | null) => {
       </button>
 
       <UButton
-        v-if="selectedUnits.length > 0"
+        v-if="isHydrated && selectedUnits.length > 0"
         label="Clear Shortlist"
         color="error"
         variant="soft"
