@@ -161,20 +161,25 @@ async function processBatch() {
             const groupedData: Record<string, any[]> = {}
             for (const row of result.data) {
                 const r = row as any
+                // TransfersRow has no top-level property_code — fall back to from_property_code.
+                // All other report types expose property_code directly.
                 const pCode = r.property_code || r.from_property_code || 'UNKNOWN'
                 if (!groupedData[pCode]) groupedData[pCode] = []
                 groupedData[pCode].push(row)
             }
 
-            for (const [pCode, rows] of Object.entries(groupedData)) {
-                 const { error } = await supabase.from('import_staging').insert({
-                     batch_id: globalBatchId.value,
-                     report_type: def.dbEnum, // 'residents_status'
-                     property_code: pCode,
-                     raw_data: rows, 
-                 })
-                 if (error) throw error
-            }
+            const insertResults = await Promise.all(
+                Object.entries(groupedData).map(([pCode, rows]) =>
+                    supabase.from('import_staging').insert({
+                        batch_id: globalBatchId.value,
+                        report_type: def.dbEnum,
+                        property_code: pCode,
+                        raw_data: rows,
+                    })
+                )
+            )
+            const insertError = insertResults.find(r => r.error)?.error
+            if (insertError) throw insertError
 
             item.status = 'done'
             item.message = 'Staged for Solver'
