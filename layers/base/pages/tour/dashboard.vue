@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import { usePropertyState } from '../../composables/usePropertyState'
 import { useTourSelection, MAX_TOUR_SLOTS } from '../../composables/useTourSelection'
 import { useSupabaseClient, useAsyncData, definePageMeta, navigateTo } from '#imports'
 
 definePageMeta({
   layout: 'tour',
-  middleware: 'auth'
+  middleware: 'auth',
+  ssr: false,
 })
 
 const { activeProperty, userContext } = usePropertyState()
@@ -15,11 +16,6 @@ const { selectedUnits, activeUnit, isSelected, isFull, toggle, setActive } = use
 
 const isMaintenance = computed(() => userContext.value?.profile?.department === 'Maintenance')
 
-// ── SSR/hydration guard ─────────────────────────────────────────────────
-// selectedUnits is restored from localStorage only on the client.
-// SSR always sees an empty array, so we must not branch on it until mounted.
-const isHydrated = ref(false)
-onMounted(() => { isHydrated.value = true })
 
 // ── Property stats (shown when no shortlist selected) ──────────────────
 const { data: stats } = await useAsyncData(
@@ -128,8 +124,7 @@ const badgeClass = (status: string) =>
     <template v-else>
 
       <!-- Shortlist has units → tour companion mode -->
-      <!-- isHydrated ensures SSR and client render the same branch on first paint -->
-      <template v-if="isHydrated && selectedUnits.length > 0">
+      <template v-if="selectedUnits.length > 0">
 
         <!-- Unit picker row -->
         <div class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3">

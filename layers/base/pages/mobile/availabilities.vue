@@ -4,7 +4,8 @@ import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
 
 definePageMeta({
   layout: 'mobile-app',
-  middleware: 'auth'
+  middleware: 'auth',
+  ssr: false,
 })
 
 const { activeProperty } = usePropertyState()
