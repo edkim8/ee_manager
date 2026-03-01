@@ -1,98 +1,134 @@
-# Latest Update — Transfer Flag Bug Fix & Solver Cleanup
+# Latest Update — Tour Companion App Build (H-064) + Daily Audit 2026-03-01
 
-**Date:** 2026-02-28
+**Date:** 2026-03-01
 **Branch:** feat/mobile-ui
 
-- **Bug Fix — Transfer Flag UNKNOWN Property**: Solver Phase 2E was logging property code as `UNKNOWN` for all transfer flag operations. Root cause: the generic staging grouping loop used `r.property_code`, which doesn't exist on `TransfersRow` (only `from_property_code` / `to_property_code` exist). Fixed with `r.from_property_code` fallback.
-- **Refactor — Parallel Staging Inserts**: Sequential `for await` insert loop replaced with `Promise.all` — all property groups within a report type now insert concurrently.
-- **Audit — 2026-02-28**: Daily audit completed, committed, and emailed. 9 clean / 3 warnings. Option B snapshot confirmed stable (Day 2). SB-3125 transfer (McShan, Toya: #2015 → #3125) processed correctly.
+---
+
+## Session Summary
+
+Today completed the core build of the **iPad Tour Companion App** (H-064), converting the H-063 UX blueprint into working Vue/Tailwind components. This includes the swipeable 4-page Unit Dossier, the 4-slot Shortlist Bar, a full Presentation Mode (collapsing layout), and the DB schema additions needed for the Neighborhood Toolkit (Page 4). Also ran and archived the daily solver audit.
 
 ---
 
-## Transfer Flag UNKNOWN Fix
+## Tour Companion — Core Build (H-064)
 
-**File:** `layers/admin/pages/admin/solver.vue:164`
+### New Files Created
 
-`TransfersRow` has no top-level `property_code` field — it only exposes `from_property_code` and `to_property_code`. The generic staging grouping loop read `r.property_code`, which was always `undefined`, producing `'UNKNOWN'` as the staging record's `property_code`. The solver's actual flag creation logic was already correct (used per-row `from_property_code`/`to_property_code`), so no data was lost — only the staging record label and log output were wrong.
+| File | Role |
+|------|------|
+| `layers/base/composables/useTourState.ts` | Unified tour state: shortlist, activeUnitId, isPresenting |
+| `layers/base/components/tour/TourShortlist.vue` | 4-slot unit selector bar with status color-coding |
+| `layers/base/components/tour/UnitDossier.vue` | 4-page swipeable dossier canvas (CSS scroll-snap) |
 
-```typescript
-// Before:
-const pCode = r.property_code || 'UNKNOWN'
+### Modified Files
 
-// After:
-// TransfersRow has no top-level property_code — fall back to from_property_code.
-// All other report types expose property_code directly.
-const pCode = r.property_code || r.from_property_code || 'UNKNOWN'
+| File | Change |
+|------|--------|
+| `layers/base/layouts/tour.vue` | Presentation Mode toggle — banner/header/sidebar collapse via CSS transitions |
+| `layers/base/pages/tour/dashboard.vue` | Uses new components; fetches `unit_id`, `vacant_days`, property social links |
+| `layers/ops/pages/assets/properties/[id].vue` | Social Links panel (Instagram, Facebook, Sightmap, Walk Score ID) |
+| `types/supabase.ts` | New columns: `instagram_url`, `facebook_url`, `site_map_url`, `walk_score_id`, `street_address` |
+| `supabase/migrations/20260301000001_add_property_social_links.sql` | Schema migration for above columns |
+
+### Presentation Mode
+
+`isPresenting` (from `useTourState`) triggers CSS height/width transitions on four regions:
+
+| Region | Normal | Presenting |
+|--------|--------|------------|
+| System banner | `h-8` | `h-0` |
+| Header bar | `h-14` | `h-0` |
+| Sidebar rail | `w-14` or `w-0` | `w-0` |
+| Shortlist bar | visible | hidden (`v-if="!isPresenting"`) |
+| Dossier canvas | remaining space | 100% viewport |
+
+Enter via `[↗ PRESENT]` pill in header. Exit via frosted-glass `[↙]` button fixed at `top-4 right-4 z-70`.
+
+### Component Auto-Import Names (Critical)
+
+| File | Auto-Import Name |
+|------|-----------------|
+| `components/tour/TourShortlist.vue` | `<TourShortlist>` |
+| `components/tour/UnitDossier.vue` | **`<TourUnitDossier>`** (Nuxt prefixes subdirectory) |
+| `composables/useTourState.ts` | `useTourState()`, `MAX_TOUR_SLOTS` |
+
+### Dossier Page Status
+
+| Page | Status | Next Action |
+|------|--------|-------------|
+| Page 1 — Photo Gallery | ✅ Live | Populate demo unit photos |
+| Page 2 — Specs & Financials | ✅ Live | Await leasing team amenity feedback |
+| Page 3 — Floor Plan | ⏳ Placeholder | Decide data source (per floor_plan vs per unit) |
+| Page 4 — Neighborhood Toolkit | ⏳ Placeholder | Add property address + Walk Score ID to DB |
+
+### SSR Fixes (Committed Earlier This Session)
+
+`definePageMeta({ ssr: false })` is silently ignored in Nuxt 4. All SSR-disabling now done via `routeRules` in `nuxt.config.ts`:
+
+```ts
+routeRules: {
+  '/tour/**':   { ssr: false },
+  '/mobile/**': { ssr: false },
+}
 ```
 
-Tomorrow's run should log `for SB` (or the relevant from-property) instead of `for UNKNOWN`.
+Resolved hydration mismatches on shortlist-dependent render branches.
 
 ---
 
-## Unit Identification Rule (Architectural — 2026-02-28)
+## Daily Audit — 2026-03-01 (Batch `55ffe4e8`)
 
-RS and SB share the same unit name format (leading digit = floor number, followed by 3-digit unit number). Unit name `3125` exists at both properties. **`unit_name` alone is never a unique identifier.**
+**Overall:** ⚠️ 3 warnings. All 5 snapshots saved. Option B stable (Day 3). W1 fix stable (Day 3).
 
-Rule: always resolve `(property_code, unit_name) → unit_id` and use `unit_id` as the sole unique unit discriminator for any analytical or decision-making process. This applies to solver logic, audit reporting, and future apartment additions.
+### Key Numbers
+
+| Property | Renewals | Applications | Notices | Available | Contracted Rent |
+|----------|----------|-------------|---------|-----------|-----------------|
+| RS | 5 | 2 | 34 | 38 | $1,488 |
+| SB | 5 | 0 | 18 | 28 | $1,644 |
+| CV | 0 | 3 | 2 | 6 | $2,366 |
+| OB | 8 | 0 | 8 | 22 | $2,547 |
+| WO | 7 | 0 | 1 | 2 | $2,950 |
+
+### Warnings
+
+- **W1 — OB 2 silent drops** (threshold: > 1). 1 → Past, 1 → Canceled. Net availability neutral. Monitor.
+- **W2 — Transfer flag UNKNOWN** persists in Phase 2E despite 2026-02-28 fix. Stale DB records with `property_code = 'UNKNOWN'` likely matching dedup check. No data loss.
+- **W3 — CV C213 Day 25 MakeReady critical.** New applicant Taub, Timothy (lease_start_date 2026-03-13) in pipeline. May self-resolve next run.
 
 ---
 
-## Commits (2026-02-28)
+## Commits (2026-03-01)
 
 | Commit | Description |
-|---|---|
-| `9dd9dce` | docs: daily audit 2026-02-28 (initial write) |
-| `f7c9304` | docs: correct audit — RS-3125 misidentified as SB-3125 |
-| `5ef3b56` | fix(solver): resolve UNKNOWN property code in transfer flag staging |
-| `16ac608` | refactor(solver): parallelize staging inserts and document Transfers fallback |
+|--------|-------------|
+| `69efcb0` | feat(tour): status color system + shortlist bar legend |
+| `4a07022` | fix(ssr): use routeRules to disable SSR for tour and mobile routes |
+| _pending_ | feat(tour): Tour Companion build — TourShortlist, UnitDossier, Presentation Mode, social links migration |
+| _pending_ | docs: daily audit 2026-03-01 + session documentation |
 
 ---
 
 ## Files Changed
 
 | File | Changes |
-|---|---|
-| `layers/admin/pages/admin/solver.vue` | `from_property_code` fallback added; sequential insert loop replaced with `Promise.all` |
-| `docs/status/DAILY_AUDIT_2026_02_28.md` | Daily audit report (corrected post-write for RS/SB-3125 misidentification) |
+|------|---------|
+| `layers/base/composables/useTourState.ts` | New — unified tour state composable |
+| `layers/base/components/tour/TourShortlist.vue` | New — 4-slot shortlist bar |
+| `layers/base/components/tour/UnitDossier.vue` | New — swipeable 4-page dossier |
+| `layers/base/layouts/tour.vue` | Presentation Mode collapse logic |
+| `layers/base/pages/tour/dashboard.vue` | Updated to use TourState; fetches property social link fields |
+| `layers/ops/pages/assets/properties/[id].vue` | Social Links panel for ops staff |
+| `supabase/migrations/20260301000001_add_property_social_links.sql` | New columns on `properties` |
+| `types/supabase.ts` | Type sync for new columns |
+| `docs/status/DAILY_AUDIT_2026_03_01.md` | Daily audit report |
+| `docs/handovers/H-064_TOUR_COMPANION_BUILD.md` | Full build handover document |
 
 ---
 
-## Previous Update (2026-02-27) — Context Impersonation Refinement & Dept-Based Navigation
+## Previous Update (2026-02-28) — Transfer Fix & Solver Cleanup
 
-- **Foundation - Auth Persistence**: Extended Supabase session cookies to 14 days in `nuxt.config.ts`.
-- **Foundation - UI Components**:
-  - `SimpleModal.vue`: Converted to a mobile-first "Bottom Sheet" with slide animations and large touch-targets.
-  - `DashboardHero.vue`: Optimized layout for small screens, including responsive typography and metric grids.
-- **Context Impersonation (Refined)**:
-  - Role downshifting is now open to all appropriate roles (Manager, RPM, etc.).
-  - Navigation now dynamically hides modules based on department (Maintenance, Leasing, etc.).
-  - Admin menu auto-hides when impersonating non-Owner roles.
-
-### Department-Based Menu Filtering
-
-| Module | Visible to departments |
-|---|---|
-| Dashboard | Always visible |
-| Assets | Always visible |
-| Leasing | Management, Leasing (or no dept) |
-| Residents | Management, Leasing (or no dept) |
-| Operations | Management, Leasing, Maintenance (or no dept) |
-| Owners | Invest (or no dept) — **also requires Owner/Asset role** |
-| Admin | Super admin only (`is_super_admin === true` in patched context) |
-
-### Who Can Access Which Menus
-
-| Department | Dashboard | Assets | Leasing | Residents | Operations | Owners | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| None (default/super admin) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (if role) | ✓ (if SA) |
-| Management | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
-| Leasing | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
-| Maintenance | ✓ | ✓ | — | — | ✓ | — | — |
-| Invest | ✓ | ✓ | — | — | — | ✓ (if role) | — |
-
-### Files Changed (2026-02-27)
-
-| File | Changes |
-|---|---|
-| `layers/base/composables/usePropertyState.ts` | `availableDownshiftRoles` removed admin gate; `userContext` patches `is_super_admin`; `setOverride` opens to non-admins with anti-upshift guard; `canUseDevTools` added and exported |
-| `layers/base/components/AppNavigation.vue` | `navigationItems` refactored with dept filtering; dev tools gates use `canUseDevTools` |
+- **Bug Fix — Transfer Flag UNKNOWN Property**: `TransfersRow` has no top-level `property_code`; fallback to `from_property_code` added.
+- **Refactor — Parallel Staging Inserts**: Sequential `for await` insert loop replaced with `Promise.all`.
+- **Audit 2026-02-28**: 9 clean / 3 warnings. SB-3125 transfer processed correctly.

@@ -295,6 +295,11 @@ Check that you're using the correct prop name:
 2. **Update this file** when you discover new gotchas or patterns
 3. **Reference specific entries** when explaining fixes to users
 
+### Agent Model Selection matrix
+- **Gemini 3.1 Pro (Tier 1 Ideator)**: Use for open-ended ideation, wireframing, and generating content hierarchy. Exceptional reasoning and massive context window. Do NOT use for direct codebase editing if architectural constraints are firm.
+- **Gemini 3 Pro Flash (Tier 1 QA/Builder)**: Use for isolated, sandboxed tasks. High speed and volume generation. Excellent for writing isolated `.spec.ts` unit tests or isolated UI components if strictly instructed not to touch architecture.
+- **Claude 4.6 Sonnet / Antigravity (Tier 2 Architect)**: Use for complex connective tissue, routing, state management, layouts, middleware, and codebase orchestration. Strictly adheres to negative constraints.
+
 ---
 
 ## Global Lookups
