@@ -30,90 +30,6 @@ const tabs = [
   { label: 'Settings', value: 'settings' },
 ]
 
-// ── Edit form ────────────────────────────────────────────────────────────
-const form = ref({
-  name:             '',
-  description:      '',
-  year_built:       null as number | null,
-  total_unit_count: null as number | null,
-  primary_image_url:'',
-  street_address:   '',
-  city:             '',
-  state_code:       '',
-  postal_code:      '',
-  latitude:         null as number | null,
-  longitude:        null as number | null,
-  website_url:      '',
-  instagram_url:    '',
-  facebook_url:     '',
-  site_map_url:     '',
-  walk_score_id:    '',
-})
-
-// Sync form whenever property data loads
-watch(property, (p) => {
-  if (!p) return
-  form.value = {
-    name:             p.name ?? '',
-    description:      p.description ?? '',
-    year_built:       p.year_built ?? null,
-    total_unit_count: p.total_unit_count ?? null,
-    primary_image_url:p.primary_image_url ?? '',
-    street_address:   p.street_address ?? '',
-    city:             p.city ?? '',
-    state_code:       p.state_code ?? '',
-    postal_code:      p.postal_code ?? '',
-    latitude:         p.latitude ?? null,
-    longitude:        p.longitude ?? null,
-    website_url:      p.website_url ?? '',
-    instagram_url:    (p as any).instagram_url ?? '',
-    facebook_url:     (p as any).facebook_url ?? '',
-    site_map_url:     (p as any).site_map_url ?? '',
-    walk_score_id:    (p as any).walk_score_id ?? '',
-  }
-}, { immediate: true })
-
-const saving = ref(false)
-const saveError = ref<string | null>(null)
-const saveSuccess = ref(false)
-
-const saveProperty = async () => {
-  saving.value = true
-  saveError.value = null
-  saveSuccess.value = false
-  try {
-    const { error: err } = await supabase
-      .from('properties')
-      .update({
-        name:              form.value.name,
-        description:       form.value.description || null,
-        year_built:        form.value.year_built,
-        total_unit_count:  form.value.total_unit_count,
-        primary_image_url: form.value.primary_image_url || null,
-        street_address:    form.value.street_address || null,
-        city:              form.value.city || null,
-        state_code:        form.value.state_code,
-        postal_code:       form.value.postal_code || null,
-        latitude:          form.value.latitude,
-        longitude:         form.value.longitude,
-        website_url:       form.value.website_url || null,
-        instagram_url:     form.value.instagram_url || null,
-        facebook_url:      form.value.facebook_url || null,
-        site_map_url:      form.value.site_map_url || null,
-        walk_score_id:     form.value.walk_score_id || null,
-      } as any)
-      .eq('id', propertyId)
-    if (err) throw err
-    saveSuccess.value = true
-    await refreshProperty()
-  } catch (e: any) {
-    saveError.value = e.message || 'Failed to save'
-  } finally {
-    saving.value = false
-  }
-}
-
-
 // Fetch Property Details
 const { data: property, status, error, refresh: refreshProperty } = await useAsyncData(`property-${propertyId}`, async () => {
   const { data, error } = await supabase
@@ -196,6 +112,89 @@ const { data: locations, refresh: refreshLocations } = await useAsyncData(`prope
 
 const handleLocationSaved = async () => {
   await refreshLocations()
+}
+
+// ── Edit form ────────────────────────────────────────────────────────────
+const form = ref({
+  name:             '',
+  description:      '',
+  year_built:       null as number | null,
+  total_unit_count: null as number | null,
+  primary_image_url:'',
+  street_address:   '',
+  city:             '',
+  state_code:       '',
+  postal_code:      '',
+  latitude:         null as number | null,
+  longitude:        null as number | null,
+  website_url:      '',
+  instagram_url:    '',
+  facebook_url:     '',
+  site_map_url:     '',
+  walk_score_id:    '',
+})
+
+// Sync form whenever property data loads (immediate so it pre-fills on first render)
+watch(property, (p) => {
+  if (!p) return
+  form.value = {
+    name:              p.name ?? '',
+    description:       p.description ?? '',
+    year_built:        p.year_built ?? null,
+    total_unit_count:  p.total_unit_count ?? null,
+    primary_image_url: p.primary_image_url ?? '',
+    street_address:    p.street_address ?? '',
+    city:              p.city ?? '',
+    state_code:        p.state_code ?? '',
+    postal_code:       p.postal_code ?? '',
+    latitude:          p.latitude ?? null,
+    longitude:         p.longitude ?? null,
+    website_url:       p.website_url ?? '',
+    instagram_url:     (p as any).instagram_url ?? '',
+    facebook_url:      (p as any).facebook_url ?? '',
+    site_map_url:      (p as any).site_map_url ?? '',
+    walk_score_id:     (p as any).walk_score_id ?? '',
+  }
+}, { immediate: true })
+
+const saving = ref(false)
+const saveError = ref<string | null>(null)
+const saveSuccess = ref(false)
+
+const saveProperty = async () => {
+  saving.value = true
+  saveError.value = null
+  saveSuccess.value = false
+  try {
+    const { error: err } = await supabase
+      .from('properties')
+      .update({
+        name:              form.value.name,
+        description:       form.value.description || null,
+        year_built:        form.value.year_built,
+        total_unit_count:  form.value.total_unit_count,
+        primary_image_url: form.value.primary_image_url || null,
+        street_address:    form.value.street_address || null,
+        city:              form.value.city || null,
+        state_code:        form.value.state_code,
+        postal_code:       form.value.postal_code || null,
+        latitude:          form.value.latitude,
+        longitude:         form.value.longitude,
+        website_url:       form.value.website_url || null,
+        instagram_url:     form.value.instagram_url || null,
+        facebook_url:      form.value.facebook_url || null,
+        site_map_url:      form.value.site_map_url || null,
+        walk_score_id:     form.value.walk_score_id || null,
+      } as any)
+      .eq('id', propertyId)
+    if (err) throw err
+    saveSuccess.value = true
+    await refreshProperty()
+  } catch (e: any) {
+    saveError.value = e.message || 'Failed to save'
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 

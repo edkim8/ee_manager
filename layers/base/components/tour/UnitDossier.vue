@@ -163,9 +163,10 @@ watch(
 const hasAddress = computed(() => !!props.propertyAddress)
 
 // Google Maps embed — prefer lat/lng coordinates, fall back to address string
+// z=17 with coordinates gives a tight property-level view (whole complex, ~1 block radius)
 const mapSrc = computed((): string | null => {
   if (props.latitude && props.longitude) {
-    return `https://maps.google.com/maps?q=${props.latitude},${props.longitude}&t=&z=15&ie=UTF8&iwloc=&output=embed`
+    return `https://maps.google.com/maps?q=${props.latitude},${props.longitude}&t=&z=17&ie=UTF8&iwloc=&output=embed`
   }
   if (props.propertyAddress) {
     const q = encodeURIComponent(props.propertyAddress)
@@ -176,6 +177,10 @@ const mapSrc = computed((): string | null => {
 
 // ── Neighborhood tab state ───────────────────────────────────────────────
 const activeNeighborhoodTab = ref<NeighborhoodTabId>('map')
+
+// Instagram and Facebook block all iframe embedding via X-Frame-Options / CSP.
+// For these tabs we skip the iframe entirely and show a tap-to-open card.
+const OPEN_ONLY_TABS = new Set<NeighborhoodTabId>(['instagram', 'facebook'])
 
 // URL for the currently active iframe-based tab (null = not configured)
 const neighborhoodIframeUrl = computed((): string | null => {
@@ -267,7 +272,7 @@ if (import.meta.client && props.walkScoreId && props.propertyAddress) {
             <img
               v-else-if="photos.length"
               :key="heroIndex"
-              :src="photos[heroIndex].file_url"
+              :src="photos[heroIndex]?.file_url"
               :alt="`${unit.unit_name} — photo ${heroIndex + 1} of ${photos.length}`"
               class="absolute inset-0 w-full h-full object-cover"
             />
@@ -489,9 +494,53 @@ if (import.meta.client && props.walkScoreId && props.propertyAddress) {
               </div>
             </div>
 
-            <!-- All iframe-based tabs (Map, Instagram, Facebook, Website, Site Map) -->
+            <!-- Instagram / Facebook — these sites block all iframe embedding via CSP.
+                 Always show a tap-to-open card regardless of browser or device. -->
             <div
-              v-if="activeNeighborhoodTab !== 'walkscore'"
+              v-if="OPEN_ONLY_TABS.has(activeNeighborhoodTab)"
+              class="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8"
+              :class="activeNeighborhoodTab === 'instagram'
+                ? 'bg-gradient-to-br from-purple-600 via-pink-500 to-amber-400'
+                : 'bg-[#1877F2]'"
+            >
+              <!-- Configured → branded open card -->
+              <template v-if="neighborhoodIframeUrl">
+                <UIcon
+                  :name="activeNeighborhoodTab === 'instagram' ? 'i-heroicons-camera' : 'i-heroicons-user-group'"
+                  class="w-16 h-16 text-white drop-shadow-lg"
+                />
+                <div class="text-center">
+                  <p class="font-black text-white text-2xl tracking-tight">
+                    {{ activeNeighborhoodTab === 'instagram' ? 'Instagram' : 'Facebook' }}
+                  </p>
+                  <p class="text-white/70 text-sm mt-1 font-medium">Opens in browser</p>
+                </div>
+                <button
+                  type="button"
+                  class="flex items-center gap-2 bg-white text-gray-900 font-black text-sm px-8 py-3.5 rounded-2xl shadow-xl active:scale-95 transition-transform"
+                  @click="openExternal(neighborhoodIframeUrl)"
+                >
+                  <UIcon name="i-heroicons-arrow-top-right-on-square" class="w-4 h-4" />
+                  Open
+                </button>
+              </template>
+
+              <!-- Not configured -->
+              <template v-else>
+                <UIcon
+                  :name="activeNeighborhoodTab === 'instagram' ? 'i-heroicons-camera' : 'i-heroicons-user-group'"
+                  class="w-12 h-12 text-white/40"
+                />
+                <div class="text-center">
+                  <p class="font-semibold text-white/80 text-sm capitalize">{{ activeNeighborhoodTab }} not configured</p>
+                  <p class="text-white/50 text-xs mt-1 max-w-xs">Add the URL under Assets → Properties → Settings.</p>
+                </div>
+              </template>
+            </div>
+
+            <!-- Iframe-based tabs (Map, Website, Site Map) -->
+            <div
+              v-if="activeNeighborhoodTab !== 'walkscore' && !OPEN_ONLY_TABS.has(activeNeighborhoodTab)"
               class="absolute inset-0 flex flex-col"
             >
               <!-- iframe (loads if URL is known) -->
@@ -515,7 +564,7 @@ if (import.meta.client && props.walkScoreId && props.propertyAddress) {
                   class="w-12 h-12"
                 />
                 <p class="font-semibold text-sm capitalize">{{ activeNeighborhoodTab }} not configured</p>
-                <p class="text-xs max-w-xs">Add this property's link in the PROPERTY_LINKS config in UnitDossier.vue</p>
+                <p class="text-xs max-w-xs">Add this URL under Assets → Properties → Settings in the web interface.</p>
               </div>
 
               <!-- Open-in-browser escape hatch (top-right overlay, frosted) -->
