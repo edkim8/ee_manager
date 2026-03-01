@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSupabaseClient, useAsyncData, definePageMeta } from '#imports'
 import ImageModal from '../../../../base/components/modals/ImageModal.vue'
@@ -26,12 +26,96 @@ const { fetchLocations } = useLocationService()
 
 const tabs = [
   { label: 'Overview', value: 'overview' },
-  { label: 'Locations', value: 'locations' }
+  { label: 'Locations', value: 'locations' },
+  { label: 'Settings', value: 'settings' },
 ]
+
+// ── Edit form ────────────────────────────────────────────────────────────
+const form = ref({
+  name:             '',
+  description:      '',
+  year_built:       null as number | null,
+  total_unit_count: null as number | null,
+  primary_image_url:'',
+  street_address:   '',
+  city:             '',
+  state_code:       '',
+  postal_code:      '',
+  latitude:         null as number | null,
+  longitude:        null as number | null,
+  website_url:      '',
+  instagram_url:    '',
+  facebook_url:     '',
+  site_map_url:     '',
+  walk_score_id:    '',
+})
+
+// Sync form whenever property data loads
+watch(property, (p) => {
+  if (!p) return
+  form.value = {
+    name:             p.name ?? '',
+    description:      p.description ?? '',
+    year_built:       p.year_built ?? null,
+    total_unit_count: p.total_unit_count ?? null,
+    primary_image_url:p.primary_image_url ?? '',
+    street_address:   p.street_address ?? '',
+    city:             p.city ?? '',
+    state_code:       p.state_code ?? '',
+    postal_code:      p.postal_code ?? '',
+    latitude:         p.latitude ?? null,
+    longitude:        p.longitude ?? null,
+    website_url:      p.website_url ?? '',
+    instagram_url:    (p as any).instagram_url ?? '',
+    facebook_url:     (p as any).facebook_url ?? '',
+    site_map_url:     (p as any).site_map_url ?? '',
+    walk_score_id:    (p as any).walk_score_id ?? '',
+  }
+}, { immediate: true })
+
+const saving = ref(false)
+const saveError = ref<string | null>(null)
+const saveSuccess = ref(false)
+
+const saveProperty = async () => {
+  saving.value = true
+  saveError.value = null
+  saveSuccess.value = false
+  try {
+    const { error: err } = await supabase
+      .from('properties')
+      .update({
+        name:              form.value.name,
+        description:       form.value.description || null,
+        year_built:        form.value.year_built,
+        total_unit_count:  form.value.total_unit_count,
+        primary_image_url: form.value.primary_image_url || null,
+        street_address:    form.value.street_address || null,
+        city:              form.value.city || null,
+        state_code:        form.value.state_code,
+        postal_code:       form.value.postal_code || null,
+        latitude:          form.value.latitude,
+        longitude:         form.value.longitude,
+        website_url:       form.value.website_url || null,
+        instagram_url:     form.value.instagram_url || null,
+        facebook_url:      form.value.facebook_url || null,
+        site_map_url:      form.value.site_map_url || null,
+        walk_score_id:     form.value.walk_score_id || null,
+      } as any)
+      .eq('id', propertyId)
+    if (err) throw err
+    saveSuccess.value = true
+    await refreshProperty()
+  } catch (e: any) {
+    saveError.value = e.message || 'Failed to save'
+  } finally {
+    saving.value = false
+  }
+}
 
 
 // Fetch Property Details
-const { data: property, status, error } = await useAsyncData(`property-${propertyId}`, async () => {
+const { data: property, status, error, refresh: refreshProperty } = await useAsyncData(`property-${propertyId}`, async () => {
   const { data, error } = await supabase
     .from('properties')
     .select('*')
@@ -333,18 +417,161 @@ const handleLocationSaved = async () => {
         <template #locations>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div class="md:col-span-2 min-h-[500px]">
-                    <LocationMap 
-                        :locations="locations || []" 
+                    <LocationMap
+                        :locations="locations || []"
                         :initial-center="property.latitude && property.longitude ? { lat: property.latitude, lng: property.longitude } : undefined"
                     />
                 </div>
                 <div>
-                   <LocationPicker 
-                      :property-code="property.code" 
-                      @location-saved="handleLocationSaved" 
-                   /> 
+                   <LocationPicker
+                      :property-code="property.code"
+                      @location-saved="handleLocationSaved"
+                   />
                 </div>
             </div>
+        </template>
+
+        <template #settings>
+          <div class="max-w-2xl space-y-8">
+
+            <!-- Save feedback -->
+            <div v-if="saveSuccess" class="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-sm font-medium">
+              <UIcon name="i-heroicons-check-circle" class="w-5 h-5 flex-shrink-0" />
+              Property saved successfully.
+            </div>
+            <div v-if="saveError" class="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm font-medium">
+              <UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 flex-shrink-0" />
+              {{ saveError }}
+            </div>
+
+            <!-- Property Info -->
+            <section class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+              <h3 class="text-xs font-black uppercase tracking-widest text-gray-400">Property Info</h3>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Name</label>
+                <UInput v-model="form.name" placeholder="Property name" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Description</label>
+                <UTextarea v-model="form.description" :rows="4" placeholder="Short property description shown on the overview page" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Year Built</label>
+                  <UInput v-model.number="form.year_built" type="number" placeholder="e.g. 2005" />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Total Units</label>
+                  <UInput v-model.number="form.total_unit_count" type="number" placeholder="e.g. 240" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Primary Image URL</label>
+                <UInput v-model="form.primary_image_url" placeholder="property-images/RS.jpg or https://..." />
+                <p class="text-[10px] text-gray-400 mt-1">Path relative to /public or a full HTTPS URL.</p>
+              </div>
+            </section>
+
+            <!-- Address -->
+            <section class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+              <h3 class="text-xs font-black uppercase tracking-widest text-gray-400">Address</h3>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Street Address</label>
+                <UInput v-model="form.street_address" placeholder="1234 Main St" />
+              </div>
+
+              <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-1">
+                  <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">City</label>
+                  <UInput v-model="form.city" placeholder="Seattle" />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">State</label>
+                  <UInput v-model="form.state_code" placeholder="WA" maxlength="2" />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">ZIP</label>
+                  <UInput v-model="form.postal_code" placeholder="98121" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Latitude</label>
+                  <UInput v-model.number="form.latitude" type="number" step="0.000001" placeholder="47.6062" />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Longitude</label>
+                  <UInput v-model.number="form.longitude" type="number" step="0.000001" placeholder="-122.3321" />
+                </div>
+              </div>
+              <p class="text-[10px] text-gray-400">Coordinates power the Google Maps embed on the Tour Dossier. Copy from Google Maps → right-click → coordinates.</p>
+            </section>
+
+            <!-- Digital Presence -->
+            <section class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+              <h3 class="text-xs font-black uppercase tracking-widest text-gray-400">Digital Presence</h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">Used on the Tour Dossier Page 4 — Neighborhood Toolkit.</p>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">
+                  <UIcon name="i-heroicons-globe-alt" class="w-3.5 h-3.5 inline mr-1" />Website URL
+                </label>
+                <UInput v-model="form.website_url" placeholder="https://www.example.com" type="url" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">
+                  <UIcon name="i-heroicons-camera" class="w-3.5 h-3.5 inline mr-1" />Instagram URL
+                </label>
+                <UInput v-model="form.instagram_url" placeholder="https://www.instagram.com/yourproperty/" type="url" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">
+                  <UIcon name="i-heroicons-user-group" class="w-3.5 h-3.5 inline mr-1" />Facebook URL
+                </label>
+                <UInput v-model="form.facebook_url" placeholder="https://www.facebook.com/yourproperty/" type="url" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">
+                  <UIcon name="i-heroicons-building-office-2" class="w-3.5 h-3.5 inline mr-1" />Site Map Embed URL
+                </label>
+                <UInput v-model="form.site_map_url" placeholder="https://sightmap.com/embed/xxxxxxxx" type="url" />
+                <p class="text-[10px] text-gray-400 mt-1">The <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded">/embed/</code> variant from sightmap.com — not the regular link.</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">
+                  <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 inline mr-1" />Walk Score ID
+                </label>
+                <UInput v-model="form.walk_score_id" placeholder="e.g. abc123def456" />
+                <p class="text-[10px] text-gray-400 mt-1">Register free at <span class="font-mono">walkscore.com/professional/api.php</span> → get your wsid.</p>
+              </div>
+            </section>
+
+            <!-- Save button -->
+            <div class="flex items-center gap-3 pb-8">
+              <UButton
+                :loading="saving"
+                :disabled="saving"
+                color="primary"
+                size="lg"
+                icon="i-heroicons-check"
+                label="Save Changes"
+                class="rounded-xl font-bold px-8"
+                @click="saveProperty"
+              />
+              <span v-if="saving" class="text-sm text-gray-400">Saving…</span>
+            </div>
+
+          </div>
         </template>
       </SimpleTabs>
     </div>

@@ -1146,16 +1146,20 @@ export type Database = {
           code: string
           created_at: string
           description: string | null
+          facebook_url: string | null
           id: string
+          instagram_url: string | null
           latitude: number | null
           longitude: number | null
           name: string
           postal_code: string | null
           primary_image_url: string | null
+          site_map_url: string | null
           state_code: string
           street_address: string | null
           total_unit_count: number | null
           updated_at: string
+          walk_score_id: string | null
           website_url: string | null
           year_built: number | null
         }
@@ -1164,16 +1168,20 @@ export type Database = {
           code: string
           created_at?: string
           description?: string | null
+          facebook_url?: string | null
           id?: string
+          instagram_url?: string | null
           latitude?: number | null
           longitude?: number | null
           name: string
           postal_code?: string | null
           primary_image_url?: string | null
+          site_map_url?: string | null
           state_code: string
           street_address?: string | null
           total_unit_count?: number | null
           updated_at?: string
+          walk_score_id?: string | null
           website_url?: string | null
           year_built?: number | null
         }
@@ -1182,16 +1190,20 @@ export type Database = {
           code?: string
           created_at?: string
           description?: string | null
+          facebook_url?: string | null
           id?: string
+          instagram_url?: string | null
           latitude?: number | null
           longitude?: number | null
           name?: string
           postal_code?: string | null
           primary_image_url?: string | null
+          site_map_url?: string | null
           state_code?: string
           street_address?: string | null
           total_unit_count?: number | null
           updated_at?: string
+          walk_score_id?: string | null
           website_url?: string | null
           year_built?: number | null
         }
