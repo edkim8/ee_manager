@@ -64,7 +64,9 @@ const tenancyStatusColors: Record<string, string> = {
   'Current': 'primary',
   'Past': 'error',
   'Future': 'primary',
-  'Notice': 'warning'
+  'Notice': 'warning',
+  'Applicant': 'warning',
+  'Eviction': 'error'
 }
 
 // Search filter

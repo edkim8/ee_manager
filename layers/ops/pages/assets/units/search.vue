@@ -178,7 +178,7 @@ const inventoryCategoryOptions = computed(() => {
   return [...set].sort()
 })
 
-const tenancyStatusOptions = ['Current', 'Future', 'Notice', 'Past']
+const tenancyStatusOptions = ['Current', 'Future', 'Notice', 'Past', 'Applicant', 'Eviction']
 const residentCountOptions = ['0', '1', '2', '3', '4', '5', '6', '7+']
 
 // Options sourced from the amenities CATALOG for the active property.
@@ -424,7 +424,9 @@ const tenancyStatusColors: Record<string, string> = {
   Current: 'primary',
   Past: 'error',
   Future: 'primary',
-  Notice: 'warning'
+  Notice: 'warning',
+  Applicant: 'warning',
+  Eviction: 'error'
 }
 
 const handleRowClick = (row: any) => {
