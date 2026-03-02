@@ -10,9 +10,10 @@ Copy and paste the prompt below into Claude Code every morning after the daily Y
 ACT AS: Tier 2 Data Architect (Auditor).
 TASK: Perform Daily Upload & Solver Audit.
 
-PRE-FLIGHT:
-- Run `git pull` to ensure the latest DAILY_AUDIT files are present from other machines.
-  If the pull fails or the repo is dirty, note it and proceed with files currently on disk.
+PRE-FLIGHT (DO THIS FIRST):
+- Execute `git checkout main` and `git pull origin main` to pull down the most recent database snapshots, history logs, and previous audit files. Do not begin the audit until you have the latest code.
+- Create a new branch for today's audit: `git checkout -b chore/daily-audit-[YYYY-MM-DD]` (replace with today's date).
+  If the pull fails or the repo is dirty, do not proceed; notify the user to resolve conflicts.
 
 CONTEXT & HISTORICAL ANALYSIS:
 - `docs/status/LATEST_UPDATE.md` (Current System Context)
@@ -66,10 +67,11 @@ WORKFLOW PHASE 1: EVALUATION
 
 4. INITIAL EVALUATION REPORT:
    - Present a concise summary of findings in the terminal.
-   - STOP & WAIT: Ask the user for inputs/clarifications.
+   - >>> CRITICAL OBSTRUCTION: YOU MUST STOP HERE. Do NOT write the markdown file. Do NOT push to GitHub.
+   - ASK THE USER TO REVIEW THE FINDINGS. State: "Please review the findings. When you are ready for me to finalize the report and push to GitHub, type 'Done'."
 
-WORKFLOW PHASE 2: CLOSING (ON "DONE")
-If the user provides feedback or says "Done":
+WORKFLOW PHASE 2: CLOSING (ONLY AFTER USER TYPES "DONE")
+If the user provides feedback, incorporate it. When the user explicitly says "Done":
 
 1. Compose the final audit in markdown. Categorize all findings as:
    ✅ CLEAN, ⚠️ WARNING, or 🔴 FATAL.
@@ -77,10 +79,13 @@ If the user provides feedback or says "Done":
 2. Write the final audit to `docs/status/DAILY_AUDIT_YYYY_MM_DD.md`
    (replace YYYY_MM_DD with today's actual date).
 
-3. Commit and push the file:
-   - `git add docs/status/DAILY_AUDIT_YYYY_MM_DD.md`
-   - `git commit -m "audit: daily solver audit YYYY-MM-DD"`
-   - `git push`
+3. Update History and Push to GitHub (Branch & PR):
+   - Update `docs/status/HISTORY_INDEX.md` to briefly log that today's audit was performed and link to the file.
+   - `git add docs/status/DAILY_AUDIT_YYYY_MM_DD.md docs/status/HISTORY_INDEX.md`
+   - `git commit -m "chore: daily solver audit YYYY-MM-DD"`
+   - `git push -u origin chore/daily-audit-[YYYY-MM-DD]`
+   - `gh pr create --title "Daily Solver Audit YYYY-MM-DD" --body "Automated daily solver forensic report"`
+   - `gh pr merge --merge --auto`
 
 4. Send the audit email via the API endpoint:
    POST to `/api/admin/notifications/send-audit`
