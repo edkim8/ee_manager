@@ -140,6 +140,15 @@ const handleRowClick = (row: any) => {
           <span class="text-sm text-gray-500">
             {{ filteredData.length }} {{ filteredData.length === 1 ? 'unit' : 'units' }}
           </span>
+          <UButton
+            icon="i-heroicons-funnel"
+            color="neutral"
+            variant="outline"
+            size="sm"
+            @click="navigateTo('/assets/units/search')"
+          >
+            Detailed Search
+          </UButton>
         </div>
       </template>
 
