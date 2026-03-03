@@ -32,6 +32,11 @@ export function useExpirationDashboard(propertyCode: string) {
 
       // 2. Fetch expiration counts by month
       // NOTE: Keep .select() inline — multi-line template literals cause 400 errors (see KNOWLEDGE_BASE.md)
+      // Compute actual last day of months[23] — hardcoding '-31' fails for Feb/Apr/Jun/Sep/Nov
+      const [endY, endM] = months[23].split('-').map(Number)
+      const lastDayOfEndMonth = new Date(endY, endM, 0).getDate()
+      const endDateFilter = `${months[23]}-${String(lastDayOfEndMonth).padStart(2, '0')}`
+
       const { data: leaseData, error: leaseError } = await supabase
         .from('leases')
         .select('end_date, tenancies!inner(property_code)')
@@ -39,7 +44,7 @@ export function useExpirationDashboard(propertyCode: string) {
         .eq('lease_status', 'Current')
         .eq('is_active', true)
         .gte('end_date', months[0] + '-01')
-        .lte('end_date', months[23] + '-31')
+        .lte('end_date', endDateFilter)
 
       if (leaseError) {
         console.error('[Dashboard] Lease fetch error:', leaseError)

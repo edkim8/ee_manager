@@ -220,7 +220,7 @@ const navigationItems = computed(() => {
   // Owners: role gate (super admin OR has any Asset role) AND dept gate (Invest or no dept)
   const propertyRoles = Object.values(ctx?.access?.property_roles || {})
   const hasOwnerAccess = isSuperAdmin || propertyRoles.includes('Asset')
-  const showOwners = hasOwnerAccess && (!dept || dept === 'Invest')
+  const showOwners = hasOwnerAccess && (isSuperAdmin || !dept || dept === 'Invest')
 
   const items: { label: string; icon: string; to?: string; onSelect?: Function; children?: any[] }[] = [
     // Dashboard & Assets — always visible
@@ -232,7 +232,7 @@ const navigationItems = computed(() => {
     {
       label: 'Assets',
       icon: 'i-heroicons-building-library',
-      to: '/assets/properties',
+      to: '/assets/units',
       children: [
         { label: 'Properties', icon: 'i-heroicons-building-office', to: '/assets/properties' },
         { label: 'Buildings', icon: 'i-heroicons-home-modern', to: '/assets/buildings' },
@@ -273,7 +273,7 @@ const navigationItems = computed(() => {
     items.push({
       label: 'Operations',
       icon: 'i-heroicons-wrench-screwdriver',
-      to: '/office/alerts',
+      to: '/office/inventory',
       children: [
         { label: 'Alerts', icon: 'i-heroicons-bell-alert', to: '/office/alerts' },
         { label: 'Work Orders', icon: 'i-heroicons-clipboard-document-check', to: '/maintenance/work-orders' },
@@ -304,7 +304,7 @@ const navigationItems = computed(() => {
     items.push({
       label: 'Admin',
       icon: 'i-heroicons-cog-6-tooth',
-      to: '/admin/upload',
+      to: '/admin/solver',
       children: [
         { label: 'Users', icon: 'i-heroicons-users', to: '/admin/users' },
         { label: 'Solver Engine', icon: 'i-heroicons-cpu-chip', to: '/admin/solver' },
