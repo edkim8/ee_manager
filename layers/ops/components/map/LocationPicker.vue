@@ -56,16 +56,36 @@ const handleFileSelect = async (event: Event) => {
     isExtracting.value = true
 
     try {
+      // 1. Try EXIF GPS extraction from photo metadata
       const coords = await extractCoordinates(selectedFile.value)
       if (coords) {
         form.value.latitude = coords.lat
         form.value.longitude = coords.lng
+        console.log('✅ GPS from EXIF metadata')
+        return
+      }
+
+      // 2. EXIF failed — common on Android Chrome with capture="environment",
+      //    which strips EXIF from the temp file it passes to JS.
+      //    Fall back to browser Geolocation API (device is at the location anyway).
+      console.log('📍 EXIF GPS not found — trying navigator.geolocation fallback...')
+      if ('geolocation' in navigator) {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            })
+          })
+          form.value.latitude = position.coords.latitude
+          form.value.longitude = position.coords.longitude
+          console.log('✅ GPS from navigator.geolocation:', position.coords)
+        } catch (geoErr) {
+          console.warn('navigator.geolocation failed:', geoErr)
+          errorMsg.value = 'No GPS data found. Please enter manually.'
+        }
       } else {
-        // Soft error - just let them enter manually
-        console.log('No GPS data found. User must enter manually.')
-        // We don't necessarily need to show an error, just stop spinning.
-        // Maybe show a toast/notification? For now, just a console log is better than blocking.
-        // Or a helper message.
         errorMsg.value = 'No GPS data found. Please enter manually.'
       }
     } catch (e) {
