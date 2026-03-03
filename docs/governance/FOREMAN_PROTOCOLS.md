@@ -61,13 +61,15 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 > 1. Read the Context.
 > 2. Implement the Code.
 > 3. Use `<NuxtImg>` with `format="webp"` for all images.
-> 4. Verify (Run tests).
+> 4. **TESTING (MANDATORY):** Write Vitest unit tests for any new logic, composables, or bug fixes. Ensure existing tests pass.
+> 5. Verify (Run `npm run test:unit`).
 >
 > **CRITICAL CONSTRAINTS:**
 > 1. **DO NOT EDIT ADMIN FILES:** (`HISTORY_INDEX.md`, `STATUS_BOARD.md`).
 > 2. **MANDATORY ASSET OPTIMIZATION:** NEVER use native `<img>`. Use `<NuxtImg format="webp">` or `<NuxtPicture>`.
 > 3. **NO LEGACY SYNTAX:** Port V1 logic to Nuxt 4/Supabase.
 > 4. **NO SQL IN MAP:** Do not write code into the System Map.
+> 5. **UNCOVERED CODE GUARANTEE:** You must leave the codebase with equal or better test coverage than you found it. Do not declare the task "Complete" if your new code lacks a `.test.ts` file or if `npm run test:unit` fails.
 >
 > **FINAL STEP (MANDATORY):**
 > You MUST create/overwrite `docs/status/LATEST_UPDATE.md` with a Field Report containing:
@@ -94,13 +96,15 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 > STEPS:
 > 1. Read Context.
 > 2. Execute Code (Include `<NuxtImg format="webp">` for all assets).
-> 3. Verify.
+> 3. **TESTING (MANDATORY):** Write Vitest unit tests for any new business logic, composables, or bug fixes. Cover edge cases.
+> 4. Verify (Run `npm run test:unit`).
 >
 > **CRITICAL CONSTRAINTS:**
 > 1. **NO ADMIN EDITS** (History/Status).
 > 2. **MANDATORY ASSET OPTIMIZATION:** Use `<NuxtImg format="webp">` or `<NuxtPicture>`.
 > 3. **NO LEGACY SYNTAX**.
 > 4. **NO SQL IN MAP**.
+> 5. **UNCOVERED CODE GUARANTEE:** You must leave the codebase with equal or better test coverage than you found it. Do not declare the task "Complete" if your new code lacks a `.test.ts` file or if `npm run test:unit` fails.
 >
 > **FINAL STEP (MANDATORY):**
 > Overwrite `docs/status/LATEST_UPDATE.md` with Field Report. Write it to disk.'"

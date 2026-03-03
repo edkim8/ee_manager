@@ -283,7 +283,7 @@ const exportMenuItems = computed(() => [[
                 column.headerClass,
                 { 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 select-none': column.sortable }
               ]"
-              :style="{ textAlign: column.align || 'left' }"
+              :style="{ textAlign: column.align || 'left', ...getColumnStyle(column) }"
               @click="column.sortable && toggleSort(column)"
             >
               <!--
@@ -515,32 +515,23 @@ const exportMenuItems = computed(() => [[
 </template>
 
 <style scoped>
-/* Make the last visible column expand to fill remaining space */
+/*
+  table-layout: fixed
+  ───────────────────
+  Required for column widths from <colgroup> and <th style="width:...">
+  to be honoured. With 'auto', browsers treat those values as hints and
+  override them based on content — making all width configs ineffective.
+
+  The previous 'auto' setting (and the ::after phantom-cell trick that
+  accompanied it) were the root cause of both:
+    1. Columns ignoring their configured widths (auto mode)
+    2. Columns squishing into the first cell (::after width:100% competed
+       with colgroup in fixed mode)
+
+  Zebra striping is handled by the Tailwind even: variant on <tr> and
+  does not need ::after pseudo-cells.
+*/
 .zebra-table {
-  /* Ensure table uses full width of container */
-  table-layout: auto;
-}
-
-.zebra-table th:last-child,
-.zebra-table td:last-child {
-  /* Last column expands to fill remaining space */
-  width: auto !important;
-}
-
-/* Extend header row background to fill container */
-.zebra-table thead tr::after {
-  content: '';
-  display: table-cell;
-  width: 100%;
-  /* Inherit the header background color */
-  background-color: inherit;
-}
-
-/* Extend body row backgrounds to fill container (zebra stripes) */
-.zebra-table tbody tr::after {
-  content: '';
-  display: table-cell;
-  width: 100%;
-  /* Inherits the row's background color including stripes */
+  table-layout: fixed;
 }
 </style>

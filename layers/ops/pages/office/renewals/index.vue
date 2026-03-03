@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { usePropertyState, useSupabaseClient, useAsyncData, navigateTo, definePageMeta } from '#imports'
-import type { TableColumn } from '../../../../table/types'
+import { allColumns } from '../../../../../configs/table-configs/renewal_worksheets-complete.generated'
+import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
 import SimpleModal from '../../../../base/components/SimpleModal.vue'
 import GenericDataTable from '../../../../table/components/GenericDataTable.vue'
 import BadgeCell from '../../../../table/components/cells/BadgeCell.vue'
@@ -14,7 +15,7 @@ definePageMeta({
 })
 
 const supabase = useSupabaseClient()
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
 
 // Modal state
 const showNewWorksheetModal = ref(false)
@@ -206,16 +207,15 @@ const { data: termBreakdown } = await useAsyncData(
   }
 )
 
-// Table columns
-const columns: TableColumn[] = [
-  { key: 'name', label: 'Worksheet Name', sortable: true },
-  { key: 'date_range', label: 'Date Range', sortable: false },
-  { key: 'status', label: 'Status', sortable: true },
-  { key: 'total_items', label: 'Total', align: 'center', sortable: true },
-  { key: 'status_breakdown', label: 'Status Breakdown', sortable: false },
-  { key: 'financial_summary', label: 'Financial Summary', sortable: false },
-  { key: 'actions', label: 'Actions', align: 'right', sortable: false }
-]
+// Table columns — from Excel config (renewal_worksheets-complete.xlsx)
+const columns = computed(() =>
+  filterColumnsByAccess(allColumns, {
+    userRole: activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null,
+    userDepartment: userContext.value?.profile?.department,
+    isSuperAdmin: !!userContext.value?.access?.is_super_admin,
+    filterGroup: 'all'
+  })
+)
 
 // Format date for display (timezone-safe)
 function formatDate(dateStr: string) {

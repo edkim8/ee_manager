@@ -8,11 +8,51 @@
  * 4. Orders by total_unpaid descending
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.SUPABASE_URL || ''
-const supabaseKey = process.env.SUPABASE_ANON_KEY || ''
+// Mock the Supabase client so we don't need a live database connection for this unit test
+vi.mock('@supabase/supabase-js', () => {
+  const mockResponse = {
+    data: [
+      {
+        id: 'mock-id',
+        property_code: 'CV',
+        tenancy_id: 'mock-tenancy',
+        unit_name: '101',
+        resident: 'John Doe',
+        total_unpaid: '500.00',
+        days_0_30: '500.00',
+        days_31_60: '0',
+        days_61_90: '0',
+        days_90_plus: '0',
+        balance: '500.00',
+        created_at: new Date().toISOString(),
+        building_name: 'Main',
+        building_id: 'b-id',
+        resident_email: 'john@example.com',
+        tenancy_status: 'Current'
+      },
+      {
+        total_unpaid: '400.00',
+        property_code: 'CV'
+      }
+    ],
+    error: null
+  }
+
+  return {
+    createClient: () => ({
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue(mockResponse),
+      limit: vi.fn().mockResolvedValue(mockResponse)
+    })
+  }
+})
+
+const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:54321'
+const supabaseKey = process.env.SUPABASE_ANON_KEY || 'dummy_key'
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 describe('view_table_delinquent_residents', () => {

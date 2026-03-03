@@ -81,6 +81,19 @@ We maintain a registry of our own custom tools (Simple Components, Table Engine,
 
 ---
 
+### GenericDataTable CSS Guardrails (CRITICAL)
+
+**Problem**: The custom Table Engine (`GenericDataTable.vue`) relies heavily on explicit `<col>` widths that are configured via the table columns schema (e.g., `width: "150px"`). Future AI modifications to the CSS block within this component often accidentally defeat the column width engine.
+
+**Load-Bearing Rule**: The CSS property `table-layout: fixed;` is **LOAD-BEARING** for the `table` wrapper. 
+- If this is changed to `table-layout: auto;`, the browser will treat `<col>` widths merely as non-binding hints, completely ruining column widths across all tables in the application.
+- Do NOT use the phantom-cell hack (`::after { display: table-cell; width: 100% }`) to stretch rows. This causes a "squished columns" bug.
+- Do NOT use `th:last-child { width: auto !important }`. This nukes configured widths for the last column.
+
+**Solution**: Zebra striping and row-level backgrounds already work natively via Tailwind's `even:` variant on `<tr>`. Do NOT attempt to "fix" table widths via CSS hacks. Let the Javascript column engine and `<col>` tags do their job. Always ensure `table` has `table-layout: fixed`.
+
+---
+
 ---
 
 ## Nuxt Image (@nuxt/image)
