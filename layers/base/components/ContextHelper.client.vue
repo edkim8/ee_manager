@@ -12,7 +12,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   icon: 'i-heroicons-question-mark-circle',
-  buttonClass: 'top-4 right-4 sm:top-auto sm:bottom-4 sm:right-4',
+  buttonClass: 'bottom-4 right-4',
   width: 'max-w-2xl'
 })
 
@@ -61,14 +61,7 @@ const toggleModal = () => {
 </template>
 
 <style scoped>
-/* Ensure the button pops slightly more than normal buttons */
 .shadow-2xl {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-}
-
-@media (max-width: 639px) {
-  .safe-top-position {
-    top: calc(env(safe-area-inset-top, 0px) + 1rem);
-  }
 }
 </style>
