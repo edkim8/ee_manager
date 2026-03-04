@@ -28,7 +28,12 @@ const locationOptions = computed(() => {
   return []
 })
 
-onMounted(async () => { await loadData() })
+onMounted(async () => {
+  await loadData()
+  if (window.innerWidth < 640) {
+    openInstallationForm()
+  }
+})
 
 const loadData = async () => {
   try {
@@ -56,9 +61,11 @@ const filterHealth            = ref<string[]>([])
 const filterWarranty          = ref<string[]>([])
 const filterConditions        = ref<string[]>([])
 const filterLocationTypes     = ref<string[]>([])
+const filterDateFrom          = ref('')
+const filterDateTo            = ref('')
 
-// Collapsible sections — all collapsed by default
-const SECTION_KEYS = ['category', 'status', 'health', 'warranty', 'condition', 'locationType'] as const
+// Collapsible sections — category open by default, rest collapsed
+const SECTION_KEYS = ['category', 'installDate', 'status', 'health', 'warranty', 'condition', 'locationType'] as const
 const expanded = ref<Record<string, boolean>>(Object.fromEntries(SECTION_KEYS.map(k => [k, false])))
 const toggleSection = (key: string) => { expanded.value[key] = !expanded.value[key] }
 const allExpanded = computed(() => SECTION_KEYS.every(k => expanded.value[k]))
@@ -90,6 +97,8 @@ const activeFilterCount = computed(() => {
   if (filterWarranty.value.length)   n++
   if (filterConditions.value.length) n++
   if (filterLocationTypes.value.length) n++
+  if (filterDateFrom.value)  n++
+  if (filterDateTo.value)    n++
   return n
 })
 
@@ -101,6 +110,8 @@ const clearAllFilters = () => {
   filterWarranty.value      = []
   filterConditions.value    = []
   filterLocationTypes.value = []
+  filterDateFrom.value      = ''
+  filterDateTo.value        = ''
 }
 
 type FilterChip = { key: string; label: string; remove: () => void }
@@ -126,6 +137,12 @@ const activeChips = computed((): FilterChip[] => {
   }
   for (const v of filterLocationTypes.value) {
     chips.push({ key: `lt-${v}`, label: v.replace('_', ' '), remove: () => { filterLocationTypes.value = filterLocationTypes.value.filter(x => x !== v) } })
+  }
+  if (filterDateFrom.value) {
+    chips.push({ key: 'date-from', label: `From ${filterDateFrom.value}`, remove: () => { filterDateFrom.value = '' } })
+  }
+  if (filterDateTo.value) {
+    chips.push({ key: 'date-to', label: `To ${filterDateTo.value}`, remove: () => { filterDateTo.value = '' } })
   }
   return chips
 })
@@ -154,6 +171,8 @@ const filteredInstallations = computed(() => {
     if (filterWarranty.value.length      && !filterWarranty.value.includes(inst.warranty_status))    return false
     if (filterConditions.value.length    && !filterConditions.value.includes(inst.condition))        return false
     if (filterLocationTypes.value.length && !filterLocationTypes.value.includes(inst.location_type)) return false
+    if (filterDateFrom.value && inst.install_date && inst.install_date < filterDateFrom.value) return false
+    if (filterDateTo.value   && inst.install_date && inst.install_date > filterDateTo.value)   return false
     return true
   })
 })
@@ -275,9 +294,9 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
 <template>
   <div class="flex gap-0 -mt-6 -mx-4 sm:-mx-6 lg:-mx-8">
 
-    <!-- ── Left Sidebar ──────────────────────────────────────────────────── -->
+    <!-- ── Left Sidebar (tablet/desktop only) ───────────────────────────── -->
     <aside
-      class="w-72 shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col"
+      class="hidden sm:flex sm:flex-col w-72 shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
       style="min-height: calc(100vh - 72px);"
     >
       <!-- Sticky header -->
@@ -325,7 +344,7 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
       <div class="flex-1 overflow-y-auto">
 
         <!-- Category -->
-        <div v-if="categoryOptions.length" class="border-b border-gray-100 dark:border-gray-800">
+        <div class="border-b border-gray-100 dark:border-gray-800">
           <button class="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" @click="toggleSection('category')">
             <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
               Category
@@ -334,6 +353,7 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
             <span class="text-sm font-medium text-gray-400 w-4 text-center select-none">{{ expanded.category ? '−' : '+' }}</span>
           </button>
           <div v-show="expanded.category" class="px-4 pb-3 space-y-1.5">
+            <p v-if="!categoryOptions.length" class="text-xs text-gray-400 dark:text-gray-500 italic">No categories available</p>
             <label v-for="opt in categoryOptions" :key="opt" class="flex items-center gap-2.5 cursor-pointer group">
               <input
                 type="checkbox"
@@ -343,6 +363,35 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
               />
               <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">{{ opt }}</span>
             </label>
+          </div>
+        </div>
+
+        <!-- Installation Date Range -->
+        <div class="border-b border-gray-100 dark:border-gray-800">
+          <button class="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" @click="toggleSection('installDate')">
+            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+              Install Date
+              <span v-if="filterDateFrom || filterDateTo" class="ml-1 text-primary-500 normal-case font-normal">●</span>
+            </span>
+            <span class="text-sm font-medium text-gray-400 w-4 text-center select-none">{{ expanded.installDate ? '−' : '+' }}</span>
+          </button>
+          <div v-show="expanded.installDate" class="px-4 pb-3 space-y-2">
+            <div>
+              <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">From</label>
+              <input
+                v-model="filterDateFrom"
+                type="date"
+                class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">To</label>
+              <input
+                v-model="filterDateTo"
+                type="date"
+                class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
           </div>
         </div>
 

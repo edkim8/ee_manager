@@ -24,9 +24,9 @@ const menuItems = computed(() => {
       { label: 'New Application', icon: 'i-heroicons-document-plus',           to: '/office/applications/new',  color: 'text-primary-500', bg: 'bg-primary-50 dark:bg-primary-900/20' },
       { label: 'Availability',    icon: 'i-heroicons-building-office-2',        to: '/mobile/availabilities',    color: 'text-sky-500',     bg: 'bg-sky-50 dark:bg-sky-900/20' },
       { label: 'Residents',       icon: 'i-heroicons-users',                    to: '/office/residents',         color: 'text-rose-500',    bg: 'bg-rose-50 dark:bg-rose-900/20' },
-      { label: 'Quick Scan',      icon: 'i-heroicons-qr-code',                  to: '/office/inventory/installations',         color: 'text-blue-500',    bg: 'bg-blue-50 dark:bg-blue-900/20' },
+      { label: 'Quick Scan',      icon: 'i-heroicons-qr-code',                  to: '/mobile/installations',         color: 'text-blue-500',    bg: 'bg-blue-50 dark:bg-blue-900/20' },
       { label: 'Work Orders',     icon: 'i-heroicons-clipboard-document-check', to: '/maintenance/work-orders',  color: 'text-orange-500',  bg: 'bg-orange-50 dark:bg-orange-900/20' },
-      { label: 'Inventory',       icon: 'i-heroicons-archive-box',              to: '/office/inventory/installations',         color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+      { label: 'Inventory',       icon: 'i-heroicons-archive-box',              to: '/mobile/installations',         color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
       { label: 'Locations',       icon: 'i-heroicons-map-pin',                  to: '/assets/locations',         color: 'text-purple-500',  bg: 'bg-purple-50 dark:bg-purple-900/20' },
       { label: 'Alerts',          icon: 'i-heroicons-bell-alert',               to: '/office/alerts',            color: 'text-amber-500',   bg: 'bg-amber-50 dark:bg-amber-900/20' },
     ]
@@ -35,9 +35,9 @@ const menuItems = computed(() => {
   // Maintenance: "Quick Scan", "My Work Orders", "Inventory"
   if (department.value === 'Maintenance') {
     return [
-      { label: 'Quick Scan', icon: 'i-heroicons-qr-code', to: '/office/inventory/installations', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+      { label: 'Quick Scan', icon: 'i-heroicons-qr-code', to: '/mobile/scan', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
       { label: 'My Work Orders', icon: 'i-heroicons-clipboard-document-check', to: '/maintenance/work-orders', color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
-      { label: 'Inventory', icon: 'i-heroicons-archive-box', to: '/office/inventory/installations', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+      { label: 'Inventory', icon: 'i-heroicons-archive-box', to: '/mobile/installations', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
       { label: 'Locations', icon: 'i-heroicons-map-pin', to: '/assets/locations', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' }
     ]
   } 

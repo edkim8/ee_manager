@@ -237,6 +237,27 @@ export const useInventoryInstallations = () => {
     })
   }
 
+  /**
+   * Look up a single installation by asset tag within a property
+   * Returns null if not found (does not throw on PGRST116)
+   */
+  const findByAssetTag = async (propertyCode: string, assetTag: string): Promise<InstallationWithDetails | null> => {
+    const { data, error } = await supabase
+      .from('view_inventory_installations')
+      .select('*')
+      .eq('property_code', propertyCode)
+      .eq('asset_tag', assetTag)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null   // not found — expected
+      console.error('❌ Error looking up asset tag:', error)
+      throw error
+    }
+
+    return data as InstallationWithDetails
+  }
+
   return {
     fetchInstallations,
     fetchInstallation,
@@ -247,5 +268,6 @@ export const useInventoryInstallations = () => {
     getInstallationCount,
     canDeleteItemDefinition,
     getInstallationsByLocation,
+    findByAssetTag,
   }
 }

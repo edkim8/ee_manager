@@ -19,6 +19,8 @@
     "@googlemaps/js-api-loader": "^2.0.2",
     "@nuxt/ui": "^4.3.0",
     "@nuxtjs/supabase": "^2.0.3",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "browser-image-compression": "^2.0.2",
     "chart.js": "^4.5.1",
     "date-fns": "^4.1.0",

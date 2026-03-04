@@ -4,6 +4,10 @@ export default defineNuxtConfig({
 
   modules: ['@nuxtjs/supabase'],
 
+  build: {
+    transpile: ['@zxing/browser', '@zxing/library'],
+  },
+
   devtools: { enabled: true },
 
   compatibilityDate: '2025-01-19',
