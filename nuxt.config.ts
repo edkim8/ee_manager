@@ -16,12 +16,27 @@ export default defineNuxtConfig({
     }
   },
 
-  // Client-only rendering for device-specific pages.
-  // These are authenticated pages with client-side state (localStorage, UA detection)
-  // that cannot be meaningfully server-rendered without hydration mismatches.
+  // All authenticated app routes are client-only rendered.
+  // SSR is only kept for /auth/** (public login/register pages).
+  // Rationale: authenticated pages have no SEO value, depend on client-side state
+  // (auth session, localStorage), and loading data server-side during SSR caused
+  // JavaScript heap OOM on Vercel (1.8 GB heap from widget data-fetching on cold start).
   routeRules: {
-    '/tour/**':   { ssr: false },
-    '/mobile/**': { ssr: false },
+    '/':              { ssr: false },
+    '/about':         { ssr: false },
+    '/admin/**':      { ssr: false },
+    '/amenities/**':  { ssr: false },
+    '/assets/**':     { ssr: false },
+    '/maintenance/**':{ ssr: false },
+    '/mobile/**':     { ssr: false },
+    '/office/**':     { ssr: false },
+    '/owners/**':     { ssr: false },
+    '/playground/**': { ssr: false },
+    '/settings/**':   { ssr: false },
+    '/tools/**':      { ssr: false },
+    '/tour/**':       { ssr: false },
+    '/user/**':       { ssr: false },
+    '/widgets/**':    { ssr: false },
   },
 
   devServer: {
