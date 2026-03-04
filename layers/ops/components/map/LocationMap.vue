@@ -182,6 +182,15 @@ const updateMarkers = () => {
     // Add enhanced info window
     const infoContent = `
       <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 240px; padding: 8px;">
+        <div style="display: flex; justify-content: flex-end; margin: -4px -4px 4px 0;">
+          <button
+            id="close-info-${loc.id}"
+            style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 18px; color: #9CA3AF; line-height: 1;"
+            onmouseover="this.style.color='#374151'"
+            onmouseout="this.style.color='#9CA3AF'"
+            title="Close"
+          >✕</button>
+        </div>
         ${loc.source_image_url ? `
           <img src="${loc.source_image_url}"
                style="width: 100%; height: auto; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -245,6 +254,11 @@ const updateMarkers = () => {
 
         // Add click listeners to buttons after info window opens
         setTimeout(() => {
+          const closeButton = document.getElementById(`close-info-${loc.id}`)
+          if (closeButton) {
+            closeButton.onclick = () => infoWindow.close()
+          }
+
           const detailButton = document.getElementById(`view-detail-${loc.id}`)
           if (detailButton) {
             detailButton.onclick = () => {
