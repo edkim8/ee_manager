@@ -443,9 +443,10 @@ const categorySummary = computed(() => {
 
             <!-- Image Preview -->
             <div v-if="selectedLocation.source_image_url" class="mb-4">
-                <NuxtImg
+                <img
                     :src="selectedLocation.source_image_url"
                     class="w-full h-auto rounded-lg shadow-md"
+                    alt="Location photo"
                 />
             </div>
 

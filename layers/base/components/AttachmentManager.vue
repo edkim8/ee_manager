@@ -220,11 +220,10 @@ const getFileIcon = (mimeType: string | null) => {
       >
         <!-- Image Preview -->
         <div v-if="att.file_type === 'image'" class="aspect-video relative overflow-hidden bg-gray-50 dark:bg-gray-950">
-          <NuxtImg 
-            :src="att.file_url" 
-            format="webp"
-            quality="60"
+          <img
+            :src="att.file_url"
             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            alt="Attachment preview"
           />
           <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none" />
         </div>

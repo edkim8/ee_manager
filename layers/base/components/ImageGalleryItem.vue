@@ -25,15 +25,11 @@ const handleOpenOriginal = () => {
     @click="handleOpenLarge"
   >
     <!-- Optimized Image -->
-    <NuxtImg 
-      :src="src" 
+    <img
+      :src="src"
       :alt="alt || 'Gallery image'"
-      format="webp"
-      quality="80"
       loading="lazy"
-      sizes="sm:100vw md:50vw lg:1200px"
-      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-      placeholder
+      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
     />
     
     <!-- Hover Overlay -->

@@ -28,15 +28,12 @@ const isOpen = computed({
     <div class="relative flex items-center justify-center bg-gray-50 dark:bg-gray-950 overflow-hidden min-h-[400px]">
       <!-- Optimized Image -->
       <div class="relative z-[105] flex items-center justify-center p-0 w-full">
-        <NuxtImg
+        <img
           v-if="src"
           :src="src"
           :alt="alt || 'Enlarged view'"
-          format="webp"
-          quality="100"
           loading="eager"
           class="w-full md:w-auto md:min-w-[800px] max-w-full max-h-[80vh] object-contain shadow-sm animate-in zoom-in duration-300"
-          placeholder
         />
         <div v-else class="p-24 text-gray-400 flex flex-col items-center gap-4">
           <UIcon name="i-heroicons-photo" class="w-16 h-16 opacity-50" />
