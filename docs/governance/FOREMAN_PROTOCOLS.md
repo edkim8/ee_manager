@@ -109,6 +109,12 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 > **FINAL STEP (MANDATORY):**
 > Overwrite `docs/status/LATEST_UPDATE.md` with Field Report. Write it to disk.'"
 
+### OPTION 3: THE DAILY SOLVER AUDIT PROMPT
+*Use for: Kicking off the Daily Solver Upload Audit.*
+*Format: Plain text for User to paste into Claude Code.*
+
+> When the User asks for the "Daily Solver Upload prompt" or similar, you MUST generate the complete, comprehensive prompt exactly as documented in `docs/governance/DAILY_UPLOAD_REVIEW_PROMPT.md`. DO NOT ask the User to provide the specific details of the prompt; retrieve the full prompt template from that file yourself and provide it to the User ready to copy-paste.
+
 ## 6. GIT & GITHUB PROTOCOLS (The "Shift" Loop)
 *Policy: One Foreman = One Active Branch.*
 
