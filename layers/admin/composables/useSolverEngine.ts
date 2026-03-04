@@ -921,9 +921,9 @@ export const useSolverEngine = () => {
                         if (toInsert.length > 0) {
                             for (let i = 0; i < toInsert.length; i += 1000) {
                                 const chunk = toInsert.slice(i, i + 1000)
-                                const { error } = await supabase.from('leases').insert(chunk)
+                                const { error } = await supabase.from('leases').upsert(chunk, { onConflict: 'tenancy_id,start_date' })
                                 if (error) {
-                                    console.error(`[Solver] Lease Insert Error ${pCode}:`, error)
+                                    console.error(`[Solver] Lease Upsert Error ${pCode}:`, error)
                                     throw error
                                 }
                                 totalUpsertedLeases += chunk.length
