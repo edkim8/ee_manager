@@ -37,6 +37,16 @@ export default defineNuxtConfig({
     }
   },
 
+  // Prevent native C++ addons from being bundled into the Vercel serverless function.
+  // @parcel/watcher is pulled in by nitropack → listhen for dev file watching;
+  // marking it external means the dynamic import fails gracefully (listhen has a .catch())
+  // and the server starts without a watcher — correct behaviour in production.
+  nitro: {
+    externals: {
+      external: ['@parcel/watcher', '@parcel/watcher-wasm']
+    }
+  },
+
   runtimeConfig: {
     // Only available on the server
     mailersendPassword: process.env.MAILERSEND_PASSWORD,
