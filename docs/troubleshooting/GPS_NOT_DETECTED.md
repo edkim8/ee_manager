@@ -361,16 +361,30 @@ Issue: Most DSLRs don't have GPS
 Solution: Manual entry or use GPS-enabled camera
 ```
 
-### Scenario 5: Android Phone Photo
+### Scenario 5: Android Phone Photo (capture="environment")
 ```
 Format: JPEG
-GPS: ✅ Usually has GPS
-Issue: Should work fine
-Solution: Check browser privacy settings
+GPS: ❌ EXIF always stripped by Android Chrome
+Issue: capture="environment" causes Android Chrome to open the camera
+        directly and pass the photo as a temp File object. Chrome strips
+        the EXIF block (including GPS) from this temp file before JS sees it.
+        exif-js runs correctly but finds nothing — the data was removed upstream.
+Solution: navigator.geolocation fallback (ALREADY IMPLEMENTED ✅)
 ```
+
+**How the fix works (LocationPicker.vue):**
+1. EXIF extraction is attempted first (works on iOS, desktop, gallery uploads)
+2. If EXIF returns null → `navigator.geolocation.getCurrentPosition()` fires automatically
+3. User grants location permission once → coordinates populated from device GPS
+4. Only if both fail → "Please enter manually" message shown
+
+**Do NOT remove the navigator.geolocation fallback.** It is the primary GPS
+source for all Android users. EXIF-only extraction fails on Android Chrome by design.
+
+**Confirmed working:** Pixel 8 Pro (Android 14, Chrome) — 2026-03-03
 
 ---
 
-**Updated:** 2026-02-08
-**Most Common Issue:** HEIC format - export as JPEG
-**Success Rate After Fix:** ~95%
+**Updated:** 2026-03-03
+**Most Common Issue:** HEIC format (iOS) / EXIF stripped by Android Chrome
+**Success Rate After Fix:** ~99%

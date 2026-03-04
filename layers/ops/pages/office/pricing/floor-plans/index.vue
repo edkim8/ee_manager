@@ -451,6 +451,7 @@ const handleSyncModalClose = () => {
             <div class="absolute inset-0 bg-gradient-to-br from-gray-500/5 to-transparent pointer-events-none" />
             <p class="relative z-10 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Avg Market Rent</p>
             <CellsCurrencyCell :value="activeFloorPlan.avg_market_rent" class="relative z-10 text-2xl font-black" />
+            <p class="relative z-10 text-xs text-gray-400 mt-1.5">Base <span class="font-semibold text-gray-600 dark:text-gray-300">${{ Number(activeFloorPlan.base_rent || 0).toLocaleString() }}</span></p>
           </UCard>
           <UCard class="relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border-primary-500/20 shadow-xl shadow-primary-500/5 rounded-2xl bg-primary-50/50 dark:bg-primary-950/20">
             <div class="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-transparent pointer-events-none" />

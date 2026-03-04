@@ -4,6 +4,13 @@ export default defineNuxtConfig({
 
   modules: ['@nuxtjs/supabase', '@nuxt/image'],
 
+  // Use Vercel's edge image optimization instead of running sharp (a native C++
+  // addon) inside the serverless function. Sharp caused SIGABRT crashes on cold
+  // start (confirmed 2026-03-03). Vercel provider is zero-cost and zero-native-deps.
+  image: {
+    provider: 'vercel',
+  },
+
   devtools: { enabled: true },
 
   compatibilityDate: '2025-01-19',
