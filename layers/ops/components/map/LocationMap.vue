@@ -185,9 +185,9 @@ const updateMarkers = () => {
         <div style="display: flex; justify-content: flex-end; margin: -4px -4px 4px 0;">
           <button
             id="close-info-${loc.id}"
-            style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 18px; color: #9CA3AF; line-height: 1;"
-            onmouseover="this.style.color='#374151'"
-            onmouseout="this.style.color='#9CA3AF'"
+            style="background: #EF4444; border: none; cursor: pointer; width: 24px; height: 24px; border-radius: 50%; font-size: 13px; color: white; line-height: 1; display: flex; align-items: center; justify-content: center;"
+            onmouseover="this.style.backgroundColor='#DC2626'"
+            onmouseout="this.style.backgroundColor='#EF4444'"
             title="Close"
           >✕</button>
         </div>
