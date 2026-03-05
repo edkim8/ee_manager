@@ -5,6 +5,20 @@ export default defineVitestConfig({
   test: {
     environment: 'nuxt',
     setupFiles: ['./tests/mocks/nitro-globals.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['layers/**'],
+      exclude: [
+        'node_modules/**',
+        'dist/**',
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        '**/*.d.ts',
+        '.nuxt/**',
+      ],
+      all: true, // Include all files in coverage, even those not tested
+    },
   },
   resolve: {
     alias: {
