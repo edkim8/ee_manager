@@ -136,4 +136,20 @@ describe('solveRentCombination: priority rules', () => {
     expect(result.combination.length).toBeGreaterThan(1)
     expect(Math.abs(result.remainingGap)).toBeLessThan(80) // combination is closer
   })
+
+  // ── A-012: Rounding / fractional logic ────────────────────────────────────
+
+  it('A-012: handles fractional deltas correctly (floating point edge cases)', () => {
+    // targetGap=100.25. a(100.125)→delta=0.125, b(100.375)→delta=0.125
+    // These are exact binary fractions. Since deltas are identical, first one wins.
+    const result = solveRentCombination(100.25, [a('a', 100.125), a('b', 100.375)])
+    expect(result.combination[0].id).toBe('b')
+    expect(result.remainingGap).toBe(-0.125)
+  })
+
+  it('A-012: picks exact fractional match', () => {
+    const result = solveRentCombination(10.5, [a('a', 10), a('b', 10.5)])
+    expect(result.combination[0].id).toBe('b')
+    expect(result.remainingGap).toBe(0)
+  })
 })
