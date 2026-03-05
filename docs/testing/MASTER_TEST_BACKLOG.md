@@ -33,14 +33,14 @@ Agents should check here for outstanding testing debt and check items off `[x]` 
 *Math, Date handling, and Data Transformation. Should have zero framework dependencies.*
 
 ### 1. Solver Utilities (Daily Audit Gaps)
-- [ ] **A-001:** `isRenewal()` gap/threshold math
-- [ ] **A-002:** `isMakeReadyOverdue()` yesterday-cutoff logic
-- [ ] **A-003:** `isSuspiciousYear()` Yardi typo detection
-- [ ] **A-004:** `chunkArray()` loop preservation logic
-- [ ] **A-005:** `parseCurrency()` edge cases
-- [ ] **A-006:** `mapTenancyStatus()` substring matching
+- [x] **A-001:** `isRenewal()` gap/threshold math
+- [x] **A-002:** `isMakeReadyOverdue()` yesterday-cutoff logic
+- [x] **A-003:** `isSuspiciousYear()` Yardi typo detection
+- [x] **A-004:** `chunkArray()` loop preservation logic
+- [x] **A-005:** `parseCurrency()` edge cases
+- [x] **A-006:** `mapTenancyStatus()` substring matching
 
 ### 2. Formatting & Filenames
-- [ ] **A-011:** `useRenewalsMailMerger.ts` — Excel filename format logic: `"{PropertyName} - {WorksheetName} - Mail Merge Data.xlsx"`
-- [ ] **A-012:** `solveRentCombination.ts` — Verify rounding behavior in edge cases.
+- [x] **A-011:** `useRenewalsMailMerger.ts` — Excel filename format logic: `"{PropertyName} - {WorksheetName} - Mail Merge Data.xlsx"`
+- [x] **A-012:** `solveRentCombination.ts` — Verify rounding behavior in edge cases.
 
