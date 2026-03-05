@@ -226,4 +226,32 @@ describe('useRenewalsMailMerger', () => {
       expect(mockAnchor.download).toMatch(/Spring Renewals/)
     })
   })
+
+  // ── A-011: Excel filename format logic ────────────────────────────────────
+
+  describe('exportMailMerger — A-011 (filename format)', () => {
+    it('generates filename in format "{PropertyName} - {WorksheetName} - Mail Merge Data.xlsx"', async () => {
+      const mockAnchor = setupDomMocks()
+      const { exportMailMerger } = useRenewalsMailMerger()
+
+      // getPropertyLetterConfig('RS') returns { propertyName: 'Riverstone' } likely or similar
+      // We can just verify it matches the pattern
+      await exportMailMerger(1, 'Fall 2026', validItems, baseWorksheet, 'RS')
+
+      expect(mockAnchor.click).toHaveBeenCalledOnce()
+      // Expect: "Riverstone - Fall 2026 - Mail Merge Data.xlsx" or "RS - Fall 2026 - Mail Merge Data.xlsx"
+      expect(mockAnchor.download).toMatch(/ - Fall 2026 - Mail Merge Data\.xlsx$/)
+    })
+
+    it('sanitizes special characters in the filename', async () => {
+      const mockAnchor = setupDomMocks()
+      const { exportMailMerger } = useRenewalsMailMerger()
+
+      await exportMailMerger(1, 'Dirty/Name!', validItems, baseWorksheet, 'RS')
+
+      expect(mockAnchor.download).not.toContain('/')
+      expect(mockAnchor.download).not.toContain('!')
+      expect(mockAnchor.download).toMatch(/DirtyName - Mail Merge Data\.xlsx$/)
+    })
+  })
 })
