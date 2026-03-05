@@ -33,3 +33,6 @@
 
 // Body-read helper — default returns empty object; tests stub via vi.stubGlobal
 ;(globalThis as any).readBody = async (_event: any): Promise<any> => ({})
+
+// Response-header setter — no-op by default; tests can spy via vi.stubGlobal
+;(globalThis as any).setResponseHeaders = (_event: any, _headers: Record<string, string>) => {}
