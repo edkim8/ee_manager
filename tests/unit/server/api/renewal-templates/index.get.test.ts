@@ -2,33 +2,14 @@
  * B-023: GET /api/renewal-templates — Auth guard (401 response)
  *
  * Strategy for testing Nitro server route handlers in Vitest:
- * - Mock h3 so that `defineEventHandler` (a Nitro global) simply returns the
- *   inner async function. This lets us call the handler directly in tests.
+ * - `defineEventHandler`, `createError` etc. are Nitro auto-import globals.
+ *   They are provided by tests/mocks/nitro-globals.ts (loaded via setupFiles)
+ *   so the route module can be imported and the exported function called directly.
  * - Mock `#supabase/server` to control `serverSupabaseUser` and
  *   `serverSupabaseServiceRole` without real DB connections.
  * - Create a minimal mock H3Event object satisfying the handler's needs.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-
-// ─── Mock h3 first (hoisted), so defineEventHandler/createError work ─────────
-// The server route uses these as Nitro auto-import globals (no explicit import).
-// We intercept the h3 module so the route's defineEventHandler just returns
-// the inner handler function directly, making it callable in tests.
-
-vi.mock('h3', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('h3')>()
-  return {
-    ...actual,
-    // Return the handler fn directly instead of wrapping it
-    defineEventHandler: (fn: Function) => fn,
-    createError: ({ statusCode, statusMessage }: { statusCode: number; statusMessage?: string }) => {
-      const err = new Error(statusMessage ?? String(statusCode)) as any
-      err.statusCode = statusCode
-      err.statusMessage = statusMessage
-      return err
-    },
-  }
-})
 
 // ─── Mock #supabase/server ────────────────────────────────────────────────────
 

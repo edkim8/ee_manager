@@ -4,6 +4,7 @@ import path from 'path'
 export default defineVitestConfig({
   test: {
     environment: 'nuxt',
+    setupFiles: ['./tests/mocks/nitro-globals.ts'],
   },
   resolve: {
     alias: {
