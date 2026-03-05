@@ -254,6 +254,9 @@ const navigationItems = computed(() => {
         { label: 'Availability Analysis', icon: 'i-heroicons-chart-bar', to: '/office/availabilities/analysis' },
         { label: 'Notices', icon: 'i-heroicons-bell', to: '/office/notices' },
         { label: 'Renewals', icon: 'i-heroicons-arrow-path-rounded-square', to: '/office/renewals' },
+        ...(isSuperAdmin || propertyRoles.some(r => ['Asset', 'RPM', 'Manager'].includes(r as string))
+          ? [{ label: 'Letter Templates', icon: 'i-heroicons-document-text', to: '/office/renewal-templates' }]
+          : []),
       ],
     })
     items.push({

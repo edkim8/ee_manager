@@ -274,7 +274,13 @@ const {
 // )
 
 // Mail Merger export
-const { exportMailMerger, loading: exportingMailMerger } = useRenewalsMailMerger()
+const {
+  exportMailMerger,
+  downloadDocxTemplate,
+  generatePdfLetters,
+  loading: exportingMailMerger,
+  loadingPdf: generatingPdf
+} = useRenewalsMailMerger()
 
 // Floor plan analytics
 const { analytics: floorPlanAnalytics } = useFloorPlanAnalytics(activeProperty as any)
@@ -687,8 +693,9 @@ async function handleFinalize() {
     const success = await exportMailMerger(
       worksheetId,
       worksheet.value.name,
-      items.value,
-      worksheet.value
+      [...standardRenewals.value, ...mtmRenewals.value],
+      worksheet.value,
+      worksheet.value.property_code
     )
 
     if (!success) {
@@ -926,13 +933,33 @@ onBeforeRouteLeave((to, from, next) => {
             @click="showFinalizeModal = true"
           />
 
+          <!-- Export Excel data file (mail merge source) -->
           <UButton
             v-if="worksheet?.status === 'final'"
-            icon="i-heroicons-arrow-down-tray"
-            label="Download Mail Merger"
+            icon="i-heroicons-table-cells"
+            label="Export Excel"
             variant="outline"
             :loading="exportingMailMerger"
-            @click="exportMailMerger(worksheetId, worksheet.name, items, worksheet)"
+            @click="exportMailMerger(worksheetId, worksheet.name, [...standardRenewals, ...mtmRenewals], worksheet, worksheet.property_code)"
+          />
+
+          <!-- Download blank DOCX template for manual Word mail merge -->
+          <UButton
+            v-if="worksheet?.status === 'final'"
+            icon="i-heroicons-document-text"
+            label="Letter Template (.docx)"
+            variant="outline"
+            @click="downloadDocxTemplate(worksheet.property_code)"
+          />
+
+          <!-- Generate filled-in PDF letters via Chrome headless -->
+          <UButton
+            v-if="worksheet?.status === 'final'"
+            icon="i-heroicons-document-arrow-down"
+            label="Generate PDF Letters"
+            color="primary"
+            :loading="generatingPdf"
+            @click="generatePdfLetters([...standardRenewals, ...mtmRenewals], worksheet, worksheet.name, worksheet.property_code)"
           />
         </div>
       </div>
@@ -1922,9 +1949,81 @@ onBeforeRouteLeave((to, from, next) => {
           <div class="space-y-2">
             <ul class="list-disc pl-5 space-y-1">
               <li><strong class="text-blue-600 uppercase italic">Draft:</strong> Active editing phase. Changes are saved locally and only persisted to the database when you click <strong>Save</strong>.</li>
-              <li><strong class="text-purple-600 uppercase italic">Finalized:</strong> Once review is complete, locking the worksheet generates a <strong>Mail Merger Excel</strong>. This file contains all approved offer data, formatted specifically for your offer letter templates.</li>
-              <li><strong class="text-gray-600 uppercase italic">Download Mail Merger:</strong> Available at any time for finalized worksheets to re-download the offer data payload.</li>
+              <li><strong class="text-purple-600 uppercase italic">Finalized:</strong> Locks the worksheet for editing. Three export buttons appear in the header — see <em>Mail Merge Steps</em> below for the full workflow.</li>
+              <li><strong class="text-gray-600 uppercase italic">Archived:</strong> Historical record. Read-only. Re-download exports at any time.</li>
             </ul>
+          </div>
+        </section>
+
+        <section class="border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 bg-indigo-50 dark:bg-indigo-900/20">
+          <h3 class="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 mb-3">
+            Mail Merge Steps — Sending Renewal Letters
+          </h3>
+          <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
+            Once a worksheet is <strong>Finalized</strong>, three buttons appear in the top-right header.
+            Choose the path that fits your workflow:
+          </p>
+
+          <div class="space-y-4">
+
+            <!-- Path A: PDF (automated) -->
+            <div>
+              <p class="font-semibold text-indigo-700 dark:text-indigo-300 mb-1">
+                ⚡ Path A — Instant PDF (recommended)
+              </p>
+              <ol class="list-decimal pl-5 space-y-1 text-xs">
+                <li>Click <strong>Generate PDF Letters</strong> (blue button). The spinner runs for a few seconds while Chrome renders each letter.</li>
+                <li>A PDF file downloads automatically — one page per resident, in table order.</li>
+                <li>Print or attach to email directly. No Word or Excel required.</li>
+              </ol>
+            </div>
+
+            <!-- Path B: Word mail merge -->
+            <div>
+              <p class="font-semibold text-indigo-700 dark:text-indigo-300 mb-1">
+                🖨️ Path B — Word Mail Merge (for custom letterhead)
+              </p>
+              <ol class="list-decimal pl-5 space-y-1 text-xs">
+                <li>Click <strong>Export Excel</strong> → saves a <code>.xlsx</code> file whose column headers match the letter template's merge fields exactly (<code>resident_name</code>, <code>unit</code>, <code>lease_rent</code>, <code>primary_term</code>, <code>primary_rent</code>, etc.).</li>
+                <li>Click <strong>Letter Template (.docx)</strong> → saves the blank Word template with <code>«merge field»</code> placeholders already configured.</li>
+                <li>Open the <strong>.docx</strong> in Microsoft Word.</li>
+                <li>Go to <strong>Mailings → Select Recipients → Use an Existing List</strong>, then select the <strong>.xlsx</strong> file you downloaded.</li>
+                <li>Click <strong>Finish &amp; Merge → Print Documents</strong> (or <em>Edit Individual Documents</em> to review before printing).</li>
+                <li>Word fills every <code>«merge field»</code> with the resident's data and produces one letter per row.</li>
+              </ol>
+            </div>
+
+            <!-- What each button downloads -->
+            <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2 text-xs">
+              <p class="font-semibold mb-1">What each button produces:</p>
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="pr-2 py-1 font-semibold">Button</th>
+                    <th class="py-1 font-semibold">Output</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="pr-2 py-1">Export Excel</td>
+                    <td class="py-1"><code>{Worksheet Name} - Mail Merge Data.xlsx</code></td>
+                  </tr>
+                  <tr class="border-t border-gray-100 dark:border-gray-700">
+                    <td class="pr-2 py-1">Letter Template (.docx)</td>
+                    <td class="py-1"><code>Renewal_Letter_Template.docx</code></td>
+                  </tr>
+                  <tr class="border-t border-gray-100 dark:border-gray-700">
+                    <td class="pr-2 py-1">Generate PDF Letters</td>
+                    <td class="py-1"><code>{Worksheet Name} - Renewal Letters {date}.pdf</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p class="text-xs text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-2">
+              <strong>Note:</strong> PDF generation requires Google Chrome to be installed on the server.
+              If the button shows an error, use Path B (Word mail merge) as a fallback.
+            </p>
           </div>
         </section>
 

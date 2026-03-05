@@ -1,161 +1,191 @@
 /**
  * Renewals Mail Merger Export
  *
- * Generates an Excel file formatted for MS Word Mail Merge
- * Used for creating renewal offer letters
+ * Three export actions for finalized renewal worksheets.
+ * All three are property-specific — filenames, letterheads, and DOCX templates
+ * vary per property code.
+ *
+ * 1. exportMailMerger     — Excel (.xlsx) with DOCX merge field column names
+ * 2. downloadDocxTemplate — Downloads the property-specific blank DOCX template
+ * 3. generatePdfLetters   — Calls the server route to produce a merged PDF
  */
 
 import { ref } from 'vue'
 import * as XLSX from 'xlsx'
+import {
+  buildLetterRows,
+  type RenewalLetterRow,
+  type WorksheetForLetter,
+  type RenewalItemForLetter
+} from '../utils/renewalLetterHtml'
+import { getPropertyLetterConfig } from '../utils/renewalLetterConfig'
 
 export function useRenewalsMailMerger() {
-  const loading = ref(false)
+  const loadingExcel = ref(false)
+  const loadingPdf   = ref(false)
+
+  // Legacy alias kept for existing template bindings
+  const loading = loadingExcel
+
+  // ─── 1. Export Excel (mail merge data file) ────────────────────────────────
 
   /**
-   * Generate Mail Merger Excel file from worksheet items
-   *
-   * Format requirements for MS Word Mail Merge:
-   * - First row = column headers (these become merge fields in Word)
-   * - Headers use PascalCase or underscores (e.g., UnitName, ResidentName)
-   * - Data rows follow with actual values
-   * - No formulas, just plain values
-   * - Dates formatted as strings
-   * - Currency as numbers (Word handles formatting)
+   * Build and download an XLSX whose column names match the DOCX merge fields.
+   * Filename is property-prefixed: "{PropertyName} - {WorksheetName} - Mail Merge Data.xlsx"
    */
-  const exportMailMerger = async (worksheetId: string, worksheetName: string, items: any[], worksheet: any) => {
-    loading.value = true
-
+  const exportMailMerger = async (
+    _worksheetId: string | number,
+    worksheetName: string,
+    items: RenewalItemForLetter[],
+    worksheet: WorksheetForLetter,
+    propertyCode: string
+  ): Promise<boolean> => {
+    loadingExcel.value = true
     try {
-      // Prepare data for Mail Merger
-      const mailMergerData = items.map(item => ({
-        // Unit & Resident Info
-        UnitName: item.unit_name || '',
-        ResidentName: item.resident_name || '',
+      const config = getPropertyLetterConfig(propertyCode)
+      const rows   = buildLetterRows(items, worksheet)
 
-        // Current Lease Info
-        CurrentRent: item.current_rent || 0,
-        LeaseStartDate: formatDateForMailMerge(item.lease_from_date),
-        LeaseEndDate: formatDateForMailMerge(item.lease_to_date),
-        MoveInDate: formatDateForMailMerge(item.move_in_date),
-
-        // Offer Info
-        MarketRent: item.market_rent || 0,
-        OfferRent: item.final_rent || item.current_rent || 0,
-        RentIncrease: (item.final_rent || item.current_rent || 0) - (item.current_rent || 0),
-        RentIncreasePercent: item.current_rent > 0
-          ? Math.round(((item.final_rent || item.current_rent) - item.current_rent) / item.current_rent * 100)
-          : 0,
-
-        // Offer Source (for reference)
-        OfferSource: item.rent_offer_source === 'ltl_percent' ? 'LTL'
-                   : item.rent_offer_source === 'max_percent' ? 'Max %'
-                   : 'Manual',
-
-        // Status Info
-        Status: item.status || 'pending',
-        Approved: item.approved ? 'Yes' : 'No',
-
-        // Worksheet Settings (same for all items, but useful in merge)
-        LTL_Percent: worksheet.ltl_percent || 25,
-        Max_Percent: worksheet.max_rent_increase_percent || 5,
-        MTM_Fee: item.renewal_type === 'mtm' ? worksheet.mtm_fee || 300 : 0,
-
-        // Renewal Type
-        RenewalType: item.renewal_type === 'mtm' ? 'Month-to-Month' : 'Standard',
-
-        // Additional Fields
-        Comment: item.comment || '',
-
-        // Offer Dates (can be customized later)
-        OfferStartDate: formatDateForMailMerge(item.lease_to_date, 1), // Day after current lease ends
-        OfferValidUntil: formatDateForMailMerge(item.lease_to_date, -30), // 30 days before lease ends
+      const sheetData = rows.map(r => ({
+        worksheet_id:        r.worksheet_id,
+        resident_name:       r.resident_name,
+        roommate_names:      r.roommate_names,
+        unit:                r.unit,
+        lease_rent:          r.lease_rent,
+        lease_to_date:       r.lease_to_date,
+        primary_term:        r.primary_term,
+        primary_rent:        r.primary_rent,
+        first_term:          r.first_term          ?? '',
+        first_term_rent:     r.first_term_rent      ?? '',
+        second_term:         r.second_term          ?? '',
+        second_term_rent:    r.second_term_rent      ?? '',
+        third_term:          r.third_term           ?? '',
+        third_term_rent:     r.third_term_rent       ?? '',
+        mtm_rent:            r.mtm_rent             ?? '',
+        early_discount:      r.early_discount        ?? '',
+        early_discount_date: r.early_discount_date  ?? ''
       }))
 
-      // Create workbook
       const workbook = XLSX.utils.book_new()
-      const worksheet_data = XLSX.utils.json_to_sheet(mailMergerData)
+      const ws       = XLSX.utils.json_to_sheet(sheetData)
+      ws['!cols']    = calculateColumnWidths(sheetData)
+      XLSX.utils.book_append_sheet(workbook, ws, 'Renewal Offers')
 
-      // Auto-size columns (for better readability in Excel)
-      const columnWidths = calculateColumnWidths(mailMergerData)
-      worksheet_data['!cols'] = columnWidths
+      const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+      const blob   = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      })
 
-      // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(workbook, worksheet_data, 'Renewal Offers')
-
-      // Generate Excel file
-      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-
-      // Create download link
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-
-      // Clean filename
-      const cleanName = worksheetName.replace(/[^a-zA-Z0-9 ]/g, '')
-      a.download = `${cleanName} - Mail Merger.xlsx`
-
-      document.body.appendChild(a)
-      a.click()
-
-      // Cleanup
-      window.URL.revokeObjectURL(url)
-      a.remove()
-
-      console.log(`[Mail Merger] Exported ${items.length} renewal offers`)
-
+      const prefix   = config.propertyName || propertyCode
+      const filename = `${sanitizeName(prefix)} - ${sanitizeName(worksheetName)} - Mail Merge Data.xlsx`
+      triggerDownload(blob, filename)
       return true
-    } catch (error) {
-      console.error('[Mail Merger] Export error:', error)
+    } catch (err) {
+      console.error('[Mail Merger] Excel export error:', err)
       return false
     } finally {
-      loading.value = false
+      loadingExcel.value = false
     }
   }
 
+  // ─── 2. Download DOCX Template ────────────────────────────────────────────
+
   /**
-   * Format date for Mail Merge (YYYY-MM-DD or MM/DD/YYYY)
-   * @param dateStr - ISO date string
-   * @param offsetDays - Add/subtract days from date
+   * Download the property-specific blank DOCX template from /public/templates/.
+   * Falls back to the generic template if a property-specific one is not yet uploaded.
    */
-  function formatDateForMailMerge(dateStr: string | null, offsetDays = 0): string {
-    if (!dateStr) return ''
+  const downloadDocxTemplate = (propertyCode: string): void => {
+    const config   = getPropertyLetterConfig(propertyCode)
+    const filename = config.docxTemplateName
 
-    const date = new Date(dateStr + 'T00:00:00')
-
-    if (offsetDays !== 0) {
-      date.setDate(date.getDate() + offsetDays)
-    }
-
-    // Return US format for easy reading
-    return date.toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
-    })
+    const a    = document.createElement('a')
+    a.href     = `/templates/${filename}`
+    a.download = filename
+    a.target   = '_blank'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
   }
 
+  // ─── 3. Generate PDF Letters ──────────────────────────────────────────────
+
   /**
-   * Calculate optimal column widths based on content
+   * Build RenewalLetterRow[] from the given items + worksheet, post them to the
+   * server-side Chrome PDF route (including propertyCode for the letterhead),
+   * and trigger a browser download.
    */
-  function calculateColumnWidths(data: any[]): any[] {
-    if (!data || data.length === 0) return []
+  const generatePdfLetters = async (
+    items: RenewalItemForLetter[],
+    worksheet: WorksheetForLetter,
+    worksheetName: string,
+    propertyCode: string
+  ): Promise<boolean> => {
+    loadingPdf.value = true
+    try {
+      const rows: RenewalLetterRow[] = buildLetterRows(items, worksheet)
+      if (rows.length === 0) {
+        console.warn('[Mail Merger] No valid rows to generate letters for')
+        return false
+      }
 
-    const keys = Object.keys(data[0])
-    return keys.map(key => {
-      // Get max length of values in this column
-      const maxLength = data.reduce((max, row) => {
-        const value = String(row[key] || '')
-        return Math.max(max, value.length)
-      }, key.length) // Include header length
+      const res = await fetch('/api/renewals/generate-letters', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ rows, propertyCode })
+      })
 
-      // Set width (Excel width units are approximately character count)
-      return { wch: Math.min(Math.max(maxLength + 2, 10), 50) }
+      if (!res.ok) {
+        const msg = await res.text().catch(() => res.statusText)
+        console.error('[Mail Merger] PDF generation failed:', msg)
+        return false
+      }
+
+      const pdfBlob = await res.blob()
+      const config  = getPropertyLetterConfig(propertyCode)
+      const prefix  = config.propertyName || propertyCode
+      const date    = new Date().toISOString().slice(0, 10)
+      triggerDownload(pdfBlob, `${sanitizeName(prefix)} - ${sanitizeName(worksheetName)} - Renewal Letters ${date}.pdf`)
+      return true
+    } catch (err) {
+      console.error('[Mail Merger] PDF generation error:', err)
+      return false
+    } finally {
+      loadingPdf.value = false
+    }
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
+  function triggerDownload(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob)
+    const a   = document.createElement('a')
+    a.href     = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    a.remove()
+  }
+
+  function sanitizeName(name: string): string {
+    return name.replace(/[^a-zA-Z0-9 \-_]/g, '').trim()
+  }
+
+  function calculateColumnWidths(data: Record<string, unknown>[]): { wch: number }[] {
+    if (!data.length) return []
+    return Object.keys(data[0]).map(key => {
+      const maxLen = data.reduce((max, row) => {
+        return Math.max(max, String(row[key] ?? '').length)
+      }, key.length)
+      return { wch: Math.min(Math.max(maxLen + 2, 10), 50) }
     })
   }
 
   return {
     exportMailMerger,
-    loading
+    downloadDocxTemplate,
+    generatePdfLetters,
+    loading,       // legacy alias → loadingExcel
+    loadingExcel,
+    loadingPdf
   }
 }

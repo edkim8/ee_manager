@@ -1,86 +1,113 @@
-# Latest Update — Mobile Inventory, Barcode Scanner & UI Polish
+# H-072 — Renewal Mail Merge & Letter Template System
+
 **Date:** 2026-03-04
-**Branch:** main
-**Status:** Complete — ready to test on real devices
+**Status:** ✅ COMPLETE — pushed to main, pending production verification
 
 ---
 
-## Summary
+## What Was Built
 
-Two major areas: (1) several UI polish fixes including the Vercel iPhone crash, map popup close button, mobile profile sheet, and context helper position; (2) a full mobile inventory workflow with a 3-step no-dropdown wizard and a camera-based barcode scan page tied to the Quick Scan dashboard button.
+### 1. Letter Generation (Worksheet Detail Page)
 
----
+Three export buttons appear on any **Finalized** renewal worksheet (`/office/renewals/[id]`):
 
-## Files Modified
+| Button | What It Does |
+|--------|-------------|
+| **Generate PDF Letters** | Chrome headless renders one US Letter page per resident, auto-downloads as PDF |
+| **Export Mail Merge Data** | Downloads Excel with one row per resident; column names match DOCX merge fields exactly |
+| **Download DOCX Template** | Downloads the property's Word template with `«merge_field»` placeholders |
 
-### `nuxt.config.ts`
-- `ssr: false` via `routeRules` for all authenticated routes — fixes Vercel iPhone OOM crash
-- Added `build.transpile: ['@zxing/browser', '@zxing/library']`
+### 2. Letter Template Management (`/office/renewal-templates`)
 
-### `layers/ops/components/map/LocationMap.vue`
-- Added red circle ✕ close button to Google Maps InfoWindow HTML
-- Wired `onclick → infoWindow.close()` via `setTimeout` after open
+New page under **Leasing → Letter Templates**. Per-property cards allow:
+- Upload letterhead image (JPG/PNG) → Supabase Storage → embedded in PDF letters
+- Upload Word DOCX template (.docx) → Supabase Storage → downloadable from worksheets
+- Set community name, manager name, manager phone → injected into letter body text
 
-### `layers/base/components/ContextHelper.client.vue`
-- Default `buttonClass` changed from `top-4 right-4` to `bottom-4 right-4`
-
-### `layers/base/layouts/mobile-app.vue`
-- Replaced "Me" nav button with "Profile" slide-up bottom sheet
-- Sheet contains: property selector, dark/light toggle, color theme swatches, My Profile link, Sign Out
-
-### `layers/base/components/AppNavigation.vue`
-- Inventory parent link and child link both point to `/office/inventory/installations`
-
-### `layers/base/pages/mobile/dashboard.vue`
-- Quick Scan tile → `/mobile/scan`
-- Inventory tile → `/mobile/installations`
-
-### `layers/ops/pages/office/inventory/installations.vue`
-- Left sidebar with 7 filter sections (Category, Install Date Range, Status, Health, Warranty, Condition, Location Type)
-- Sidebar hidden on mobile (`hidden sm:flex`); auto-opens form on mobile mount
-- All sections collapsed by default
-- Active filter chips with individual dismiss
-- "Item Management" button → `/office/inventory`
-
-### `layers/base/composables/useInventoryInstallations.ts`
-- Added `findByAssetTag(propertyCode, assetTag)` — returns `null` on not-found
+Access: Super Admin, Asset, RPM, Manager roles.
 
 ---
 
-## Files Created
+## Architecture
 
-### `layers/base/pages/mobile/installations.vue`
-Mobile installation list + 3-step full-screen wizard (no dropdowns):
-- **Step 1:** Item selection — search input + category-grouped tappable list
-- **Step 2:** Location — Unit/Building/Common Area toggle + search + tappable list
-- **Step 3:** Details — date input, 2×2 condition buttons, serial/asset tag/notes inputs
-- Consistent header: back arrow (steps 2–3) + step dots + ✕ cancel always visible
-- Accepts `?assetTag=` query param to pre-fill from scan page
+```
+Worksheet (finalized)
+  ├── Generate PDF Letters
+  │     → POST /api/renewals/generate-letters
+  │     → Fetches renewal_letter_templates (community name, manager, letterhead URL)
+  │     → renewalLetterHtml.ts → Chrome headless → PDF
+  │
+  ├── Export Mail Merge Data
+  │     → useRenewalsMailMerger.ts → xlsx library → .xlsx download
+  │
+  └── Download DOCX Template
+        → useRenewalsMailMerger.ts → fetch from Supabase Storage or /public/templates/
 
-### `layers/base/pages/mobile/scan.vue`
-Full-screen Quick Scan page — 4 states:
-- **scanning** — live camera with animated frame
-- **looking** — spinner while querying DB by asset tag
-- **found** — full installation detail card (health-color-coded, location, status, age/life, serial)
-- **unknown** — "Not Registered" + Add as New Installation (→ installations with tag pre-filled)
-
-### `layers/base/components/BarcodeScanner.client.vue`
-Camera scanner using `@zxing/browser`:
-- Selects rear camera automatically on mobile
-- Animated scan frame: corner marks + moving scan line
-- Handles camera permission denied / no camera errors
-- Emits `scanned` (decoded string) and `error` (message)
+Leasing → Letter Templates (/office/renewal-templates)
+  → GET /api/renewal-templates (fetch all templates)
+  → PATCH /api/renewal-templates/:code (save text fields + Storage URLs)
+  → Supabase Storage: images bucket (letterheads), documents bucket (DOCX)
+```
 
 ---
 
-## Architecture: Barcode Workflow
+## Files
 
-`asset_tag` (TEXT, UNIQUE per property) is the barcode value — e.g. `WO-0101`.
+### New
+| File | Purpose |
+|------|---------|
+| `layers/ops/utils/renewalLetterHtml.ts` | Pure-TS letter engine, 0 framework deps |
+| `layers/ops/utils/renewalLetterConfig.ts` | Static per-property config (5 properties) |
+| `layers/ops/server/api/renewals/generate-letters.post.ts` | PDF generation endpoint |
+| `layers/ops/composables/useRenewalsMailMerger.ts` | Three export actions composable |
+| `layers/ops/middleware/renewal-templates.ts` | Route guard (Asset/RPM/Manager/super admin) |
+| `layers/ops/pages/office/renewal-templates.vue` | Template management UI |
+| `layers/admin/server/api/renewal-templates/index.get.ts` | GET templates API |
+| `layers/admin/server/api/renewal-templates/[code].patch.ts` | PATCH template API |
+| `supabase/migrations/20260304000001_create_renewal_letter_templates.sql` | DB table + seed + RLS |
+| `public/images/letterheads/RS.jpg` | RS letterhead image |
+| `public/templates/RS_Multi_Renewal_Letter_Template.docx` | RS starter DOCX |
+| `tests/unit/ops/renewalLetterHtml.test.ts` | 70 unit tests (all passing) |
 
-**Recommended process:**
-1. Print batch of numbered labels at office (`WO-0001` to `WO-0050`)
-2. Staff carries labels to unit, attaches to item
-3. Quick Scan → scan label → if not found → Add as New Installation with tag pre-filled
-4. Later: Quick Scan any label → instant detail view
+### Modified
+| File | Change |
+|------|--------|
+| `layers/base/components/AppNavigation.vue` | Added Letter Templates to Leasing menu (role-gated) |
+| `layers/ops/composables/useRenewalsMailMerger.ts` | Rewrote with property-specific exports |
+| `layers/ops/pages/office/renewals/[id].vue` | Added 3 export buttons + context helper steps |
 
-→ Full detail: `docs/status/SESSION_2026_03_04_MOBILE_INVENTORY_SCANNER.md`
+---
+
+## 16 Merge Fields
+
+| Field | Source |
+|-------|--------|
+| `resident_name` | Resident full name |
+| `roommate_names` | Additional occupants |
+| `unit` | Unit number |
+| `lease_to_date` | Lease expiry (formatted MMM DD, YYYY) |
+| `lease_rent` | Current rent |
+| `primary_term` | Primary renewal term (months) |
+| `primary_rent` | Final approved rent |
+| `first/second/third_term` | Alternate term lengths |
+| `first/second/third_term_rent` | primary_rent ± worksheet offset % |
+| `mtm_rent` | Month-to-month rent |
+| `early_discount` | Early renewal concession amount |
+| `early_discount_date` | Discount deadline |
+
+---
+
+## Testing
+
+**573 unit tests passing** (up from 502 at session start).
+70 new tests in `renewalLetterHtml.test.ts`.
+See `docs/testing/MASTER_TEST_BACKLOG.md` section 3 for outstanding server route + composable coverage items (H072-A through H072-G).
+
+---
+
+## Known Limitations & Follow-ups
+
+- **Chrome required for PDF** — Vercel/production must have Chrome available. Word mail merge path is unaffected.
+- **SB/OB/CV/WO letterheads** — Not yet uploaded. Need property managers to provide images. Upload via Leasing → Letter Templates.
+- **Property scoping on GET** — Template list returns all accessible properties; per-property row filtering deferred (silent failure in `user_property_access` server query needs investigation).
+- **Foreman report:** `docs/handovers/FOREMAN_REPORT_2026_03_04_RENEWAL_MAIL_MERGE.md`
