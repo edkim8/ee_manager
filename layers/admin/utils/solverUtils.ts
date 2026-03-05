@@ -60,6 +60,19 @@ export function mapTenancyStatus(rowStatus: string | null): TenancyStatus {
   return 'Current' // Fallback
 }
 
+// ─── parseCurrency ────────────────────────────────────────────────────────────
+
+/**
+ * Parses a currency string or number into a valid number or null.
+ * Handles '$', ',', and whitespace.
+ */
+export function parseCurrency(val: string | number | null | undefined): number | null {
+  if (!val && val !== 0) return null
+  if (typeof val === 'number') return val
+  const num = parseFloat(String(val).replace(/[$,]/g, '').trim())
+  return isNaN(num) ? null : num
+}
+
 // ─── parseDate ────────────────────────────────────────────────────────────────
 
 /**
@@ -216,4 +229,53 @@ export function isRenewal(
   if (gapDays >= -7 && newTermDays >= 90) return true
 
   return false
+}
+
+// ─── chunkArray ───────────────────────────────────────────────────────────────
+
+/**
+ * Standard utility to split an array into chunks of a given size.
+ */
+export function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size))
+  }
+  return chunks
+}
+
+// ─── isMakeReadyOverdue ───────────────────────────────────────────────────────
+
+/**
+ * Determines if a make-ready task is overdue based on a yesterday-cutoff.
+ *
+ * Logic:
+ *  - If dateStr < today minus 1 day → true (Overdue)
+ *  - Otherwise → false
+ */
+export function isMakeReadyOverdue(dateStr: string | null | undefined, todayStr: string): boolean {
+  if (!dateStr) return false
+  const date = new Date(dateStr)
+  const today = new Date(todayStr)
+  
+  // Set to midnight UTC for stable comparison
+  date.setUTCHours(0, 0, 0, 0)
+  today.setUTCHours(0, 0, 0, 0)
+
+  const MS_PER_DAY = 1000 * 60 * 60 * 24
+  const diffDays = Math.floor((today.getTime() - date.getTime()) / MS_PER_DAY)
+
+  return diffDays >= 2 // strictly before yesterday
+}
+
+// ─── isSuspiciousYear ─────────────────────────────────────────────────────────
+
+/**
+ * Detects suspicious years (Yardi typos) like 1900 or 2100+.
+ */
+export function isSuspiciousYear(dateStr: string | null | undefined): boolean {
+  if (!dateStr) return false
+  const year = new Date(dateStr).getUTCFullYear()
+  if (isNaN(year)) return false
+  return year < 1920 || year > 2050
 }

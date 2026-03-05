@@ -5,6 +5,10 @@ import {
   deriveAvailabilityStatus,
   classifyMissingTenancies,
   isRenewal,
+  parseCurrency,
+  chunkArray,
+  isMakeReadyOverdue,
+  isSuspiciousYear,
   type TenancyRef,
   type MissingTenancy,
 } from '../../../layers/admin/utils/solverUtils'
@@ -73,6 +77,36 @@ describe('parseDate', () => {
     it('returns unrecognized format as-is (caller validates)', () => {
       expect(parseDate('Jan 14, 2026')).toBe('Jan 14, 2026')
     })
+  })
+})
+
+// ─── parseCurrency ────────────────────────────────────────────────────────────
+
+describe('parseCurrency', () => {
+  it('parses "$1,234.56" → 1234.56', () => {
+    expect(parseCurrency('$1,234.56')).toBe(1234.56)
+  })
+
+  it('parses " 1200 " → 1200', () => {
+    expect(parseCurrency(' 1200 ')).toBe(1200)
+  })
+
+  it('parses number 500 → 500', () => {
+    expect(parseCurrency(500)).toBe(500)
+  })
+
+  it('handles negative currency "-$50.00" → -50', () => {
+    expect(parseCurrency('-$50.00')).toBe(-50)
+  })
+
+  it('returns null for null/undefined/empty', () => {
+    expect(parseCurrency(null)).toBeNull()
+    expect(parseCurrency(undefined)).toBeNull()
+    expect(parseCurrency('')).toBeNull()
+  })
+
+  it('returns null for invalid string "abc"', () => {
+    expect(parseCurrency('abc')).toBeNull()
   })
 })
 
@@ -379,5 +413,73 @@ describe('isRenewal', () => {
     it('12-month → 1-month transition is a renewal (large term drop triggers C2)', () => {
       expect(isRenewal('2026-01-01', '2026-01-31', '2025-01-01', '2025-12-31')).toBe(true)
     })
+  })
+})
+
+// ─── chunkArray ───────────────────────────────────────────────────────────────
+
+describe('chunkArray', () => {
+  it('splits array into equal chunks', () => {
+    const input = [1, 2, 3, 4, 5, 6]
+    expect(chunkArray(input, 2)).toEqual([[1, 2], [3, 4], [5, 6]])
+  })
+
+  it('handles trailing partial chunk', () => {
+    const input = [1, 2, 3, 4, 5]
+    expect(chunkArray(input, 2)).toEqual([[1, 2], [3, 4], [5]])
+  })
+
+  it('returns empty array for empty input', () => {
+    expect(chunkArray([], 10)).toEqual([])
+  })
+
+  it('returns single chunk if size > array length', () => {
+    expect(chunkArray([1, 2], 10)).toEqual([[1, 2]])
+  })
+})
+
+// ─── isMakeReadyOverdue ───────────────────────────────────────────────────────
+
+describe('isMakeReadyOverdue', () => {
+  const TODAY = '2026-03-04'
+
+  it('returns true if date is before yesterday (overdue)', () => {
+    // Today: Mar 4. Yesterday: Mar 3. Overdue: <= Mar 2.
+    expect(isMakeReadyOverdue('2026-03-02', TODAY)).toBe(true)
+    expect(isMakeReadyOverdue('2026-02-28', TODAY)).toBe(true)
+  })
+
+  it('returns false if date is yesterday or today (not overdue)', () => {
+    expect(isMakeReadyOverdue('2026-03-03', TODAY)).toBe(false)
+    expect(isMakeReadyOverdue('2026-03-04', TODAY)).toBe(false)
+  })
+
+  it('returns false for future dates', () => {
+    expect(isMakeReadyOverdue('2026-03-05', TODAY)).toBe(false)
+  })
+
+  it('returns false for null/undefined', () => {
+    expect(isMakeReadyOverdue(null, TODAY)).toBe(false)
+  })
+})
+
+// ─── isSuspiciousYear ─────────────────────────────────────────────────────────
+
+describe('isSuspiciousYear', () => {
+  it('returns true for year 1900', () => {
+    expect(isSuspiciousYear('1900-01-01')).toBe(true)
+  })
+
+  it('returns true for year 2099', () => {
+    expect(isSuspiciousYear('2099-12-31')).toBe(true)
+  })
+
+  it('returns false for year 2025', () => {
+    expect(isSuspiciousYear('2025-06-15')).toBe(false)
+  })
+
+  it('returns false for null/invalid', () => {
+    expect(isSuspiciousYear(null)).toBe(false)
+    expect(isSuspiciousYear('invalid-date')).toBe(false)
   })
 })
