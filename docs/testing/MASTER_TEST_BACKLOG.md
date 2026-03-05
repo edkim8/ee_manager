@@ -21,11 +21,11 @@ Agents should check here for outstanding testing debt and check items off `[x]` 
 - [ ] **B-017:** `layers/ops/components/map/LocationMap.vue` (Close button injection)
 
 ### 3. Renewal System Server/Composable (H-072)
-- [ ] **B-021:** `useRenewalsMailMerger.ts` — `buildLetterRows` call with real worksheet fixture
-- [ ] **B-022:** `useRenewalsMailMerger.ts` — `generatePdfLetters` error handling (503 Chrome)
-- [ ] **B-023:** `GET /api/renewal-templates` — Auth guard (401 response)
-- [ ] **B-024:** `PATCH /api/renewal-templates/:code` — Field whitelist & validation
-- [ ] **B-025:** `POST /api/renewals/generate-letters` — Limit checks (200 rows) & 503 errors
+- [x] **B-021:** `useRenewalsMailMerger.ts` — `buildLetterRows` call with real worksheet fixture
+- [x] **B-022:** `useRenewalsMailMerger.ts` — `generatePdfLetters` error handling (503 Chrome)
+- [x] **B-023:** `GET /api/renewal-templates` — Auth guard (401 response)
+- [x] **B-024:** `PATCH /api/renewal-templates/:code` — Field whitelist & validation
+- [x] **B-025:** `POST /api/renewals/generate-letters` — Limit checks (200 rows) & 503 errors
 
 ---
 

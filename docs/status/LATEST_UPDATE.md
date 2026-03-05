@@ -1,113 +1,81 @@
-# H-072 — Renewal Mail Merge & Letter Template System
+# Field Report — Category B Unit Testing Session (2026-03-04)
 
-**Date:** 2026-03-04
-**Status:** ✅ COMPLETE — pushed to main, pending production verification
-
----
-
-## What Was Built
-
-### 1. Letter Generation (Worksheet Detail Page)
-
-Three export buttons appear on any **Finalized** renewal worksheet (`/office/renewals/[id]`):
-
-| Button | What It Does |
-|--------|-------------|
-| **Generate PDF Letters** | Chrome headless renders one US Letter page per resident, auto-downloads as PDF |
-| **Export Mail Merge Data** | Downloads Excel with one row per resident; column names match DOCX merge fields exactly |
-| **Download DOCX Template** | Downloads the property's Word template with `«merge_field»` placeholders |
-
-### 2. Letter Template Management (`/office/renewal-templates`)
-
-New page under **Leasing → Letter Templates**. Per-property cards allow:
-- Upload letterhead image (JPG/PNG) → Supabase Storage → embedded in PDF letters
-- Upload Word DOCX template (.docx) → Supabase Storage → downloadable from worksheets
-- Set community name, manager name, manager phone → injected into letter body text
-
-Access: Super Admin, Asset, RPM, Manager roles.
+**Branch:** `test/backlog-session-03-04`
+**Final test count:** 618 passing across 23 files (up from 591/21)
+**Net new tests:** +27
 
 ---
 
-## Architecture
+## Work Completed
+
+### Infrastructure Fix — Nitro globals for server route tests
+
+**Problem:** Server route files use `defineEventHandler`, `createError`, `getRouterParam`,
+`readBody`, and `setResponseHeaders` as Nitro auto-import globals. These are undefined
+in the Vitest/Nuxt test environment, causing `ReferenceError` on module import.
+
+**Solution:**
+- Created `tests/mocks/nitro-globals.ts` — stubs all five globals on `globalThis`
+- Added `setupFiles: ['./tests/mocks/nitro-globals.ts']` to `vitest.config.ts`
+- This unblocks ALL future server route tests in the Nuxt environment
+
+**Key discovery:** Node built-in module mocks (`vi.mock('node:*')`) do NOT work in
+`environment: 'nuxt'`. The Vite/Nuxt browser-like module graph bypasses them. Server
+routes that import Node built-ins must use `@vitest-environment node` docblock annotation
+in their test files. The `#supabase/server` alias mock works fine in either environment.
+
+---
+
+## Items Completed
+
+| ID    | Item                                                              | Tests | File |
+|-------|-------------------------------------------------------------------|-------|------|
+| B-021 | `useRenewalsMailMerger.ts` — buildLetterRows integration          | pre-existing ✓ | `tests/unit/ops/useRenewalsMailMerger.test.ts` |
+| B-022 | `useRenewalsMailMerger.ts` — generatePdfLetters 503/network errors| pre-existing ✓ | same |
+| B-023 | `GET /api/renewal-templates` — auth guard + query shape           | 5 | `tests/unit/server/api/renewal-templates/index.get.test.ts` |
+| B-024 | `PATCH /api/renewal-templates/:code` — whitelist & validation     | 10 | `tests/unit/server/api/renewal-templates/[code].patch.test.ts` |
+| B-025 | `POST /api/renewals/generate-letters` — limits & 503 & success   | 12 | `tests/unit/server/api/renewals/generate-letters.post.test.ts` |
+
+---
+
+## Commits
 
 ```
-Worksheet (finalized)
-  ├── Generate PDF Letters
-  │     → POST /api/renewals/generate-letters
-  │     → Fetches renewal_letter_templates (community name, manager, letterhead URL)
-  │     → renewalLetterHtml.ts → Chrome headless → PDF
-  │
-  ├── Export Mail Merge Data
-  │     → useRenewalsMailMerger.ts → xlsx library → .xlsx download
-  │
-  └── Download DOCX Template
-        → useRenewalsMailMerger.ts → fetch from Supabase Storage or /public/templates/
-
-Leasing → Letter Templates (/office/renewal-templates)
-  → GET /api/renewal-templates (fetch all templates)
-  → PATCH /api/renewal-templates/:code (save text fields + Storage URLs)
-  → Supabase Storage: images bucket (letterheads), documents bucket (DOCX)
+7b596e9  test: add B-025 POST /api/renewals/generate-letters limit & 503 coverage
+e646a5e  test: add B-024 PATCH /api/renewal-templates/:code field whitelist coverage
+94e944f  test: fix B-023 defineEventHandler global via Nitro globals setup file
 ```
 
 ---
 
-## Files
+## Remaining Category B Items
 
-### New
-| File | Purpose |
-|------|---------|
-| `layers/ops/utils/renewalLetterHtml.ts` | Pure-TS letter engine, 0 framework deps |
-| `layers/ops/utils/renewalLetterConfig.ts` | Static per-property config (5 properties) |
-| `layers/ops/server/api/renewals/generate-letters.post.ts` | PDF generation endpoint |
-| `layers/ops/composables/useRenewalsMailMerger.ts` | Three export actions composable |
-| `layers/ops/middleware/renewal-templates.ts` | Route guard (Asset/RPM/Manager/super admin) |
-| `layers/ops/pages/office/renewal-templates.vue` | Template management UI |
-| `layers/admin/server/api/renewal-templates/index.get.ts` | GET templates API |
-| `layers/admin/server/api/renewal-templates/[code].patch.ts` | PATCH template API |
-| `supabase/migrations/20260304000001_create_renewal_letter_templates.sql` | DB table + seed + RLS |
-| `public/images/letterheads/RS.jpg` | RS letterhead image |
-| `public/templates/RS_Multi_Renewal_Letter_Template.docx` | RS starter DOCX |
-| `tests/unit/ops/renewalLetterHtml.test.ts` | 70 unit tests (all passing) |
+All B-02x Renewal System items are now complete. Remaining open items:
 
-### Modified
-| File | Change |
-|------|--------|
-| `layers/base/components/AppNavigation.vue` | Added Letter Templates to Leasing menu (role-gated) |
-| `layers/ops/composables/useRenewalsMailMerger.ts` | Rewrote with property-specific exports |
-| `layers/ops/pages/office/renewals/[id].vue` | Added 3 export buttons + context helper steps |
+- **B-011 to B-017** — Mobile Inventory & Scanner (H-071): Vue component tests
+  requiring ZXing, DOM animations, and mobile-specific browser APIs. These require
+  dedicated component test setup (likely `@vitest-environment jsdom` + component mounting).
 
 ---
 
-## 16 Merge Fields
+## Pattern Notes for Future Server Route Tests
 
-| Field | Source |
-|-------|--------|
-| `resident_name` | Resident full name |
-| `roommate_names` | Additional occupants |
-| `unit` | Unit number |
-| `lease_to_date` | Lease expiry (formatted MMM DD, YYYY) |
-| `lease_rent` | Current rent |
-| `primary_term` | Primary renewal term (months) |
-| `primary_rent` | Final approved rent |
-| `first/second/third_term` | Alternate term lengths |
-| `first/second/third_term_rent` | primary_rent ± worksheet offset % |
-| `mtm_rent` | Month-to-month rent |
-| `early_discount` | Early renewal concession amount |
-| `early_discount_date` | Discount deadline |
+```ts
+// 1. Add @vitest-environment node if route imports node:* built-ins
+/**
+ * @vitest-environment node
+ */
 
----
+// 2. Mock Nitro globals are auto-provided by setupFiles (nitro-globals.ts)
+//    Override per-test with vi.stubGlobal('readBody', vi.fn().mockResolvedValue(...))
 
-## Testing
+// 3. Mock #supabase/server:
+vi.mock('#supabase/server', () => ({
+  serverSupabaseUser:        mockServerSupabaseUser,
+  serverSupabaseServiceRole: mockServiceRole,
+}))
 
-**573 unit tests passing** (up from 502 at session start).
-70 new tests in `renewalLetterHtml.test.ts`.
-See `docs/testing/MASTER_TEST_BACKLOG.md` section 3 for outstanding server route + composable coverage items (H072-A through H072-G).
-
----
-
-## Known Limitations & Follow-ups
-
-- **Chrome required for PDF** — Vercel/production must have Chrome available. Word mail merge path is unaffected.
-- **SB/OB/CV/WO letterheads** — Not yet uploaded. Need property managers to provide images. Upload via Leasing → Letter Templates.
-- **Property scoping on GET** — Template list returns all accessible properties; per-property row filtering deferred (silent failure in `user_property_access` server query needs investigation).
-- **Foreman report:** `docs/handovers/FOREMAN_REPORT_2026_03_04_RENEWAL_MAIL_MERGE.md`
+// 4. Import handler AFTER vi.mock declarations
+import handler from '../path/to/route'
+await (handler as Function)(mockEvent)
+```
