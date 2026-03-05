@@ -6,41 +6,27 @@ Agents should check here for outstanding testing debt and check items off `[x]` 
 ---
 
 ## 🏗 CATEGORY B: High Friction (TIER 2 - Claude)
-*Requires mocking framework dependencies (Nuxt #imports, Supabase, Browser APIs).*
+*DEFERRED: Requires Claude Tokens / Environment Mocking.*
 
-### 1. Environmental Unblocking (URGENT)
-- [ ] **B-001:** Resolve Vitest `#imports` / `useSupabaseClient` mocking failure. (Fix the "Cannot read properties of undefined (reading client)" error).
-
-### 2. Mobile Inventory & Scanner (H-071)
-- [ ] **B-011:** `layers/base/components/BarcodeScanner.client.vue` (ZXing lifecycle)
-- [ ] **B-012:** `layers/base/pages/mobile/scan.vue` (4-state scan flow)
-- [ ] **B-013:** `layers/base/pages/mobile/installations.vue` (3-step mobile wizard)
-- [ ] **B-014:** `layers/ops/pages/office/inventory/installations.vue` (Responsive sidebar filters)
-- [ ] **B-015:** `layers/base/composables/useInventoryInstallations.ts` (`findByAssetTag` DB lookup)
-- [ ] **B-016:** `layers/base/layouts/mobile-app.vue` (Bottom sheet animations)
-- [ ] **B-017:** `layers/ops/components/map/LocationMap.vue` (Close button injection)
-
-### 3. Renewal System Server/Composable (H-072)
-- [x] **B-021:** `useRenewalsMailMerger.ts` — `buildLetterRows` call with real worksheet fixture
-- [x] **B-022:** `useRenewalsMailMerger.ts` — `generatePdfLetters` error handling (503 Chrome)
-- [x] **B-023:** `GET /api/renewal-templates` — Auth guard (401 response)
-- [x] **B-024:** `PATCH /api/renewal-templates/:code` — Field whitelist & validation
-- [x] **B-025:** `POST /api/renewals/generate-letters` — Limit checks (200 rows) & 503 errors
+### 1. Table Engine & Owners API
+- [ ] **B-002:** `GenericDataTable.vue` component testing.
+- [ ] **B-030:** `GET /api/owners/entities` API testing.
 
 ---
 
 ## 🧠 CATEGORY A: Pure Logic (TIER 1 - Goldfish)
-*Math, Date handling, and Data Transformation. Should have zero framework dependencies.*
+*Math, Date handling, and Data Transformation. NO framework dependencies.*
 
-### 1. Solver Utilities (Daily Audit Gaps)
-- [x] **A-001:** `isRenewal()` gap/threshold math
-- [x] **A-002:** `isMakeReadyOverdue()` yesterday-cutoff logic
-- [x] **A-003:** `isSuspiciousYear()` Yardi typo detection
-- [x] **A-004:** `chunkArray()` loop preservation logic
-- [x] **A-005:** `parseCurrency()` edge cases
-- [x] **A-006:** `mapTenancyStatus()` substring matching
+### 1. Solver Tracking & Availability
+- [x] **A-020:** `layers/admin/utils/availabilityUtils.ts` — Test `buildTenancyPriorityMap` (Priority order) and `classifyStaleAvailabilities` (State machine).
+- [x] **A-021:** `layers/admin/utils/solverTrackingState.ts` — Test `createSolverTrackingState` (Factory pattern) and all tracker increment functions.
 
-### 2. Formatting & Filenames
-- [x] **A-011:** `useRenewalsMailMerger.ts` — Excel filename format logic: `"{PropertyName} - {WorksheetName} - Mail Merge Data.xlsx"`
-- [x] **A-012:** `solveRentCombination.ts` — Verify rounding behavior in edge cases.
+### 2. Barcode & Asset Logic (EXTRACTION REQUIRED)
+- [x] **A-030:** **Extract & Test**: Locate barcode/asset validation regex in `scan.vue` or `BarcodeScanner.client.vue`. Move to new `layers/base/utils/validation.ts` and write comprehensive tests.
+- [x] **A-031:** **Extract & Test**: Locate Asset Tag generation/formatting logic. Move to `layers/base/utils/inventory.ts` and write tests.
+
+### 3. Legacy Solver Utilities (COMPLETED)
+- [x] **A-001:** `isRenewal()` logic
+- [x] **A-002:** `isMakeReadyOverdue()` logic
+- [x] **A-011:** Excel filename format logic
 
