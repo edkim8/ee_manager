@@ -103,7 +103,7 @@ async function uploadLetterhead(code: string, file: File) {
   uploading.value[`${code}-lh`] = true
   try {
     const ext  = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-    const path = `renewal-templates/letterheads/${code}.${ext}`
+    const path = `renewal-templates/${code}-letterhead.${ext}`
 
     const { error: upErr } = await supabase.storage
       .from('images')
@@ -133,7 +133,7 @@ async function uploadLetterhead(code: string, file: File) {
 async function uploadDocx(code: string, file: File) {
   uploading.value[`${code}-docx`] = true
   try {
-    const path = `renewal-templates/docx/${code}_Renewal_Letter_Template.docx`
+    const path = `renewal-templates/${code}_Renewal_Letter_Template.docx`
 
     const { error: upErr } = await supabase.storage
       .from('documents')
