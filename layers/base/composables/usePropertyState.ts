@@ -1,9 +1,47 @@
 import { ref, watch, computed } from 'vue'
 import { useSupabaseClient, useSupabaseUser, useState, useCookie, useFetch, useRequestFetch, useAsyncData } from '#imports'
 
+// localStorage key for the /api/me response cache.
+// Provides instant restore on navigation and refresh so the property selector
+// never flashes blank while the network fetch is in flight.
+const ME_CACHE_KEY = 'eemanager:me-context'
+const ME_CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+function readMeCache(): any {
+  if (!import.meta.client) return null
+  try {
+    const raw = localStorage.getItem(ME_CACHE_KEY)
+    if (!raw) return null
+    const { data, ts } = JSON.parse(raw)
+    if (Date.now() - ts > ME_CACHE_TTL_MS) {
+      localStorage.removeItem(ME_CACHE_KEY)
+      return null
+    }
+    return data
+  } catch {
+    return null
+  }
+}
+
+function writeMeCache(data: any): void {
+  if (!import.meta.client) return
+  try {
+    localStorage.setItem(ME_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }))
+  } catch { /* quota exceeded or private browsing — silently skip */ }
+}
+
+function clearMeCache(): void {
+  if (!import.meta.client) return
+  try { localStorage.removeItem(ME_CACHE_KEY) } catch {}
+}
+
 export const usePropertyState = () => {
   const supabase = useSupabaseClient()
   const user = useSupabaseUser()
+
+  // Shared global cache — initialized once from localStorage on the client.
+  // useState key ensures all composable instances share the same ref.
+  const meCache = useState<any>('me-local-cache', () => readMeCache())
   
   // 1. Persistent State (Cookie)
   const activePropertyCookie = useCookie<string | null>('selected-property', {
@@ -52,6 +90,20 @@ export const usePropertyState = () => {
     immediate: true
   })
 
+  // Write fresh API data to localStorage whenever it arrives.
+  // This keeps the cache fresh for the next navigation or reload.
+  watch(me, (newVal) => {
+    if (newVal) {
+      writeMeCache(newVal)
+      meCache.value = newVal
+    }
+  })
+
+  // effectiveMe: use the live API response when available; fall back to the
+  // localStorage cache during the brief window when me.value is null
+  // (initial fetch in flight, or Supabase auth briefly re-validating on navigation).
+  const effectiveMe = computed(() => me.value ?? meCache.value)
+
   // Role hierarchy for downshift filtering (highest → lowest)
   const ROLE_HIERARCHY = ['Owner', 'Asset', 'RPM', 'Manager', 'Staff'] as const
 
@@ -59,9 +111,9 @@ export const usePropertyState = () => {
   // property. Always reads me.value (unpatched) so the current override never
   // influences what options are available.
   const availableDownshiftRoles = computed<string[]>(() => {
-    if (!me.value) return []
+    if (!effectiveMe.value) return []
     const actualRole = activeProperty.value
-      ? (me.value.access.property_roles[activeProperty.value] ?? '')
+      ? (effectiveMe.value.access.property_roles[activeProperty.value] ?? '')
       : ''
     const idx = ROLE_HIERARCHY.indexOf(actualRole as any)
     // Unknown role → show all; otherwise only ranks strictly below current
@@ -72,17 +124,17 @@ export const usePropertyState = () => {
 
   // True when this user has at least one role to downshift to (eligibility gate)
   const canUseDevTools = computed(() =>
-    !!(me.value && availableDownshiftRoles.value.length > 0)
+    !!(effectiveMe.value && availableDownshiftRoles.value.length > 0)
   )
 
   // 6. Derived State - User Context with optional override patching
   // Eligible users: super admins AND any role with valid downshift options (Asset, RPM, Manager)
   const userContext = computed(() => {
-    if (!me.value) return null
+    if (!effectiveMe.value) return null
 
     const base = {
-      ...me.value.user,
-      access: me.value.access,
+      ...effectiveMe.value.user,
+      access: effectiveMe.value.access,
     }
 
     const { dept, role } = contextOverride.value
@@ -93,7 +145,7 @@ export const usePropertyState = () => {
 
     // Anti-upshift guard for non-admins: the requested role must exist in their
     // valid downshift list. Silently ignore invalid requests.
-    if (role && !me.value.access.is_super_admin) {
+    if (role && !effectiveMe.value.access.is_super_admin) {
       if (!availableDownshiftRoles.value.includes(role)) return base
     }
 
@@ -122,9 +174,9 @@ export const usePropertyState = () => {
 
   // 7. Derived State - Property Options
   const propertyOptions = computed(() => {
-    if (!me.value) return []
-    const access = me.value.access
-    const allProps = me.value.properties
+    if (!effectiveMe.value) return []
+    const access = effectiveMe.value.access
+    const allProps = effectiveMe.value.properties
     const filtered = (allProps || []).filter((p: any) => !!access.property_roles[p.code])
     
     return filtered.map((p: any) => ({
@@ -162,6 +214,8 @@ export const usePropertyState = () => {
     activeProperty.value = null
     activePropertyCookie.value = null
     me.value = null
+    meCache.value = null
+    clearMeCache()
   }
 
   /**
@@ -171,7 +225,7 @@ export const usePropertyState = () => {
   const setOverride = (dept: string | null, role: string | null) => {
     if (!canUseDevTools.value) return
     // Anti-upshift: non-admins may only request roles in their downshift list
-    if (role && !me.value?.access?.is_super_admin) {
+    if (role && !effectiveMe.value?.access?.is_super_admin) {
       if (!availableDownshiftRoles.value.includes(role)) return
     }
     contextOverride.value = { dept, role }
