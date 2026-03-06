@@ -552,6 +552,7 @@ export const useSolverEngine = () => {
                             .from('leases')
                             .select('id, tenancy_id')
                             .in('tenancy_id', tenancyIds)
+                            .eq('is_active', true)
 
                         const existingLeaseMap = new Map((existingLeases || []).map((l: any) => [l.tenancy_id, l.id]))
 
@@ -569,9 +570,9 @@ export const useSolverEngine = () => {
                             }
                         }
 
-                        // Insert new leases
+                        // Insert new leases (upsert to handle conflicts with UNIQUE(tenancy_id,start_date))
                         if (leasesToInsert.length > 0) {
-                            const { error } = await supabase.from('leases').insert(leasesToInsert)
+                            const { error } = await supabase.from('leases').upsert(leasesToInsert, { onConflict: 'tenancy_id,start_date' })
                             if (error) {
                                 console.error(`[Solver] Lease Insert Error (from Residents) for ${pCode}:`, error)
                             } else {
@@ -2298,6 +2299,7 @@ export const useSolverEngine = () => {
             statusMessage.value = `Completed: ${totalUpsertedTenancies} Tenancies, ${totalUpsertedResidents} Residents, ${totalUpsertedLeases} Leases, ${totalUpsertedAvailabilities || 0} Availabilities.`
         } catch (e: any) {
             // Mark run as failed
+            console.error('[Solver] Fatal error in processBatch:', e)
             await tracker.failRun(e.message)
             statusMessage.value = `Error: ${e.message}`
             throw e
