@@ -2,6 +2,8 @@
 
 This file tracks key architectural decisions and completed milestones. **Latest Update**: [2026-03-04] H-071: Solver crash hotfix (Phase 2 lease double-write exposed by new UNIQUE constraint — `.upsert` on conflict at `useSolverEngine.ts:924`). CV MakeReady ALL 5 FLAGS RESOLVED (C213 28-day crisis ends). RS mass repricing 38 units ($15–$350 drops). RS 3103 URGENT (Helbert starts 03-07). WO 464-E new flag. OB delinquency flush 53 resolved. 9 warnings, 0 fatals. Read this at the start of a session to "download" past wisdom without reading the full archives.
 
+**Latest Audit**: [2026-03-05] Solver three-part repair (`2eb0dc6`): Phase 1 lease insert upsert + `is_active` filter + outer catch console.error. RS 3103 CRITICAL (Helbert starts 03-07). RS 3125 + OB S160 RESOLVED. Work order anomaly W2/W3 closed. CV AIRM dormant (all applicant units Applied). Delinquency sync 0/0 all properties (stale files). 6 warnings, 0 fatals.
+
 | ID | Module | Key Decisions | Archive Link |
 |----|--------|---------------|--------------|
 | H-001 | Initialization | Established 2-Layer "Goldfish" Architecture (Base/Ops). Enforced Spec-First Rule. | [INIT_SCAFFOLD](../archive/INIT_SCAFFOLD.md) |
