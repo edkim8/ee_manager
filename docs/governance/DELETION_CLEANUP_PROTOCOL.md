@@ -71,9 +71,38 @@ documents/renewal-templates/docx/template.docx  ← sub-folder, violates depth r
 
 ---
 
-## 6. IMPLEMENTATION CHECKLIST (FOR BUILDERS)
+## 6. PRIVILEGES & ACCESS CONTROL
+
+### Deletion Authority Model (Creator + Admin)
+To prevent accidental data loss and maintain security, deletion rights are restricted based on the following hierarchy:
+
+| Data Type | Creator Deletion | Admin Deletion | Implementation |
+|---|---|---|---|
+| **GIS Locations** | ✅ Yes | ✅ Yes (`is_super_admin`) | RLS Policy |
+| **Notes (All)** | ✅ Yes | ✅ Yes (`is_super_admin`) | RLS Policy |
+| **Attachments (All)**| ✅ Yes | ✅ Yes (`is_super_admin`) | RLS Policy |
+
+> [!NOTE]
+> "Notes (All)" includes `location_notes` and any other polymorphic note tables. "Attachments (All)" includes `attachments`, `location_note_attachments`, and storage objects.
+
+### Enforcement Mechanisms
+
+#### 1. Database Level (RLS)
+The primary line of defense. RLS policies must check for either:
+- `auth.uid() = created_by` (Ownership)
+- Use `public.is_admin()` helper function (checks `public.profiles.is_super_admin`)
+
+#### 2. UI Level (Conditional Rendering)
+The "Delete" button should be hidden or disabled if the user does not meet the criteria. 
+> [!IMPORTANT]
+> UI hiding is for **UX only**. Never rely on UI hidden states for security; RLS must always be the final gatekeeper.
+
+---
+
+## 7. IMPLEMENTATION CHECKLIST (FOR BUILDERS)
 When implementing a "Delete" button:
 - [ ] Is this Tier 1 or Tier 2?
 - [ ] Does this record have attachments?
 - [ ] Did I call `supabase.storage.from(bucket).remove([path])`?
 - [ ] Did I verify the cascade?
+- [ ] Did I verify the Privilege (Creator or Admin)?
