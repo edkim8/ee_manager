@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useLocationNotes, type NoteWithAttachments } from '../../composables/useLocationNotes'
 import SimpleModal from '../../../base/components/SimpleModal.vue'
+import { usePropertyState } from '../../../base/composables/usePropertyState'
 
 const props = defineProps<{
   modelValue: boolean
@@ -14,6 +15,17 @@ const emit = defineEmits<{
 }>()
 
 const { fetchLocationNotes, addLocationNote, addNoteAttachment, deleteLocationNote } = useLocationNotes()
+
+const { userContext } = usePropertyState()
+const currentUserId = computed(() => userContext.value?.id ?? null)
+const isSuperAdmin = computed(() => userContext.value?.access?.is_super_admin ?? false)
+
+const canDeleteNote = (note: NoteWithAttachments) => {
+  if (isSuperAdmin.value) return true
+  // Legacy records with no creator: admin-only
+  if (!note.created_by) return false
+  return note.created_by === currentUserId.value
+}
 
 // State
 const notes = ref<NoteWithAttachments[]>([])
@@ -251,11 +263,12 @@ const getCategoryLabel = (category: string) => {
                   {{ new Date(note.created_at).toLocaleDateString() }} at {{ new Date(note.created_at).toLocaleTimeString() }}
                 </span>
               </div>
-              <span v-if="note.created_by" class="text-xs text-gray-400">
-                By: {{ note.created_by.substring(0, 8) }}...
+              <span v-if="note.creator_name" class="text-xs text-gray-400">
+                By: {{ note.creator_name }}
               </span>
             </div>
             <UButton
+              v-if="canDeleteNote(note)"
               icon="i-heroicons-trash"
               color="red"
               variant="ghost"

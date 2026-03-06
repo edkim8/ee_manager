@@ -28,7 +28,18 @@ if (isAppMode.value) {
 
 const supabase = useSupabaseClient()
 const { fetchLocations } = useLocationService()
-const { activeProperty: globalActiveProperty } = usePropertyState()
+const { activeProperty: globalActiveProperty, userContext } = usePropertyState()
+
+const currentUserId = computed(() => userContext.value?.id ?? null)
+const isSuperAdmin = computed(() => userContext.value?.access?.is_super_admin ?? false)
+const canDeleteLocation = computed(() => {
+  if (!selectedLocation.value) return false
+  if (isSuperAdmin.value) return true
+  const createdBy = selectedLocation.value.created_by
+  // Legacy records with no creator: admin-only
+  if (!createdBy) return false
+  return createdBy === currentUserId.value
+})
 
 // State
 const showAddModal = ref(false)
@@ -526,7 +537,7 @@ const categorySummary = computed(() => {
                 </div>
 
                 <!-- Delete confirmation (inline — no native confirm() dialog) -->
-                <div v-if="showDeleteConfirm" class="rounded-2xl border-2 border-red-400 bg-red-50 dark:bg-red-900/20 p-4 space-y-3">
+                <div v-if="canDeleteLocation && showDeleteConfirm" class="rounded-2xl border-2 border-red-400 bg-red-50 dark:bg-red-900/20 p-4 space-y-3">
                     <p class="text-sm font-bold text-red-700 dark:text-red-300 text-center">Delete this location permanently?</p>
                     <div class="flex gap-3">
                         <UButton
@@ -557,6 +568,7 @@ const categorySummary = computed(() => {
                 <!-- Secondary Actions Row -->
                 <div v-if="!showDeleteConfirm" class="flex gap-4">
                     <UButton
+                        v-if="canDeleteLocation"
                         color="red"
                         variant="outline"
                         block
@@ -571,7 +583,8 @@ const categorySummary = computed(() => {
                         color="amber"
                         variant="outline"
                         size="xl"
-                        class="flex-1 rounded-2xl border-2 border-amber-500 font-black uppercase tracking-widest active:scale-95 transition-all h-14 bg-amber-50/50 dark:bg-amber-900/10 justify-center"
+                        :class="canDeleteLocation ? 'flex-1' : 'w-full'"
+                        class="rounded-2xl border-2 border-amber-500 font-black uppercase tracking-widest active:scale-95 transition-all h-14 bg-amber-50/50 dark:bg-amber-900/10 justify-center"
                         @click="showDetailModal = false"
                     >
                         <UIcon name="i-heroicons-x-mark" class="w-5 h-5 mr-2" />

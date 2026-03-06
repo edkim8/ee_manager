@@ -7,7 +7,7 @@ export interface LocationNote {
   note_text: string
   category: 'inspection' | 'repair_replacement' | 'incident' | 'maintenance' | 'update'
   created_by?: string
-  created_by_user?: { email: string }
+  creator_name?: string
   created_at: string
   updated_at: string
 }
@@ -64,10 +64,29 @@ export const useLocationNotes = () => {
       throw attachmentsError
     }
 
-    // Combine notes with their attachments
-    const notesWithAttachments: NoteWithAttachments[] = notes.map(note => ({
+    // Batch-fetch creator profiles for display names
+    const creatorIds = [...new Set(notes.map((n: any) => n.created_by).filter(Boolean))] as string[]
+    let creatorNameMap: Record<string, string> = {}
+
+    if (creatorIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', creatorIds)
+
+      if (profiles) {
+        for (const p of profiles) {
+          const name = [p.first_name, p.last_name].filter(Boolean).join(' ')
+          creatorNameMap[p.id] = name || p.email?.split('@')[0] || 'Unknown'
+        }
+      }
+    }
+
+    // Combine notes with their attachments and creator name
+    const notesWithAttachments: NoteWithAttachments[] = notes.map((note: any) => ({
       ...note,
-      attachments: attachments.filter(att => att.note_id === note.id)
+      creator_name: note.created_by ? (creatorNameMap[note.created_by] ?? 'Unknown') : undefined,
+      attachments: (attachments as any[]).filter((att: any) => att.note_id === note.id)
     }))
 
     return notesWithAttachments

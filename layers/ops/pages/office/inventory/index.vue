@@ -6,7 +6,22 @@ definePageMeta({
 })
 
 // Composables
-const { activeProperty } = usePropertyState()
+const { activeProperty, userContext } = usePropertyState()
+
+const currentUserId = computed(() => userContext.value?.id ?? null)
+const isSuperAdmin = computed(() => userContext.value?.access?.is_super_admin ?? false)
+
+const canDeleteAttachment = (attachment: any) => {
+  if (isSuperAdmin.value) return true
+  if (!attachment.uploaded_by) return false
+  return attachment.uploaded_by === currentUserId.value
+}
+
+const canDeleteItem = (item: any) => {
+  if (isSuperAdmin.value) return true
+  if (!item.created_by) return false
+  return item.created_by === currentUserId.value
+}
 const { fetchCategories, createCategory, updateCategory, deleteCategory } = useInventoryCategories()
 const { fetchItemDefinitions, createItemDefinition, updateItemDefinition, deleteItemDefinition } = useInventoryItemDefinitions()
 const { addAttachment, fetchAttachments, deleteAttachment } = useAttachments()
@@ -472,6 +487,7 @@ const getCategoryName = (categoryId: string) => {
                   Edit
                 </button>
                 <button
+                  v-if="isSuperAdmin"
                   @click="handleDeleteCategory(category.id)"
                   class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm"
                 >
@@ -623,6 +639,7 @@ const getCategoryName = (categoryId: string) => {
               <div v-for="photo in itemPhotos" :key="photo.id" class="relative group">
                 <img :src="photo.file_url" :alt="photo.file_name" class="w-full h-24 object-cover rounded border border-gray-200 dark:border-gray-700" />
                 <button
+                  v-if="canDeleteAttachment(photo)"
                   type="button"
                   @click="handleDeleteAttachment(photo)"
                   class="absolute top-1 right-1 bg-red-600 text-white w-6 h-6 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
@@ -662,6 +679,7 @@ const getCategoryName = (categoryId: string) => {
                   📄 {{ doc.file_name }}
                 </a>
                 <button
+                  v-if="canDeleteAttachment(doc)"
                   type="button"
                   @click="handleDeleteAttachment(doc)"
                   class="text-red-600 hover:text-red-800 text-xs"
