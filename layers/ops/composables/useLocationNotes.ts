@@ -131,20 +131,38 @@ export const useLocationNotes = () => {
   // Delete a note (cascades to attachments)
   const deleteLocationNote = async (noteId: string): Promise<boolean> => {
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser()
+    // 1. Collect all attachments for this note
+    const { data: attachments } = await supabase
+      .from('location_note_attachments')
+      .select('file_url, file_type')
+      .eq('note_id', noteId)
 
-    // Get note to check created_by
-    const { data: note } = await supabase
+    // 2. Purge associated storage files (Best-effort - Hybrid Model)
+    if (attachments && attachments.length > 0) {
+      const imageFiles: string[] = []
+      const docFiles: string[] = []
+      for (const att of attachments) {
+        if (!att.file_url) continue
+        const bucket = att.file_type === 'image' ? 'images' : 'documents'
+        const urlParts = att.file_url.split(`/${bucket}/`)
+        if (urlParts.length > 1) {
+          if (att.file_type === 'image') imageFiles.push(urlParts[1])
+          else docFiles.push(urlParts[1])
+        }
+      }
+      try {
+        if (imageFiles.length > 0) await supabase.storage.from('images').remove(imageFiles)
+        if (docFiles.length > 0) await supabase.storage.from('documents').remove(docFiles)
+      } catch (storageError) {
+        // Log but do not block - Orphan Scanner safety net
+        console.warn('[Hybrid Purge] Note storage purge failed, marking for Orphan Scanner:', storageError)
+      }
+    }
+
+    // 3. Delete the note (cascades to location_note_attachments rows)
+    const { error } = await supabase
       .from('location_notes')
-      .select('created_by')
-      .eq('id', noteId)
-      .single()
-
-
-    const { error, count } = await supabase
-      .from('location_notes')
-      .delete({ count: 'exact' })
+      .delete()
       .eq('id', noteId)
 
     if (error) {
@@ -152,9 +170,6 @@ export const useLocationNotes = () => {
       throw error
     }
 
-    if (count === 0) {
-    } else {
-    }
     return true
   }
 
@@ -231,7 +246,6 @@ export const useLocationNotes = () => {
 
   // Delete attachment
   const deleteNoteAttachment = async (attachmentId: string): Promise<boolean> => {
-
     // Get attachment to find file path
     const { data: attachment } = await supabase
       .from('location_note_attachments')
@@ -239,18 +253,7 @@ export const useLocationNotes = () => {
       .eq('id', attachmentId)
       .single()
 
-    // Delete from database
-    const { error } = await supabase
-      .from('location_note_attachments')
-      .delete()
-      .eq('id', attachmentId)
-
-    if (error) {
-      console.error('Error deleting attachment:', error)
-      throw error
-    }
-
-    // Try to delete file from storage
+    // 1. Purge file from storage (Best-effort - Hybrid Model)
     if (attachment?.file_url) {
       try {
         const bucket = attachment.file_type === 'image' ? 'images' : 'documents'
@@ -260,7 +263,20 @@ export const useLocationNotes = () => {
           await supabase.storage.from(bucket).remove([filePath])
         }
       } catch (storageError) {
+        // Log but do not block - Orphan Scanner safety net
+        console.warn('[Hybrid Purge] Note attachment storage purge failed:', storageError)
       }
+    }
+
+    // 2. Delete from database
+    const { error } = await supabase
+      .from('location_note_attachments')
+      .delete()
+      .eq('id', attachmentId)
+
+    if (error) {
+      console.error('Error deleting attachment record:', error)
+      throw error
     }
 
     return true

@@ -97,10 +97,14 @@ const showDetailModal = ref(false)
 const selectedLocation = ref<any>(null)
 const { deleteLocation } = useLocationService()
 const isDeleting = ref(false)
+const showDeleteConfirm = ref(false)
+const deleteErrorMsg = ref<string | null>(null)
 
 const viewLocation = (location: any) => {
     selectedLocation.value = location
     showDetailModal.value = true
+    showDeleteConfirm.value = false
+    deleteErrorMsg.value = null
 }
 
 const viewNotes = () => {
@@ -129,18 +133,17 @@ const handleViewDetailFromMap = (locationId: string) => {
 
 const handleDelete = async () => {
     if (!selectedLocation.value?.id) return
-
-    if (!confirm('Are you sure you want to delete this location?')) return
-
     isDeleting.value = true
+    deleteErrorMsg.value = null
     try {
         await deleteLocation(selectedLocation.value.id)
         showDetailModal.value = false
+        showDeleteConfirm.value = false
         selectedLocation.value = null
         await loadLocations()
-    } catch (e) {
+    } catch (e: any) {
         console.error('Error deleting location:', e)
-        alert('Failed to delete location')
+        deleteErrorMsg.value = e?.message || 'Failed to delete location. Please try again.'
     } finally {
         isDeleting.value = false
     }
@@ -517,16 +520,49 @@ const categorySummary = computed(() => {
                     Share Location
                 </UButton>
 
+                <!-- Error message -->
+                <div v-if="deleteErrorMsg" class="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+                    {{ deleteErrorMsg }}
+                </div>
+
+                <!-- Delete confirmation (inline — no native confirm() dialog) -->
+                <div v-if="showDeleteConfirm" class="rounded-2xl border-2 border-red-400 bg-red-50 dark:bg-red-900/20 p-4 space-y-3">
+                    <p class="text-sm font-bold text-red-700 dark:text-red-300 text-center">Delete this location permanently?</p>
+                    <div class="flex gap-3">
+                        <UButton
+                            color="red"
+                            variant="solid"
+                            block
+                            size="xl"
+                            class="flex-1 rounded-xl font-black uppercase tracking-widest active:scale-95 transition-all h-12"
+                            :loading="isDeleting"
+                            @click="handleDelete"
+                        >
+                            Yes, Delete
+                        </UButton>
+                        <UButton
+                            color="gray"
+                            variant="outline"
+                            block
+                            size="xl"
+                            class="flex-1 rounded-xl font-black uppercase tracking-widest active:scale-95 transition-all h-12"
+                            :disabled="isDeleting"
+                            @click="showDeleteConfirm = false"
+                        >
+                            Cancel
+                        </UButton>
+                    </div>
+                </div>
+
                 <!-- Secondary Actions Row -->
-                <div class="flex gap-4">
+                <div v-if="!showDeleteConfirm" class="flex gap-4">
                     <UButton
                         color="red"
                         variant="outline"
                         block
                         size="xl"
                         class="flex-1 rounded-2xl border-2 border-red-500 font-black uppercase tracking-widest active:scale-95 transition-all h-14 bg-red-50/50 dark:bg-red-900/10"
-                        :loading="isDeleting"
-                        @click="handleDelete"
+                        @click="showDeleteConfirm = true; deleteErrorMsg = null"
                     >
                         <UIcon name="i-heroicons-trash" class="w-5 h-5 mr-2" />
                         Delete

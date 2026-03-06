@@ -70,30 +70,27 @@ export const useLocationService = () => {
 
     if (fetchError) throw fetchError
 
-    // Delete the location record
+    // 1. Purge associated Storage file (Best-effort - Hybrid Model)
+    if (location?.source_image_url) {
+      try {
+        const urlParts = location.source_image_url.split('/images/')
+        if (urlParts.length > 1) {
+          const filePath = urlParts[1]
+          await supabase.storage.from('images').remove([filePath])
+        }
+      } catch (storageError) {
+        // Log but do not block - the Orphan Scanner will catch this later
+        console.warn('[Hybrid Purge] Storage delete failed, marking for Orphan Scanner:', storageError)
+      }
+    }
+
+    // 2. Delete the database record
     const { error: deleteError } = await supabase
       .from('locations')
       .delete()
       .eq('id', id)
 
     if (deleteError) throw deleteError
-
-    // If there's an image, try to delete it from storage
-    if (location?.source_image_url) {
-      try {
-        // Extract file path from URL (format: .../storage/v1/object/public/images/locations/filename.jpg)
-        const urlParts = location.source_image_url.split('/images/')
-        if (urlParts.length > 1) {
-          const filePath = urlParts[1]
-          await supabase.storage
-            .from('images')
-            .remove([filePath])
-        }
-      } catch (storageError) {
-        // Log but don't fail - location is already deleted
-        console.warn('Failed to delete image from storage:', storageError)
-      }
-    }
 
     return true
   }
