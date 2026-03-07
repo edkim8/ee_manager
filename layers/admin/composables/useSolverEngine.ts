@@ -253,10 +253,6 @@ export const useSolverEngine = () => {
                             continue
                         }
 
-                        // DEBUG TRACE
-                        if (['1025', '1026', '1027'].includes(row.unit_name || '')) {
-                            console.log(`[Solver TRACE] Found Unit ${row.unit_name} -> ID: ${unitId} (Role: ${role})`)
-                        }
 
                         // A. Tenancy Logic (STRICT: Only Primary Updates Tenancy)
                         if (role === 'Primary') {
