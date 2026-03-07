@@ -47,6 +47,7 @@ const emptyForm = () => ({
   owner_entity_id: '',
   owned_entity_id: '',
   equity_pct:      0,
+  withhold_pct:    0,
   notes:           '',
 })
 
@@ -64,6 +65,7 @@ function openEdit(row: any) {
     owner_entity_id: row.owner_entity_id,
     owned_entity_id: row.owned_entity_id,
     equity_pct:      row.equity_pct,
+    withhold_pct:    row.withhold_pct ?? 0,
     notes:           row.notes || '',
   }
   isCreating.value = false
@@ -209,6 +211,7 @@ const groupedRows = computed(() => {
                 <th class="text-left py-2 px-3 font-semibold text-gray-600 dark:text-gray-400">Personal Entity (Owner)</th>
                 <th class="text-center py-2 px-3 font-semibold text-gray-600 dark:text-gray-400">Type</th>
                 <th class="text-right py-2 px-3 font-semibold text-gray-600 dark:text-gray-400">Equity %</th>
+                <th class="text-right py-2 px-3 font-semibold text-gray-600 dark:text-gray-400 max-lg:hidden">Withhold %</th>
                 <th class="text-left py-2 px-3 font-semibold text-gray-600 dark:text-gray-400 max-md:hidden">Notes</th>
                 <th class="py-2 px-3 w-20"></th>
               </tr>
@@ -233,6 +236,12 @@ const groupedRows = computed(() => {
                 </td>
                 <td class="py-2 px-3 text-right font-mono font-semibold" :class="equityTotalColor(row.owned_entity_id)">
                   {{ Number(row.equity_pct).toFixed(4) }}%
+                </td>
+                <td class="py-2 px-3 text-right max-lg:hidden">
+                  <span v-if="Number(row.withhold_pct) > 0" class="font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    {{ Number(row.withhold_pct).toFixed(1) }}%
+                  </span>
+                  <span v-else class="text-gray-400">—</span>
                 </td>
                 <td class="py-2 px-3 text-sm text-gray-500 italic max-md:hidden">
                   {{ row.notes || '—' }}
@@ -310,18 +319,36 @@ const groupedRows = computed(() => {
           </template>
         </UFormField>
 
-        <!-- Equity % -->
-        <UFormField label="Equity %" required>
-          <UInput
-            v-model.number="form.equity_pct"
-            type="number"
-            step="0.0001"
-            min="0"
-            max="100"
-            placeholder="e.g. 12.0000"
-            class="w-full"
-          />
-        </UFormField>
+        <!-- Equity % & Withholding -->
+        <div class="grid grid-cols-2 gap-4">
+          <UFormField label="Equity %" required>
+            <UInput
+              v-model.number="form.equity_pct"
+              type="number"
+              step="0.0001"
+              min="0"
+              max="100"
+              placeholder="e.g. 12.0000"
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField label="Withhold % (CA 592)">
+            <UInput
+              v-model.number="form.withhold_pct"
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              placeholder="0"
+              class="w-full font-mono"
+            />
+            <template #hint>
+              <span class="text-xs text-amber-600 dark:text-amber-400">
+                Set 7% for CV non-resident owners only
+              </span>
+            </template>
+          </UFormField>
+        </div>
 
         <!-- Notes -->
         <UFormField label="Notes">

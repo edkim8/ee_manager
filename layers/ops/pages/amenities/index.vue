@@ -237,7 +237,7 @@ const saveAmenity = async () => {
 
           <UFormField label="Status">
             <div class="flex items-center gap-3">
-              <UToggle v-model="selectedAmenity.active" />
+              <USwitch v-model="selectedAmenity.active" />
               <span class="text-sm text-gray-500 font-medium">{{ selectedAmenity.active ? 'Active' : 'Inactive' }}</span>
             </div>
           </UFormField>

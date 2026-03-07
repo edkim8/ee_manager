@@ -93,10 +93,24 @@ async function save() {
       await $fetch('/api/owners/individual-owners', { method: 'POST', body: form.value })
       toast.add({ title: 'Created', description: 'Owner mapped to entity.', color: 'success' })
     } else {
-      await $fetch(`/api/owners/individual-owners/${form.value.profile_id}/${form.value.owner_id}`, {
-        method: 'PATCH',
-        body: form.value,
-      })
+      // Save mapping fields (equity, role, notes) and entity GL codes in parallel
+      await Promise.all([
+        $fetch(`/api/owners/individual-owners/${form.value.profile_id}/${form.value.owner_id}`, {
+          method: 'PATCH',
+          body: {
+            equity_pct:      form.value.equity_pct,
+            role:            form.value.role,
+            notes:           form.value.notes,
+          },
+        }),
+        $fetch(`/api/owners/entities/${form.value.owner_id}`, {
+          method: 'PATCH',
+          body: {
+            distribution_gl: form.value.distribution_gl || null,
+            contribution_gl: form.value.contribution_gl || null,
+          },
+        }),
+      ])
       toast.add({ title: 'Saved', description: 'Owner record updated.', color: 'success' })
     }
     showModal.value = false
@@ -165,7 +179,7 @@ function roleBadgeColor(role: string): string {
           { key: 'role',         label: 'Role',        sortable: true,  width: '130px', align: 'center' },
           { key: 'equity_pct',   label: 'Equity %',    sortable: true,  width: '90px',  align: 'right' },
           { key: 'distribution_gl', label: 'Dist GL',  sortable: false, width: '100px', align: 'center', class: 'max-md:hidden', headerClass: 'max-md:hidden' },
-          { key: 'contribution_gl', label: 'Contrib GL', sortable: false, width: '100px', align: 'center', class: 'max-md:hidden', headerClass: 'max-md:hidden' },
+          { key: 'contribution_gl', label: 'Contrib GL',  sortable: false, width: '100px', align: 'center', class: 'max-md:hidden', headerClass: 'max-md:hidden' },
           { key: 'notes',        label: 'Notes',       sortable: false, width: '200px', class: 'max-lg:hidden', headerClass: 'max-lg:hidden' },
           { key: 'actions',      label: '',            sortable: false, width: '80px',  align: 'center' },
         ]"
@@ -323,8 +337,7 @@ function roleBadgeColor(role: string): string {
             <UFormField label="Distribution GL">
               <UInput
                 v-model="form.distribution_gl"
-                placeholder="e.g. 300-0000"
-                maxlength="9"
+                placeholder="e.g. 33015-000"
                 class="w-full font-mono"
               />
             </UFormField>
@@ -332,12 +345,11 @@ function roleBadgeColor(role: string): string {
               <UInput
                 v-model="form.contribution_gl"
                 placeholder="e.g. 310-0000"
-                maxlength="9"
                 class="w-full font-mono"
               />
             </UFormField>
           </div>
-          <p class="mt-2 text-xs text-gray-400">Only required for owners who receive distributions (e.g. TIC owners).</p>
+          <p class="mt-2 text-xs text-gray-400">Only required for owners who receive distributions. Withholding % is configured in Entity Interests.</p>
         </div>
 
         <!-- Notes -->

@@ -145,3 +145,22 @@ describe('namePattern smoke tests', () => {
     expect(re.test('5p_Availables.xlsx')).toBe(false)
   })
 })
+
+// ─── residents_status: normalize_id on Code field (Bug 2026-03-06) ────────────
+// Verifies the fix for the Excel trailing-space false silent-drop bug.
+// The 'Code' column must use the 'normalize_id' transform so tenancy_id values
+// are trimmed and lowercased before being added to the reportedTenancyIds Set.
+
+describe('residents_statusConfig — normalize_id on Code field', () => {
+  it('Code field maps to tenancy_id', () => {
+    expect(residents_statusConfig.mapping['Code']?.targetField).toBe('tenancy_id')
+  })
+
+  it('Code field uses normalize_id transform', () => {
+    expect(residents_statusConfig.mapping['Code']?.transform).toBe('normalize_id')
+  })
+
+  it('Code field is marked required', () => {
+    expect(residents_statusConfig.mapping['Code']?.required).toBe(true)
+  })
+})

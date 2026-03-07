@@ -391,6 +391,12 @@ function applyTransform(rawVal: any, fieldConfig: FieldMapping, row: Record<stri
       // Simple Yardi ID lookup: azres422 → RS, azstoran → SB, etc.
       // Returns null if not in dictionary (user should verify the Yardi ID is mapped)
       return yardiToPropertyCode(rawVal)
+    case 'normalize_id':
+      // Trim whitespace and lowercase — used for Yardi IDs (tenancy_id, resident_id, etc.)
+      // Excel cells may carry trailing spaces that break Set lookups in the solver.
+      if (rawVal === null || rawVal === undefined) return null
+      const normalized = String(rawVal).trim().toLowerCase()
+      return normalized || null
     case 'skip':
       return undefined // Should not reach here, but just in case
     default:

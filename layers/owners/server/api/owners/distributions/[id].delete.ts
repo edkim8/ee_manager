@@ -4,23 +4,16 @@ export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event)
   if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
-  const id   = getRouterParam(event, 'id')
-  const body = await readBody(event)
+  const id = getRouterParam(event, 'id')
 
   const client = serverSupabaseServiceRole(event)
 
-  const { data, error } = await client
-    .from('entity_entity_ownership' as any)
-    .update({
-      equity_pct:   body.equity_pct   ?? 0,
-      withhold_pct: body.withhold_pct ?? 0,
-      notes:        body.notes        || null,
-    })
+  const { error } = await client
+    .from('distributions' as any)
+    .delete()
     .eq('id', id)
-    .select()
-    .single()
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
-  return data
+  return { success: true }
 })

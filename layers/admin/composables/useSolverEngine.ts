@@ -603,8 +603,17 @@ export const useSolverEngine = () => {
                     statusMessage.value = `${pCode}: Checking for silently-dropped tenancies...`
 
                     // Collect all tenancy_ids seen in today's report (Primary rows own status)
+                    // Normalize IDs (trim + lowercase) to guard against Excel trailing-space artifacts.
                     const reportedTenancyIds = new Set(
-                        rows.filter((r: any) => r.tenancy_id).map((r: any) => r.tenancy_id)
+                        rows
+                            .filter((r: any) => {
+                                if (!r.tenancy_id) {
+                                    console.error(`[Solver] ${pCode}: Row missing tenancy_id after parse — row will be excluded from silent-drop check`, r)
+                                    return false
+                                }
+                                return true
+                            })
+                            .map((r: any) => String(r.tenancy_id).trim().toLowerCase())
                     )
 
                     // Fetch all currently active tenancies for this property from the DB
@@ -621,30 +630,22 @@ export const useSolverEngine = () => {
                         if (missing.length > 0) {
                             console.log(`[Solver] ${pCode}: ${missing.length} silently-dropped tenancies detected`)
 
-                            // Transition Current/Notice → Past
-                            if (toPastIds.length > 0) {
-                                for (let i = 0; i < toPastIds.length; i += 1000) {
-                                    const chunk = toPastIds.slice(i, i + 1000)
-                                    const { error } = await supabase
-                                        .from('tenancies')
-                                        .update({ status: 'Past' })
-                                        .in('id', chunk)
-                                    if (error) console.error(`[Solver] ${pCode}: Past transition error:`, error)
+                            // Transition tenancy statuses via server route (service_role) to bypass
+                            // the RLS gap that silently blocks authenticated-JWT status updates.
+                            if (toPastIds.length > 0 || toCanceledIds.length > 0) {
+                                try {
+                                    const statusResult = await $fetch('/api/solver/update-tenancy-status', {
+                                        method: 'POST',
+                                        body: { toPastIds, toCanceledIds, propertyCode: pCode }
+                                    }) as { past: number; canceled: number; errors: string[] }
+                                    if (toPastIds.length > 0)     console.log(`[Solver] ${pCode}: Transitioned ${statusResult.past} tenancies → Past`)
+                                    if (toCanceledIds.length > 0) console.log(`[Solver] ${pCode}: Transitioned ${statusResult.canceled} tenancies → Canceled`)
+                                    if (statusResult.errors?.length) {
+                                        statusResult.errors.forEach(e => console.error(`[Solver] ${pCode}: Status transition error: ${e}`))
+                                    }
+                                } catch (statusErr: any) {
+                                    console.error(`[Solver] ${pCode}: Failed to call update-tenancy-status route:`, statusErr)
                                 }
-                                console.log(`[Solver] ${pCode}: Transitioned ${toPastIds.length} tenancies → Past`)
-                            }
-
-                            // Transition Applicant/Future → Canceled
-                            if (toCanceledIds.length > 0) {
-                                for (let i = 0; i < toCanceledIds.length; i += 1000) {
-                                    const chunk = toCanceledIds.slice(i, i + 1000)
-                                    const { error } = await supabase
-                                        .from('tenancies')
-                                        .update({ status: 'Canceled' })
-                                        .in('id', chunk)
-                                    if (error) console.error(`[Solver] ${pCode}: Canceled transition error:`, error)
-                                }
-                                console.log(`[Solver] ${pCode}: Transitioned ${toCanceledIds.length} tenancies → Canceled`)
                             }
 
                             // Reset linked availability records back to Available

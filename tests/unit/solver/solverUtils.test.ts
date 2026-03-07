@@ -273,6 +273,40 @@ describe('classifyMissingTenancies', () => {
       expect(availabilityResetUnitIds).toEqual(expect.arrayContaining(['u4', 'u5']))
     })
   })
+
+  // ─── Trailing-space normalization (Bug 2026-03-06 — SB-1057/1059) ────────────
+  // The solver now normalizes Set entries to lowercase+trimmed before calling
+  // classifyMissingTenancies, and classifyMissingTenancies normalizes t.id on
+  // lookup. This block verifies both sides of the normalization contract.
+  describe('trailing-space normalization (Excel whitespace bug)', () => {
+    it('does NOT flag as missing when Set contains normalized (trimmed) ID and DB ID is clean', () => {
+      // Simulates: parser emitted 't2487994 ' → solver normalized to 't2487994'
+      const reported = new Set(['t2487994']) // already normalized by solver
+      const active = [t('t2487994', 'u1', 'Notice')]
+      const { missing } = classifyMissingTenancies(reported, active)
+      expect(missing).toHaveLength(0)
+    })
+
+    it('does NOT flag as missing when DB ID has mixed case and Set is lowercase', () => {
+      // Defensive: DB IDs are always lowercase in Yardi, but guard against future data issues
+      const reported = new Set(['t2487994'])
+      const active = [t('T2487994', 'u1', 'Notice')] // uppercase DB ID (hypothetical)
+      const { missing } = classifyMissingTenancies(reported, active)
+      expect(missing).toHaveLength(0)
+    })
+
+    it('correctly flags as missing when tenancy is genuinely absent from report', () => {
+      // Regression guard: normalization must not suppress real silent drops
+      const reported = new Set(['t2487994'])
+      const active = [
+        t('t2487994', 'u1', 'Notice'),  // present → keep
+        t('t9999999', 'u2', 'Current'), // absent  → Past
+      ]
+      const { missing, toPastIds } = classifyMissingTenancies(reported, active)
+      expect(missing).toHaveLength(1)
+      expect(toPastIds).toContain('t9999999')
+    })
+  })
 })
 
 // ─── isRenewal ────────────────────────────────────────────────────────────────

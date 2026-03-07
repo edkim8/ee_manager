@@ -298,6 +298,8 @@ const navigationItems = computed(() => {
         { label: 'Entity Interests', icon: 'i-heroicons-arrow-trending-up', to: '/owners/entity-interests' },
         { label: 'Property Entities', icon: 'i-heroicons-building-office', to: '/owners/entities' },
         { label: 'Property Ownership', icon: 'i-heroicons-building-office-2', to: '/owners/property-ownership' },
+        { label: 'Distributions', icon: 'i-heroicons-banknotes', to: '/owners/distributions' },
+        { label: 'Owner Statements', icon: 'i-heroicons-document-text', to: '/owners/statements' },
       ],
     })
   }
