@@ -53,7 +53,7 @@ const config: ParserConfig = {
   mapping: {
     'Property': { targetField: 'property_code', transform: 'yardi_code', required: true, fillDown: true },
     'Unit': { targetField: 'unit_name', required: true },
-    'Code': { targetField: 'tenancy_id', required: true },
+    'Code': { targetField: 'tenancy_id', transform: 'normalize_id', required: true },
     'Type': { targetField: 'type' },
     'Tenant': { targetField: 'resident' },
     'Rent': { targetField: 'rent' },

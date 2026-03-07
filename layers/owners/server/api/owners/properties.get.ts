@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
 
   const { data, error } = await client
     .from('properties')
-    .select('id, code, name')
+    .select('id, code, name, entity_level_distribution')
     .order('code')
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })

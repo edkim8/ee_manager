@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
       notes,
       created_at,
       profiles!profile_id(id, first_name, last_name, email),
-      ownership_entities!owner_id(id, name, entity_type)
+      ownership_entities!owner_id(id, name, entity_type, distribution_gl, contribution_gl)
     `)
     .order('created_at', { ascending: false })
 
@@ -26,8 +26,9 @@ export default defineEventHandler(async (event) => {
     owner_id:        r.owner_id,
     equity_pct:      r.equity_pct,
     role:            r.role,
-    distribution_gl: r.distribution_gl,
-    contribution_gl: r.contribution_gl,
+    // GL codes live on ownership_entities — canonical single source of truth
+    distribution_gl: r.ownership_entities?.distribution_gl || '',
+    contribution_gl: r.ownership_entities?.contribution_gl || '',
     notes:           r.notes,
     profile_name:    [r.profiles?.first_name, r.profiles?.last_name].filter(Boolean).join(' ') || r.profiles?.email || 'Unknown',
     profile_email:   r.profiles?.email || '',

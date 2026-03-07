@@ -1,5 +1,5 @@
 // Built-in transform types
-export type BuiltInTransform = 'currency' | 'date' | 'phone' | 'trim' | 'yardi_code' | 'skip';
+export type BuiltInTransform = 'currency' | 'date' | 'phone' | 'trim' | 'yardi_code' | 'skip' | 'normalize_id';
 
 export interface FieldMapping {
   targetField: string;

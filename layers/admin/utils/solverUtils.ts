@@ -164,7 +164,7 @@ export function classifyMissingTenancies(
   reportedTenancyIds: Set<string>,
   activeTenancies: MissingTenancy[],
 ): MissingTenancyClassification {
-  const missing = activeTenancies.filter((t) => !reportedTenancyIds.has(t.id))
+  const missing = activeTenancies.filter((t) => !reportedTenancyIds.has(String(t.id).trim().toLowerCase()))
 
   const toPastIds = missing
     .filter((t) => t.status === 'Current' || t.status === 'Notice')
