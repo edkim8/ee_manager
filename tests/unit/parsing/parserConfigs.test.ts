@@ -140,6 +140,16 @@ describe('namePattern smoke tests', () => {
     expect(() => re.test('5p_ExpiringLeases.xlsx')).not.toThrow()
   })
 
+  it('residents_statusConfig matches the EE Manager _All file', () => {
+    const re = new RegExp(residents_statusConfig.namePattern, 'i')
+    expect(re.test('5p_Residents_Status_All_2026-03-09_0623.xlsx')).toBe(true)
+  })
+
+  it('residents_statusConfig rejects the legacy file (without _All)', () => {
+    const re = new RegExp(residents_statusConfig.namePattern, 'i')
+    expect(re.test('5p_Residents_Status_2026-03-09_0623.xlsx')).toBe(false)
+  })
+
   it('residents_statusConfig does not match unrelated filenames', () => {
     const re = new RegExp(residents_statusConfig.namePattern)
     expect(re.test('5p_Availables.xlsx')).toBe(false)

@@ -127,6 +127,7 @@ const allRequiredPresent = computed(() => {
     return verificationStatus.value.filter(p => p.required).every(p => p.isPresent)
 })
 
+import { classifyParseResult, computeBatchManifest } from '../../../admin/utils/ingestionValidation'
 import { useSupabaseClient } from '#imports'
 
 const supabase = useSupabaseClient()
@@ -150,8 +151,19 @@ async function processBatch() {
         try {
             // A. Parse
             const result = await def.parse(item.file)
-            if (result.errors && result.errors.length > 0) {
-                 item.message = `Uploaded with ${result.errors.length} warnings`
+
+            const classification = classifyParseResult({ errors: result.errors ?? [], data: result.data })
+            if (classification.outcome === 'error') {
+                item.status = 'error'
+                item.message = classification.message
+                continue
+            }
+            if (classification.outcome === 'empty_warning') {
+                item.message = classification.message
+                console.warn(`[Solver] ${def.label} (${item.file.name}): parsed successfully but produced 0 rows. Check file content.`)
+            }
+            if (classification.outcome === 'warnings') {
+                item.message = classification.message
             }
             item.parsedData = result.data
 
@@ -191,6 +203,22 @@ async function processBatch() {
         }
     }
     
+    // --- BATCH MANIFEST CHECK ---
+    const stagedIds = new Set(pendingFiles.value.filter(f => f.status === 'done').map(f => f.parserId as string))
+    const { missingFiles } = computeBatchManifest(stagedIds, SOLVER_PARSERS)
+
+    const manifestLines = SOLVER_PARSERS.map(p => {
+        if (stagedIds.has(p.id))  return `  ✓ ${p.label}`
+        if (p.id === 'alerts')    return `  — ${p.label}: absent (expected when Yardi has no active alerts)`
+        return `  ✗ ${p.label}: MISSING${p.required ? ' [REQUIRED]' : ''}`
+    })
+    console.log(`[Solver] Batch manifest for ${globalBatchId.value}:\n${manifestLines.join('\n')}`)
+
+    if (missingFiles.length > 0) {
+        const names = missingFiles.map(p => p.label).join(', ')
+        console.warn(`[Solver] WARNING: ${missingFiles.length} file(s) missing from batch: ${names}. Affected phases will be skipped.`)
+    }
+
     // --- TRIGGER SOLVER ENGINE ---
     try {
         overallStatus.value = 'processing' // Indicate processing start
@@ -327,7 +355,8 @@ async function processBatch() {
                             <UIcon :name="item.isPresent ? 'i-heroicons-check-circle' : 'i-heroicons-stop'" class="w-4 h-4" />
                             <span>{{ item.label }}</span>
                         </div>
-                        <span v-if="!item.required" class="text-[10px] uppercase tracking-wide opacity-50">Optional</span>
+                        <span v-if="item.id === 'alerts' && !item.isPresent" class="text-[10px] uppercase tracking-wide opacity-50" title="Yardi produces no file when there are no active alerts — this is expected">No Alerts</span>
+                        <span v-else-if="!item.required" class="text-[10px] uppercase tracking-wide opacity-50">Optional</span>
                     </div>
                 </div>
                 <!-- File Errors -->

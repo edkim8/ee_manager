@@ -46,7 +46,7 @@ export interface ResidentsStatusRow {
  */
 const config: ParserConfig = {
   id: 'residents_status',
-  namePattern: '^5p_residents_status',
+  namePattern: '^5p_residents_status_all',
   headerRow: 6,
   strategy: 'fill_down',
   fillDownFields: ['property_code'],

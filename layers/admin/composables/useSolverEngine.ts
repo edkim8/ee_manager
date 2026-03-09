@@ -1203,6 +1203,8 @@ export const useSolverEngine = () => {
                     }
                 }
                 statusMessage.value = `Availabilities Synced: ${totalUpsertedAvailabilities} records.`
+            } else {
+                console.warn('[Solver] Step 3 (Availables): No file in batch — price change tracking and availability sync skipped.')
             }
 
             // --- PHASE 2C-2: Update Stale Availability Records ---
@@ -1453,6 +1455,8 @@ export const useSolverEngine = () => {
                 }
                 
                 statusMessage.value = `Notices Synced: ${totalUpdatedTenancies} tenancies, ${totalUpdatedAvailabilities} availabilities.`
+            } else {
+                console.warn('[Solver] Step 2A (Notices): No file in batch — notice status updates skipped.')
             }
 
             // ==========================================
@@ -1747,6 +1751,8 @@ export const useSolverEngine = () => {
                 }
                 
                 statusMessage.value = `MakeReady Synced: ${totalFlagsCreated} flags created, ${totalFlagsResolved} resolved.`
+            } else {
+                console.warn('[Solver] Step 2C (MakeReady): No file in batch — overdue flag detection skipped. MakeReady phase requires 5p_MakeReady.')
             }
 
             // Step 2D: Applications (Leasing Pipeline)
@@ -1905,6 +1911,8 @@ export const useSolverEngine = () => {
                 }
 
                 statusMessage.value = `Applications Synced: ${totalApplicationsSaved} saved, ${totalAvailabilitiesUpdated} availabilities updated, ${totalApplicationFlags} overdue flags.`
+            } else {
+                console.warn('[Solver] Step 2D (Applications): No file in batch — application pipeline sync skipped.')
             }
 
             // --- STEP 2E: TRANSFERS (Unit-to-Unit Moves) ---
@@ -2091,6 +2099,8 @@ export const useSolverEngine = () => {
 
                 statusMessage.value = 'Alerts Synced'
                 console.log(`[Solver] Phase 3A Complete: Alerts processed`)
+            } else {
+                console.log('[Solver] Phase 3A: No Alerts file in batch — skipping. Expected when Yardi has no active alerts (no output file produced).')
             }
 
             // --- STEP 3B: WORK ORDERS ---
@@ -2126,6 +2136,8 @@ export const useSolverEngine = () => {
 
                 statusMessage.value = 'Work Orders Synced'
                 console.log(`[Solver] Phase 3B Complete: Work Orders processed`)
+            } else {
+                console.warn('[Solver] Phase 3B: No Work Orders file in batch — skipping. Check that 5p_WorkOrders was included in the upload.')
             }
 
             // --- STEP 3C: DELINQUENCIES ---
@@ -2161,6 +2173,8 @@ export const useSolverEngine = () => {
 
                 statusMessage.value = 'Delinquencies Synced'
                 console.log(`[Solver] Phase 3C Complete: Delinquencies processed`)
+            } else {
+                console.warn('[Solver] Phase 3C: No Delinquencies file in batch — skipping. Check that 5p_Delinquencies was included in the upload.')
             }
 
             // Complete tracking and generate report
