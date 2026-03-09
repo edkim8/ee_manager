@@ -666,7 +666,18 @@ export const useSolverEngine = () => {
                                 }
                             }
 
-                            // Track for reporting
+                            // Track individual silent drops as solver_events rows for audit trail
+                            for (const t of missing) {
+                                const inferredStatus = (t.status === 'Current' || t.status === 'Notice') ? 'Past' : 'Canceled'
+                                tracker.trackSilentDrop(pCode, {
+                                    tenancy_id: t.id,
+                                    unit_id: t.unit_id,
+                                    from_status: t.status,
+                                    inferred_to_status: inferredStatus,
+                                })
+                            }
+
+                            // Track aggregate for daily report summary string
                             const summary = [
                                 toPastIds.length > 0 ? `${toPastIds.length}→Past` : null,
                                 toCanceledIds.length > 0 ? `${toCanceledIds.length}→Canceled` : null,

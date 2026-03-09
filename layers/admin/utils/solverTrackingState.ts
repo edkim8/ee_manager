@@ -166,6 +166,19 @@ export function createSolverTrackingState() {
     propertySummaries[propertyCode].statusAutoFixes.push(`${unitName}: ${statusChange}`)
   }
 
+  const trackSilentDrop = (
+    propertyCode: string,
+    details: {
+      tenancy_id: string
+      unit_id: string
+      from_status: string
+      inferred_to_status: string
+    },
+  ): void => {
+    initProperty(propertyCode)
+    events.push({ property_code: propertyCode, event_type: 'silent_drop', unit_id: details.unit_id, tenancy_id: details.tenancy_id, details })
+  }
+
   const trackAvailabilityChanges = (propertyCode: string, newCount: number, updateCount: number): void => {
     initProperty(propertyCode)
     propertySummaries[propertyCode].availabilitiesNew += newCount
@@ -257,5 +270,6 @@ export function createSolverTrackingState() {
     trackApplication,
     trackPriceChange,
     trackNewLeaseSigned,
+    trackSilentDrop,
   }
 }
