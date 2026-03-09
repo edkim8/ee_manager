@@ -60,10 +60,7 @@ WORKFLOW PHASE 1: EVALUATION
    - Note any alert churn (> 3 adds or removes at a single property in one run).
    - Code Efficiency Sweep: Flag if any unit is resolved multiple times (duplicate TRACE
      logs for same unit ID) — potential redundant DB calls.
-   - "Silently-Dropped Tenancies": When the solver detects a tenancy that disappeared from
-     Yardi without a normal status transition, it transitions it to → Canceled and resets
-     the unit to Available. The standard term is ALWAYS "Canceled". Log the count and 
-     affected units (if surfaced in the log); flag if > 1 at any single property.
+   - "Silently-Dropped Tenancies": The solver performs a "Missing Sweep" comparing Yardi reporting to the DB. It now triggers a `trackSilentDrop` event. It infers the exit status: Current/Notice → Past, while Applicant/Future → Canceled. Check the logs for `trackSilentDrop` events. Log the count and affected units; flag if > 1 at any single property.
 
 4. INITIAL EVALUATION REPORT:
    - Present a concise summary of findings in the terminal.

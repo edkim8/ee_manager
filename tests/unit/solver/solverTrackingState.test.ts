@@ -220,6 +220,46 @@ describe('trackNewLeaseSigned', () => {
   })
 })
 
+// ─── trackSilentDrop ──────────────────────────────────────────────────────────
+
+describe('trackSilentDrop', () => {
+  it('pushes a silent_drop event with correct fields', () => {
+    tracker.trackSilentDrop('SB', { tenancy_id: 't1', unit_id: 'u1', from_status: 'Applicant', inferred_to_status: 'Canceled' })
+    expect(tracker.events).toHaveLength(1)
+    const ev = tracker.events[0]
+    expect(ev.event_type).toBe('silent_drop')
+    expect(ev.property_code).toBe('SB')
+    expect(ev.tenancy_id).toBe('t1')
+    expect(ev.unit_id).toBe('u1')
+    expect(ev.details).toMatchObject({ from_status: 'Applicant', inferred_to_status: 'Canceled' })
+  })
+
+  it('does not increment any summary counter', () => {
+    tracker.trackSilentDrop('SB', { tenancy_id: 't1', unit_id: 'u1', from_status: 'Future', inferred_to_status: 'Canceled' })
+    const s = tracker.propertySummaries['SB']
+    expect(s.tenanciesNew).toBe(0)
+    expect(s.statusAutoFixes).toHaveLength(0)
+  })
+
+  it('auto-initializes property if not yet seen', () => {
+    tracker.trackSilentDrop('RS', { tenancy_id: 't2', unit_id: 'u2', from_status: 'Current', inferred_to_status: 'Past' })
+    expect(tracker.propertySummaries['RS']).toBeDefined()
+  })
+
+  it('records correct inferred_to_status for Current → Past', () => {
+    tracker.trackSilentDrop('OB', { tenancy_id: 't3', unit_id: 'u3', from_status: 'Current', inferred_to_status: 'Past' })
+    expect(tracker.events[0].details).toMatchObject({ from_status: 'Current', inferred_to_status: 'Past' })
+  })
+
+  it('accumulates multiple drops as separate events', () => {
+    tracker.trackSilentDrop('SB', { tenancy_id: 't1', unit_id: 'u1', from_status: 'Applicant', inferred_to_status: 'Canceled' })
+    tracker.trackSilentDrop('SB', { tenancy_id: 't2', unit_id: 'u2', from_status: 'Future', inferred_to_status: 'Canceled' })
+    tracker.trackSilentDrop('SB', { tenancy_id: 't3', unit_id: 'u3', from_status: 'Current', inferred_to_status: 'Past' })
+    expect(tracker.events).toHaveLength(3)
+    expect(tracker.events.every(e => e.event_type === 'silent_drop')).toBe(true)
+  })
+})
+
 // ─── multi-property isolation ─────────────────────────────────────────────────
 
 describe('multi-property isolation', () => {
