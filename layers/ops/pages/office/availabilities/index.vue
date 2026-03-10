@@ -12,6 +12,7 @@ import { useParseAvailablesAudit, AVAILABLES_AUDIT_REQUIRED_HEADERS } from '../.
 // ===== EXCEL-BASED TABLE CONFIGURATION =====
 import { allColumns, filterGroups } from '../../../../../configs/table-configs/availabilities-complete.generated'
 import { filterColumnsByAccess } from '../../../../table/composables/useTableColumns'
+import { useTableSelection } from '../../../../table/composables/useTableSelection'
 
 const supabase = useSupabaseClient()
 const { activeProperty, userContext } = usePropertyState()
@@ -32,6 +33,14 @@ const canSwitchDepartment = computed(() => {
   const role = activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null
   const adminRoles = ['Asset', 'RPM', 'Manager']
   return userContext.value?.access?.is_super_admin || (role && adminRoles.includes(role))
+})
+
+// Bulk Upfront access: Management dept + Asset/Manager role, or super admin
+const canBulkUpfront = computed(() => {
+  if (userContext.value?.access?.is_super_admin) return true
+  const role = activeProperty.value ? userContext.value?.access?.property_roles?.[activeProperty.value] : null
+  const dept = userContext.value?.profile?.department
+  return dept === 'Management' && (role === 'Asset' || role === 'Manager')
 })
 
 // Fetch Active Property Name for Header
@@ -255,6 +264,41 @@ const filteredData = computed(() => {
     a.floor_plan_name?.toLowerCase().includes(q)
   )
 })
+
+// ===== ROW SELECTION =====
+const { selectedRows, selectedCount, allSelected, someSelected, isSelected, toggleRow, toggleSelectAll, clearSelection } = useTableSelection(filteredData, 'unit_id')
+
+// ===== BULK UPFRONT =====
+const bulkUpfrontAmount = ref<number | null>(null)
+const bulkUpfrontDays = ref<number | null>(null)
+const isBulkSaving = ref(false)
+
+const applyBulkUpfront = async () => {
+  if (selectedCount.value === 0) return
+  if (bulkUpfrontAmount.value === null && bulkUpfrontDays.value === null) return
+
+  isBulkSaving.value = true
+  try {
+    const unitIds = selectedRows.value.map((r: any) => r.unit_id)
+    const patch: Record<string, any> = {}
+    if (bulkUpfrontAmount.value !== null) patch.concession_upfront_amount = bulkUpfrontAmount.value
+    if (bulkUpfrontDays.value !== null) patch.concession_free_rent_days = bulkUpfrontDays.value
+
+    const { error } = await supabase
+      .from('availabilities')
+      .update(patch)
+      .in('unit_id', unitIds)
+
+    if (error) throw error
+
+    clearSelection()
+    bulkUpfrontAmount.value = null
+    bulkUpfrontDays.value = null
+    await refreshAvailabilities()
+  } finally {
+    isBulkSaving.value = false
+  }
+}
 
 const handleRowClick = (row: any) => {
   if (row?.unit_id) {
@@ -565,6 +609,29 @@ const handleFileUpload = async (event: Event) => {
         export-filename="availabilities"
         @row-click="handleRowClick"
       >
+        <!-- Selection Checkbox Header -->
+        <template #header-selection>
+          <input
+            type="checkbox"
+            :checked="allSelected"
+            :indeterminate.prop="someSelected && !allSelected"
+            class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            @click.stop
+            @change="toggleSelectAll"
+          />
+        </template>
+
+        <!-- Selection Checkbox Cell -->
+        <template #cell-selection="{ row }">
+          <input
+            type="checkbox"
+            :checked="isSelected(row)"
+            class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            @click.stop
+            @change="toggleRow(row)"
+          />
+        </template>
+
         <template #toolbar>
           <div class="flex items-center gap-4">
             <UInput
@@ -581,6 +648,44 @@ const handleFileUpload = async (event: Event) => {
 
         <template #toolbar-actions>
           <div class="flex items-center gap-4">
+
+            <!-- Bulk Upfront Controls (Manager/Asset in Management dept, or super admin) -->
+            <div v-if="canBulkUpfront && selectedCount > 0" class="flex items-center gap-2 pr-2 border-r border-gray-200">
+              <span class="text-xs text-gray-500 font-semibold uppercase tracking-wider whitespace-nowrap">
+                {{ selectedCount }} selected:
+              </span>
+              <UInput
+                v-model.number="bulkUpfrontAmount"
+                type="number"
+                placeholder="Upfront $"
+                class="w-28"
+                size="xs"
+                :min="0"
+              />
+              <UInput
+                v-model.number="bulkUpfrontDays"
+                type="number"
+                placeholder="Free Days"
+                class="w-24"
+                size="xs"
+                :min="0"
+              />
+              <UButton
+                label="Apply"
+                color="primary"
+                size="xs"
+                :loading="isBulkSaving"
+                :disabled="bulkUpfrontAmount === null && bulkUpfrontDays === null"
+                @click="applyBulkUpfront"
+              />
+              <UButton
+                label="Clear"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                @click="clearSelection"
+              />
+            </div>
             <div class="flex items-center gap-2 pr-2 border-r border-gray-200">
               <span class="text-xs text-gray-500 uppercase font-semibold tracking-wider">Show:</span>
               <div class="flex gap-1 p-1 bg-gray-50 rounded-lg border border-gray-100">
@@ -699,6 +804,18 @@ const handleFileUpload = async (event: Event) => {
              :color-class="getDynamicConcessionColor(Math.abs(row.market_base_rent > 0 ? ((row.rent_offered - row.market_base_rent) / row.market_base_rent) : 0))"
              class="font-mono"
            />
+        </template>
+
+        <!-- Upfront $ -->
+        <template #cell-concession_upfront_amount="{ value }">
+          <CellsCurrencyCell v-if="value" :value="value" class="font-mono text-sm" />
+          <span v-else class="text-gray-400">—</span>
+        </template>
+
+        <!-- Free Rent Days -->
+        <template #cell-concession_free_rent_days="{ value }">
+          <span v-if="value" class="font-mono text-sm text-gray-700 dark:text-gray-200">{{ value }}d</span>
+          <span v-else class="text-gray-400">—</span>
         </template>
 
         <template #cell-concession_display_calc="{ row }">
