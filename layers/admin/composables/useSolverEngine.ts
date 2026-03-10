@@ -5,7 +5,7 @@ import type { ResidentsStatusRow } from '~/layers/parsing/composables/parsers/us
 import { resolveUnitId } from '../../base/utils/lookup'
 import { getTodayPST, getNowPST, daysBetween, addDays } from '../../base/utils/date-helpers'
 import { buildTenancyPriorityMap, classifyStaleAvailabilities } from '../utils/availabilityUtils'
-import { mapTenancyStatus as mapTenancyStatusUtil, parseDate as parseDateUtil, deriveAvailabilityStatus, classifyMissingTenancies, isRenewal as isRenewalUtil } from '../utils/solverUtils'
+import { mapTenancyStatus as mapTenancyStatusUtil, parseDate as parseDateUtil, deriveAvailabilityStatus, classifyMissingTenancies, isRenewal as isRenewalUtil, isDelinquencySummaryFormat } from '../utils/solverUtils'
 import { useSolverTracking } from './useSolverTracking'
 import { useSolverReportGenerator } from './useSolverReportGenerator'
 import { useAlertsSync } from '../../parsing/composables/useAlertsSync'
@@ -2059,6 +2059,14 @@ export const useSolverEngine = () => {
             // ==========================================
 
             // --- STEP 3A: ALERTS ---
+            // Strategy: "absence within a confirmed batch = zero alerts"
+            // When Yardi has 0 alerts for a property, the dashboard shows no
+            // clickable link — the download script produces no file and no
+            // import_staging row is created.  We infer zero alerts for any
+            // property that IS present in this batch (has a residents_status
+            // report) but has NO alerts report.  This is safe because all 5
+            // properties are always uploaded together; a missing alerts row
+            // is never an upload failure — it means the count was genuinely 0.
             statusMessage.value = 'Processing Alerts...'
             const { data: alertsReports } = await supabase
                 .from('import_staging')
@@ -2066,10 +2074,30 @@ export const useSolverEngine = () => {
                 .eq('batch_id', batchId)
                 .eq('report_type', 'alerts')
 
-            if (alertsReports && alertsReports.length > 0) {
-                console.log(`[Solver] Phase 3A: Processing Alerts for ${alertsReports.length} properties`)
+            const alertsSync = useAlertsSync()
 
-                const alertsSync = useAlertsSync()
+            // Build set of properties that have an alerts file in this batch
+            const propertiesWithAlertsFile = new Set((alertsReports || []).map((r: any) => r.property_code))
+
+            // All properties confirmed present in this batch (from residents_status)
+            const batchPropertyCodes = reports.map((r: any) => r.property_code)
+
+            for (const pCode of batchPropertyCodes) {
+                if (!propertiesWithAlertsFile.has(pCode)) {
+                    // No alerts file uploaded → zero alerts today → clear stale ones
+                    console.log(`[Solver] Phase 3A: No alerts file for ${pCode} (zero-alerts day) — clearing stale alerts`)
+                    const success = await alertsSync.clearAlerts(pCode)
+                    if (success) {
+                        console.log(`[Solver] ✓ Alerts cleared for ${pCode}: ${alertsSync.syncStats.value}`)
+                    } else {
+                        console.error(`[Solver] ✗ Alerts clear failed for ${pCode}: ${alertsSync.syncError.value}`)
+                    }
+                }
+            }
+
+            // Process properties that DO have an alerts file
+            if (alertsReports && alertsReports.length > 0) {
+                console.log(`[Solver] Phase 3A: Syncing alerts for ${alertsReports.length} properties with data`)
 
                 for (const report of alertsReports) {
                     const pCode = report.property_code
@@ -2079,7 +2107,6 @@ export const useSolverEngine = () => {
 
                     console.log(`[Solver] Processing Alerts for ${pCode} (${rows.length} rows)`)
 
-                    // Sync alerts using existing sync logic
                     const success = await alertsSync.syncAlerts(rows)
 
                     if (success) {
@@ -2088,10 +2115,10 @@ export const useSolverEngine = () => {
                         console.error(`[Solver] ✗ Alerts sync failed for ${pCode}: ${alertsSync.syncError.value}`)
                     }
                 }
-
-                statusMessage.value = 'Alerts Synced'
-                console.log(`[Solver] Phase 3A Complete: Alerts processed`)
             }
+
+            statusMessage.value = 'Alerts Synced'
+            console.log(`[Solver] Phase 3A Complete: Alerts processed`)
 
             // --- STEP 3B: WORK ORDERS ---
             statusMessage.value = 'Processing Work Orders...'
@@ -2146,6 +2173,14 @@ export const useSolverEngine = () => {
                     const rows = report.raw_data as any[]
 
                     if (!rows || rows.length === 0) continue
+
+                    // Sanity check: detect Summary-format exports before attempting sync
+                    if (isDelinquencySummaryFormat(rows)) {
+                        const msg = 'DATA COMPROMISED: Received Summary format for Delinquencies instead of Individual format.'
+                        console.warn(`[Solver] ⚠ Delinquencies for ${pCode}: ${msg} Skipping sync.`)
+                        tracker.trackDiscrepancy(pCode, { message: msg, report_type: 'delinquencies' })
+                        continue
+                    }
 
                     console.log(`[Solver] Processing Delinquencies for ${pCode} (${rows.length} rows)`)
 

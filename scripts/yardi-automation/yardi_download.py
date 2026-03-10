@@ -123,8 +123,22 @@ def run_phase_a(page: Page, dates: dict, data_dir: Path, archive_dir: Path) -> N
 
         frame = _filter_frame(page)
         loc = frame.locator(f"tr:has-text('{label}') a").first
-        loc.wait_for(state="visible", timeout=10_000)
-        loc.click()
+
+        # When count = 0, Yardi shows plain text — no <a> tag to click.
+        # Catch the timeout instead of crashing Phase A and losing Make_Ready + WorkOrders.
+        link_clicked = True
+        try:
+            loc.wait_for(state="visible", timeout=10_000)
+            loc.click()
+        except Exception:
+            link_clicked = False
+
+        if not link_clicked:
+            if name == "Alerts":
+                print(f"  INFO: Alerts stat link not clickable (count = 0) — no file produced. Solver will infer zero alerts.")
+            else:
+                print(f"  WARNING: Stat link not found for {name} — skipping.")
+            continue
 
         try:
             frame.locator(f"text={header}").first.wait_for(state="visible", timeout=20_000)
@@ -137,11 +151,13 @@ def run_phase_a(page: Page, dates: dict, data_dir: Path, archive_dir: Path) -> N
         dest = data_dir / filename
         archive_if_exists(dest, archive_dir)
 
-        with page.expect_download(timeout=30_000) as dl:
-            frame.locator("img[src*='DataGridExcel']").first.click()
-
-        dl.value.save_as(str(dest))
-        done(name, dest)
+        try:
+            with page.expect_download(timeout=30_000) as dl:
+                frame.locator("img[src*='DataGridExcel']").first.click()
+            dl.value.save_as(str(dest))
+            done(name, dest)
+        except Exception as e:
+            print(f"  WARNING: Excel download failed for {name}: {e} — skipping.")
 
 
 # ---------------------------------------------------------------------------

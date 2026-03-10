@@ -279,3 +279,33 @@ export function isSuspiciousYear(dateStr: string | null | undefined): boolean {
   if (isNaN(year)) return false
   return year < 1920 || year > 2050
 }
+
+// ─── isDelinquencySummaryFormat ───────────────────────────────────────────────
+/**
+ * Detects whether a delinquencies raw_data payload is a Summary-format export
+ * instead of the expected Individual-format export.
+ *
+ * In Individual format every row has a tenancy_id (Yardi resident code like
+ * "RS-0001") and a resident name.  In Summary format these identifiers are
+ * absent — Yardi aggregates balances by property/building with no per-resident
+ * rows.
+ *
+ * Heuristic: if every row in the array lacks a non-empty `tenancy_id` AND a
+ * non-empty `resident` field, the file is Summary format and must not be synced.
+ *
+ * @param rows - The already-parsed rows from import_staging raw_data
+ * @returns true when Summary format is detected (delinquency sync must be skipped)
+ */
+export function isDelinquencySummaryFormat(rows: Record<string, unknown>[]): boolean {
+  if (!rows || rows.length === 0) return false
+
+  const hasIndividualRow = rows.some((row) => {
+    const tenancyId = row['tenancy_id']
+    const resident  = row['resident']
+    const hasTenancyId = typeof tenancyId === 'string' && tenancyId.trim().length > 0
+    const hasResident  = typeof resident  === 'string' && resident.trim().length > 0
+    return hasTenancyId && hasResident
+  })
+
+  return !hasIndividualRow
+}
