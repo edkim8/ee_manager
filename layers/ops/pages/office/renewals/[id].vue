@@ -1081,6 +1081,7 @@ onBeforeRouteLeave((to, from, next) => {
             <span class="font-bold">{{ fp.floor_plan_name }}</span>
             <span class="text-[10px] opacity-60">
               {{ floorPlanCounts[fp.floor_plan_id]?.standard || 0 }} / {{ floorPlanCounts[fp.floor_plan_id]?.mtm || 0 }}
+              <template v-if="fp.area_sqft"> · {{ fp.area_sqft }} SF</template>
             </span>
           </div>
         </UButton>
@@ -1230,6 +1231,10 @@ onBeforeRouteLeave((to, from, next) => {
 
               <template #cell-unit_name="{ row }">
                 {{ row.units?.unit_name || row.unit_name || 'N/A' }}
+              </template>
+
+              <template #cell-floor_plan="{ row }">
+                {{ row.units?.floor_plans?.marketing_name || '—' }}
               </template>
 
               <template #cell-lease_to_date="{ value }">
@@ -1384,6 +1389,10 @@ onBeforeRouteLeave((to, from, next) => {
             >
               <template #cell-unit_name="{ row }">
                 {{ row.units?.unit_name || row.unit_name || 'N/A' }}
+              </template>
+
+              <template #cell-floor_plan="{ row }">
+                {{ row.units?.floor_plans?.marketing_name || '—' }}
               </template>
 
               <template #cell-lease_to_date="{ value }">

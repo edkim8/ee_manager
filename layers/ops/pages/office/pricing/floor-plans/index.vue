@@ -323,6 +323,22 @@ const applicantFutureColumns = computed(() => {
     })
 })
 
+// ===== VACANCY COLOR CODING (mirrors availabilities index defaults) =====
+const getVacancyColor = (days: number | null): string => {
+  const d = days ?? 0
+  if (d <= 0)  return '#B91C1C'  // red   — ready now / overdue
+  if (d <= 25) return '#F472B6'  // pink  — ready within 25 days
+  if (d <= 50) return '#FBBF24'  // yellow — ready within 50 days
+  if (d <= 75) return '#34D399'  // green — ready within 75 days
+  return '#60A5FA'               // blue  — 75+ days out
+}
+
+const statusColors: Record<string, string> = {
+  'Available': 'primary',
+  'Applied':   'warning',
+  'Leased':    'success'
+}
+
 // ===== DYNAMIC CONCESSION COLORING =====
 
 /**
@@ -528,11 +544,23 @@ const handleSyncModalClose = () => {
         row-key="unit_id"
         striped
       >
-          <!-- Unit Badge -->
-          <template #cell-unit_name="{ value }">
-              <span class="px-2 py-1 bg-gray-900 text-white rounded text-[10px] font-black min-w-[50px] inline-block text-center shadow-sm">
+          <!-- Unit Badge (vacancy color-coded) -->
+          <template #cell-unit_name="{ value, row }">
+              <span
+                class="px-2 py-1 rounded text-[10px] font-black min-w-[50px] inline-block text-center shadow-sm text-gray-950"
+                :style="{ backgroundColor: getVacancyColor(row.vacant_days) }"
+              >
                   {{ value }}
               </span>
+          </template>
+
+          <!-- Status Badge -->
+          <template #cell-status="{ value }">
+              <CellsBadgeCell
+                  :text="value"
+                  :color="statusColors[value] || 'neutral'"
+                  variant="subtle"
+              />
           </template>
 
           <!-- Sync Alerts -->
@@ -600,9 +628,12 @@ const handleSyncModalClose = () => {
         row-key="unit_id"
         striped
       >
-          <!-- Unit Badge -->
-          <template #cell-unit_name="{ value }">
-              <span class="px-2 py-1 bg-gray-900 text-white rounded text-[10px] font-black min-w-[50px] inline-block text-center shadow-sm">
+          <!-- Unit Badge (vacancy color-coded) -->
+          <template #cell-unit_name="{ value, row }">
+              <span
+                class="px-2 py-1 rounded text-[10px] font-black min-w-[50px] inline-block text-center shadow-sm text-gray-950"
+                :style="{ backgroundColor: getVacancyColor(row.vacant_days) }"
+              >
                   {{ value }}
               </span>
           </template>

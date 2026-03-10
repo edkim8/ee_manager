@@ -23,6 +23,7 @@ export const useSolverTracking = () => {
         trackPriceChange,
         trackNewLeaseSigned,
         trackSilentDrop,
+        trackDiscrepancy,
     } = state
 
     /**
@@ -135,6 +136,7 @@ export const useSolverTracking = () => {
         trackPriceChange,
         trackNewLeaseSigned,
         trackSilentDrop,
+        trackDiscrepancy,
         // ========== END TRACKING ENHANCEMENTS ==========
         completeRun,
         failRun,

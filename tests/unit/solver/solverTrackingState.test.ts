@@ -19,6 +19,7 @@ describe('initProperty', () => {
     expect(summary.tenanciesNew).toBe(0)
     expect(summary.leasesRenewed).toBe(0)
     expect(summary.statusAutoFixes).toEqual([])
+    expect(summary.discrepancies).toEqual([])
   })
 
   it('is idempotent — does not overwrite existing summary', () => {

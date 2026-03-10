@@ -33,6 +33,7 @@ export interface PropertySummary {
   applicationsSaved: number
   priceChanges: number
   newLeasesSigned: number
+  discrepancies: string[]
 }
 
 export interface SolverTrackingState {
@@ -72,6 +73,7 @@ export function createSolverTrackingState() {
         applicationsSaved: 0,
         priceChanges: 0,
         newLeasesSigned: 0,
+        discrepancies: [],
       }
     }
   }
@@ -244,6 +246,18 @@ export function createSolverTrackingState() {
     events.push({ property_code: propertyCode, event_type: 'lease_signed', unit_id: details.unit_id, tenancy_id: details.tenancy_id, details })
   }
 
+  const trackDiscrepancy = (
+    propertyCode: string,
+    details: {
+      message: string
+      report_type: string
+    },
+  ): void => {
+    initProperty(propertyCode)
+    propertySummaries[propertyCode].discrepancies.push(details.message)
+    events.push({ property_code: propertyCode, event_type: 'discrepancy', details })
+  }
+
   const reset = (): void => {
     events.length = 0
     Object.keys(propertySummaries).forEach((key) => delete propertySummaries[key])
@@ -271,5 +285,6 @@ export function createSolverTrackingState() {
     trackPriceChange,
     trackNewLeaseSigned,
     trackSilentDrop,
+    trackDiscrepancy,
   }
 }

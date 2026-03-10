@@ -70,14 +70,21 @@ def _return_to_dashboard(page: Page, dashboard_url: str) -> None:
     frame.goto(dashboard_url, wait_until="networkidle", timeout=15_000)
 
 
-def _click_stat_link(frame: Frame, label_text: str) -> None:
+def _click_stat_link(frame: Frame, label_text: str) -> bool:
     """
     Click the <a> in the <tr> whose static label matches label_text.
     The number inside the <a> is dynamic and is NOT used for targeting.
+
+    Returns True if the link was found and clicked, False if no link exists
+    (e.g. Alerts showing 0 — plain text, not a hyperlink).
     """
     locator = frame.locator(f"tr:has-text('{label_text}') a").first
-    locator.wait_for(state="visible", timeout=10_000)
-    locator.click()
+    try:
+        locator.wait_for(state="visible", timeout=10_000)
+        locator.click()
+        return True
+    except Exception:
+        return False
 
 
 def _wait_for_report_header(frame: Frame, header_text: str, timeout_ms: int = 20_000) -> None:
@@ -101,8 +108,21 @@ def _download_report(
 
     frame = _get_filter_frame(page)
 
-    # 1. Click the stat link (label-row targeted, number-agnostic)
-    _click_stat_link(frame, label_text)
+    # 1. Click the stat link (label-row targeted, number-agnostic).
+    #    Returns False when the count is 0 — Yardi shows plain text, not a link.
+    clicked = _click_stat_link(frame, label_text)
+
+    if not clicked:
+        # Zero-count: no link exists so no download is possible from Yardi.
+        # For Alerts this is the normal "zero alerts today" state — the Solver
+        # handles this by comparing which properties in the batch have no alerts
+        # report and deactivating their stale alerts.
+        # For any other report a missing link is unexpected; warn and skip.
+        if output_name == "Alerts":
+            print(f"[phase_a]   INFO: Alerts stat link not clickable (count = 0) — no file produced. Solver will infer zero alerts.")
+        else:
+            print(f"[phase_a]   WARNING: Stat link not found for {output_name} — skipping.")
+        return
 
     # 2. Wait for the report to render in-place inside the filter frame
     try:
@@ -116,12 +136,15 @@ def _download_report(
     archive_if_exists(dest, archive_dir)
 
     # 4. Click Excel button and capture download (page-level captures iframe downloads)
-    with page.expect_download(timeout=30_000) as dl_info:
-        frame.locator(EXCEL_ICON_SELECTOR).first.click()
+    try:
+        with page.expect_download(timeout=30_000) as dl_info:
+            frame.locator(EXCEL_ICON_SELECTOR).first.click()
 
-    download = dl_info.value
-    download.save_as(str(dest))
-    print(f"[phase_a]   Saved → {dest}")
+        download = dl_info.value
+        download.save_as(str(dest))
+        print(f"[phase_a]   Saved → {dest}")
+    except Exception as e:
+        print(f"[phase_a]   WARNING: Excel download failed for {output_name}: {e} — skipping.")
 
 
 def run_phase_a(

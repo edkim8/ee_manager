@@ -147,8 +147,55 @@ export function useAlertsSync() {
     }
   }
 
+  /**
+   * Deactivate ALL active alerts for a single property.
+   *
+   * Called when the Solver receives an explicit zero-alerts signal for a
+   * property (i.e. an import_staging row exists with raw_data: []).
+   * This is intentionally separate from syncAlerts() so the intent is clear
+   * at the call site.
+   */
+  async function clearAlerts(propertyCode: string): Promise<boolean> {
+    isSyncing.value = true
+    syncError.value = null
+    syncStats.value = null
+
+    try {
+      const { data: activeAlerts, error: fetchError } = await client
+        .from('alerts')
+        .select('id')
+        .eq('property_code', propertyCode)
+        .eq('is_active', true)
+
+      if (fetchError) throw fetchError
+
+      const idsToDeactivate = (activeAlerts || []).map((r: { id: string }) => r.id)
+
+      if (idsToDeactivate.length > 0) {
+        const { error: updateError } = await client
+          .from('alerts')
+          .update({ is_active: false })
+          .in('id', idsToDeactivate)
+
+        if (updateError) throw updateError
+      }
+
+      const dateStr = new Date().toISOString().split('T')[0]
+      syncStats.value = `Alert date: ${dateStr}, Alerts cleared: ${idsToDeactivate.length} (zero-alerts day)`
+      return true
+
+    } catch (err: any) {
+      console.error('Alerts clearAlerts Error:', err)
+      syncError.value = err.message || 'Failed to clear alerts'
+      return false
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
   return {
     syncAlerts,
+    clearAlerts,
     isSyncing,
     syncError,
     syncStats
