@@ -118,6 +118,22 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 ## 6. GIT & GITHUB PROTOCOLS (The "Shift" Loop)
 *Policy: One Foreman = One Active Branch.*
 
+### Daily Audit Branch Rule
+The `chore/daily-audit-YYYY-MM-DD` branch is **documentation-only**. It must contain only
+`DAILY_AUDIT_YYYY_MM_DD.md` and `HISTORY_INDEX.md`. If the audit surfaces a code fix:
+1. Complete the audit close first (Phase 2 — commit, push, PR, merge).
+2. Open a new session immediately after. Paste the relevant audit finding as context.
+3. Dispatch as a standard Golden/Silver task on a `fix/` or `feat/` branch from `main`.
+
+The solver/parsing context reloads in seconds. Branch discipline is permanent.
+
+**Exception:** A single-line patch with no test impact may be applied inline on the audit
+branch. Anything beyond that goes on its own branch.
+
+**Root cause this rule prevents:** Mixing code changes into an audit branch risks the session
+ending before Phase 2 runs — leaving uncommitted code stashed on a chore branch where it
+is invisible to the next session, and leaving the audit itself unarchived.
+
 ### Phase 1: Shift Start (Foreman-Driven)
 1.  **Foreman**: Asks User for the "Task Title/Branch Name".
 2.  **User**: Provides name (e.g., `feat/global-solver`).

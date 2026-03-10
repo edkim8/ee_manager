@@ -64,8 +64,15 @@ WORKFLOW PHASE 1: EVALUATION
 
 4. INITIAL EVALUATION REPORT:
    - Present a concise summary of findings in the terminal.
-   - >>> CRITICAL OBSTRUCTION: YOU MUST STOP HERE. Do NOT write the markdown file. Do NOT push to GitHub.
+   - >>> SAVE DRAFT FIRST, THEN STOP. Before pausing for user review:
+     * Write the evaluation findings to `docs/status/DAILY_AUDIT_YYYY_MM_DD.md` with the
+       header line: `> [DRAFT — Awaiting User Review]` at the top of the file.
+     * `git add docs/status/DAILY_AUDIT_YYYY_MM_DD.md`
+     * `git commit -m "chore: draft audit YYYY-MM-DD [pre-review]"`
+     * `git push -u origin chore/daily-audit-[YYYY-MM-DD]`
    - ASK THE USER TO REVIEW THE FINDINGS. State: "Please review the findings. When you are ready for me to finalize the report and push to GitHub, type 'Done'."
+   - NOTE: If the session is interrupted before "Done" is typed, the draft is already committed.
+     The next session can pull, read the draft, and resume from Phase 2 without data loss.
 
 WORKFLOW PHASE 2: CLOSING (ONLY AFTER USER TYPES "DONE")
 If the user provides feedback, incorporate it. When the user explicitly says "Done":
