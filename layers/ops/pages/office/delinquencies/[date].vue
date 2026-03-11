@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useSupabaseClient, useAsyncData, definePageMeta, navigateTo } from '#imports'
+import { useSupabaseClient, useAsyncData, definePageMeta, navigateTo, usePropertyState } from '#imports'
 
 definePageMeta({
   layout: 'dashboard'
@@ -10,18 +10,21 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const supabase = useSupabaseClient()
+const { activeProperty } = usePropertyState()
 const snapshotDate = route.params.date as string
 
-console.log('Detail page loaded')
-console.log('Snapshot date from route:', snapshotDate)
-
-// Fetch available dates for navigation
+// Fetch available dates for navigation — scoped to active property
 const { data: availableDates } = await useAsyncData('available-dates-nav', async () => {
-  const { data, error } = await supabase
+  const query = supabase
     .from('delinquencies')
     .select('created_at')
     .order('created_at', { ascending: false })
 
+  if (activeProperty.value) {
+    query.eq('property_code', activeProperty.value)
+  }
+
+  const { data, error } = await query
   if (error) return []
 
   const uniqueDates = [...new Set(
@@ -52,43 +55,25 @@ const navigateToDate = (date: string | null) => {
   }
 }
 
+import { computeSnapshotSummary } from '../../../utils/delinquencyUtils'
+
 // Parse date to validate and format
 const parsedDate = computed(() => {
-  try {
-    const date = new Date(snapshotDate)
-    console.log('Parsed date:', date)
-    return date
-  } catch (e) {
-    console.error('Date parsing error:', e)
-    return null
-  }
+  const date = new Date(snapshotDate)
+  return isNaN(date.getTime()) ? null : date
 })
 
-const isValidDate = computed(() => {
-  const valid = parsedDate.value && !isNaN(parsedDate.value.getTime())
-  console.log('Is valid date:', valid)
-  return valid
-})
+const isValidDate = computed(() => parsedDate.value !== null)
 
-// Fetch delinquencies for this specific snapshot date
+// Fetch delinquencies for this specific snapshot date — scoped to active property
 const { data: snapshot, status, error } = await useAsyncData(`delinquency-snapshot-${snapshotDate}`, async () => {
-  console.log('Starting data fetch...')
+  if (!isValidDate.value) return null
 
-  if (!isValidDate.value) {
-    console.error('Invalid date, skipping fetch')
-    return null
-  }
+  // Use noon-anchored parsing to avoid UTC midnight → wrong day in local timezone
+  const startOfDay = new Date(`${snapshotDate}T00:00:00`)
+  const endOfDay   = new Date(`${snapshotDate}T23:59:59.999`)
 
-  // Get all delinquencies created on this date
-  const startOfDay = new Date(snapshotDate)
-  startOfDay.setHours(0, 0, 0, 0)
-
-  const endOfDay = new Date(snapshotDate)
-  endOfDay.setHours(23, 59, 59, 999)
-
-  console.log('Fetching delinquencies between:', startOfDay.toISOString(), 'and', endOfDay.toISOString())
-
-  const { data, error } = await supabase
+  const query = supabase
     .from('delinquencies')
     .select(`
       *,
@@ -112,32 +97,16 @@ const { data: snapshot, status, error } = await useAsyncData(`delinquency-snapsh
     .lte('created_at', endOfDay.toISOString())
     .order('total_unpaid', { ascending: false })
 
-  if (error) {
-    console.error('Supabase query error:', error)
-    throw error
+  if (activeProperty.value) {
+    query.eq('property_code', activeProperty.value)
   }
 
-  console.log('Delinquencies fetched:', data?.length || 0)
-
-  // Calculate summary stats
-  const totalUnpaid = data.reduce((sum, d) => sum + Number(d.total_unpaid), 0)
-  const totalBalance = data.reduce((sum, d) => sum + Number(d.balance), 0)
-  const days0_30 = data.reduce((sum, d) => sum + Number(d.days_0_30), 0)
-  const days31_60 = data.reduce((sum, d) => sum + Number(d.days_31_60), 0)
-  const days61_90 = data.reduce((sum, d) => sum + Number(d.days_61_90), 0)
-  const days90Plus = data.reduce((sum, d) => sum + Number(d.days_90_plus), 0)
+  const { data, error } = await query
+  if (error) throw error
 
   return {
     delinquencies: data,
-    summary: {
-      totalUnpaid,
-      totalBalance,
-      days0_30,
-      days31_60,
-      days61_90,
-      days90Plus,
-      count: data.length
-    }
+    summary: computeSnapshotSummary(data),
   }
 })
 
@@ -150,7 +119,10 @@ const formatCurrency = (val: number) => {
 }
 
 const formatDate = (dateStr: string | Date) => {
-  return new Date(dateStr).toLocaleDateString('en-US', {
+  // For bare YYYY-MM-DD strings, append T12:00:00 to parse in local time rather than
+  // UTC midnight, which would shift the displayed date one day back in US time zones.
+  const d = typeof dateStr === 'string' ? new Date(`${dateStr}T12:00:00`) : dateStr
+  return d.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

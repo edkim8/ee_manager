@@ -90,10 +90,30 @@ export function useDelinquenciesSync() {
         }
       }
 
-      // 5. Handle Residents who were active but are MISSING from the report (Resolved)
-      activeMap.forEach((row, tenancyId) => {
+      // 5. Handle Residents who were active but are MISSING from the report (Resolved).
+      //    Insert a $0 tombstone record so historical snapshots can correctly exclude them
+      //    (the RPC filters total_unpaid > 0; without a tombstone the last positive-balance
+      //    record would inflate historical totals indefinitely).
+      const tombstonesToInsert: any[] = []
+      activeMap.forEach((activeRow, tenancyId) => {
         if (!processedTenancyIds.has(tenancyId)) {
-            toDeactivate.push(row.id)
+          toDeactivate.push(activeRow.id)
+          // Tombstone: same identity fields, all monetary columns zeroed, is_active=true.
+          tombstonesToInsert.push({
+            tenancy_id:    activeRow.tenancy_id,
+            property_code: activeRow.property_code,
+            unit_id:       activeRow.unit_id,
+            unit_name:     activeRow.unit_name,
+            resident:      activeRow.resident,
+            total_unpaid:  0,
+            days_0_30:     0,
+            days_31_60:    0,
+            days_61_90:    0,
+            days_90_plus:  0,
+            prepays:       0,
+            balance:       0,
+            is_active:     true,
+          })
         }
       })
 
@@ -107,17 +127,27 @@ export function useDelinquenciesSync() {
         if (deleteError) throw deleteError
       }
 
+      // Insert new/updated records
       if (toInsert.length > 0) {
         const { error: insertError } = await client
           .from('delinquencies')
           .insert(toInsert)
-        
+
         if (insertError) throw insertError
+      }
+
+      // Insert tombstone records for resolved tenancies (after deactivation)
+      if (tombstonesToInsert.length > 0) {
+        const { error: tombstoneError } = await client
+          .from('delinquencies')
+          .insert(tombstonesToInsert)
+
+        if (tombstoneError) throw tombstoneError
       }
 
       // 7. Stats
       const dateStr = new Date().toISOString().split('T')[0]
-      let stats = `Snapshot Date: ${dateStr}, Updated/New: ${toInsert.length}, Resolved: ${toDeactivate.length - (toInsert.length > 0 ? toInsert.filter(i => activeMap.has(i.tenancy_id)).length : 0)}`
+      let stats = `Snapshot Date: ${dateStr}, Updated/New: ${toInsert.length}, Resolved: ${tombstonesToInsert.length}`
       
       if (missingTenancyIds.length > 0) {
         stats += ` | SKIPPED: ${missingTenancyIds.length} unknown residents (check console)`

@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useSupabaseClient, usePropertyState } from '#imports'
 
 export interface DelinquencySummary {
@@ -30,6 +30,13 @@ export interface DailyTrendPoint {
   balance_sum: number
 }
 
+export interface ResidentHistoryRecord {
+  tenancy_id: string
+  months_on_list: number
+  peak_unpaid: number
+  prev_month_unpaid: number | null
+}
+
 export function useDelinquenciesAnalysis() {
   const supabase = useSupabaseClient()
   const { activeProperty } = usePropertyState()
@@ -37,13 +44,17 @@ export function useDelinquenciesAnalysis() {
   const summary = ref<DelinquencySummary | null>(null)
   const snapshots = ref<DelinquencySnapshot[]>([])
   const dailyTrend = ref<DailyTrendPoint[]>([])
-  const loading = ref(false)
+  const residentHistory = ref<ResidentHistoryRecord[]>([])
+  // Counter-based loading: incremented per in-flight request, loading === true
+  // while any request is pending. Prevents premature false from parallel fetches.
+  const _loadingCount = ref(0)
+  const loading = computed(() => _loadingCount.value > 0)
   const error = ref<string | null>(null)
 
   async function fetchSummary() {
     if (!activeProperty.value) return
-    
-    loading.value = true
+
+    _loadingCount.value++
     try {
       const { data, error: err } = await supabase
         .from('view_delinquencies_current_summary')
@@ -54,17 +65,16 @@ export function useDelinquenciesAnalysis() {
       if (err && err.code !== 'PGRST116') throw err // Ignore "no rows found" error
       summary.value = data || null
     } catch (err: any) {
-      console.error('Error fetching delinquency summary:', err)
       error.value = err.message
     } finally {
-      loading.value = false
+      _loadingCount.value--
     }
   }
 
   async function fetchSnapshots(monthsCount: number = 4) {
     if (!activeProperty.value) return
-    
-    loading.value = true
+
+    _loadingCount.value++
     try {
       const { data, error: err } = await supabase
         .rpc('get_delinquencies_monthly_26th_snapshots', {
@@ -75,30 +85,49 @@ export function useDelinquenciesAnalysis() {
       if (err) throw err
       snapshots.value = data || []
     } catch (err: any) {
-      console.error('Error fetching delinquency snapshots:', err)
       error.value = err.message
     } finally {
-      loading.value = false
+      _loadingCount.value--
     }
   }
 
   async function fetchDailyTrend() {
     if (!activeProperty.value) return
-    
-    loading.value = true
+
+    _loadingCount.value++
     try {
       const { data, error: err } = await supabase
         .from('view_delinquencies_daily_trend')
         .select('*')
         .eq('property_code', activeProperty.value)
+        .order('snapshot_date', { ascending: true })
 
       if (err) throw err
       dailyTrend.value = data || []
     } catch (err: any) {
-      console.error('Error fetching daily trend:', err)
       error.value = err.message
     } finally {
-      loading.value = false
+      _loadingCount.value--
+    }
+  }
+
+  async function fetchResidentHistory(monthsCount: number = 12) {
+    if (!activeProperty.value) return
+
+    _loadingCount.value++
+    try {
+      const { data, error: err } = await supabase
+        .rpc('get_delinquency_resident_history', {
+          p_property_code: activeProperty.value,
+          p_months_count: monthsCount
+        })
+
+      if (err) throw err
+      residentHistory.value = data || []
+    } catch (err: any) {
+      error.value = err.message
+    } finally {
+      _loadingCount.value--
     }
   }
 
@@ -106,10 +135,12 @@ export function useDelinquenciesAnalysis() {
     summary,
     snapshots,
     dailyTrend,
+    residentHistory,
     loading,
     error,
     fetchSummary,
     fetchSnapshots,
-    fetchDailyTrend
+    fetchDailyTrend,
+    fetchResidentHistory
   }
 }
