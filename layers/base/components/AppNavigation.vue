@@ -228,6 +228,11 @@ const navigationItems = computed(() => {
       label: 'Dashboard',
       icon: 'i-heroicons-home',
       to: '/',
+      children: [
+        { label: 'Dashboard', icon: 'i-heroicons-home', to: '/' },
+        { label: 'Daily Report', icon: 'i-heroicons-document-chart-bar', to: '/solver/report' },
+        { label: 'Report Guide', icon: 'i-heroicons-question-mark-circle', to: '/solver/report-help' },
+      ],
     },
     {
       label: 'Assets',

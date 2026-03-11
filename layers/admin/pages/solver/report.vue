@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'admin' })
+definePageMeta({ layout: 'dashboard' })
 
 const { data, pending, error, refresh } = await useFetch('/api/solver/email-preview', {
   lazy: true,
@@ -28,7 +28,7 @@ const { data, pending, error, refresh } = await useFetch('/api/solver/email-prev
           icon="i-heroicons-question-mark-circle"
           variant="soft"
           color="gray"
-          to="/admin/solver/report-help"
+          to="/solver/report-help"
         >
           Report Guide
         </UButton>

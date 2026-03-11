@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'admin' })
+definePageMeta({ layout: 'dashboard' })
 </script>
 
 <template>
@@ -9,7 +9,7 @@ definePageMeta({ layout: 'admin' })
         icon="i-heroicons-arrow-left"
         variant="ghost"
         color="gray"
-        to="/admin/solver/report"
+        to="/solver/report"
       />
       <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Daily Solver Report — Guide</h1>
@@ -183,7 +183,7 @@ definePageMeta({ layout: 'admin' })
     </div>
 
     <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
-      <UButton to="/admin/solver/report" icon="i-heroicons-arrow-left">
+      <UButton to="/solver/report" icon="i-heroicons-arrow-left">
         Back to Live Report
       </UButton>
     </div>

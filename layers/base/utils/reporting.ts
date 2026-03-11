@@ -111,8 +111,8 @@ export function generateHighFidelityHtmlReport(
                 </div>
                 ${baseUrl ? `
                 <div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
-                    <a href="${baseUrl}/admin/solver/report" style="display: inline-block; background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; border: 1px solid rgba(255,255,255,0.3);">📊 Live Report →</a>
-                    <a href="${baseUrl}/admin/solver/report-help" style="display: inline-block; background: rgba(255,255,255,0.1); color: white; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; border: 1px solid rgba(255,255,255,0.25);">❓ Report Guide</a>
+                    <a href="${baseUrl}/solver/report" style="display: inline-block; background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; border: 1px solid rgba(255,255,255,0.3);">📊 Live Report →</a>
+                    <a href="${baseUrl}/solver/report-help" style="display: inline-block; background: rgba(255,255,255,0.1); color: white; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; border: 1px solid rgba(255,255,255,0.25);">❓ Report Guide</a>
                 </div>
                 ` : ''}
             </div>
