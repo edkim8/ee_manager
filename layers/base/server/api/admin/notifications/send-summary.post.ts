@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { Database } from '../../../../../types/supabase'
-import { generateHighFidelityHtmlReport } from '../../../../utils/reporting'
+import { generateHighFidelityHtmlReport, type PropertySnapshotDeltas, type PropertyRenewalCountsMap } from '../../../../utils/reporting'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -43,57 +43,38 @@ export default defineEventHandler(async (event) => {
     if (eventsError) throw eventsError
     const allEvents = (events || []) as any[]
 
-    // 3. Fetch Operational Data (for summary boxes)
+    // 3. Fetch Operational Data — include property_code in all selects so we can
+    //    scope each recipient's summary to only their subscribed properties.
 
-    // 3a. Alerts Summary
+    const uploadDateStr = new Date(run.upload_date).toDateString()
+
+    // 3a. Alerts
     const { data: alertsData } = await client
       .from('view_table_alerts_unified')
-      .select('is_active, source, created_at')
+      .select('property_code, is_active, created_at')
       .in('property_code', propertiesProcessed)
 
-    const alertsActive = alertsData?.filter(a => a.is_active).length || 0
-    const alertsNewToday = alertsData?.filter(a => {
-      const createdDate = new Date(a.created_at).toDateString()
-      const today = new Date().toDateString()
-      return createdDate === today
-    }).length || 0
-
-    // 3b. Work Orders Summary
+    // 3b. Work Orders (include call_date to compute overdue = open > 30 days)
     const { data: workOrdersData } = await client
       .from('work_orders')
-      .select('status, completion_date, is_active')
+      .select('property_code, is_active, completion_date, created_at, call_date')
       .in('property_code', propertiesProcessed)
 
-    const workOrdersOpen = workOrdersData?.filter(wo => wo.is_active && !wo.completion_date).length || 0
-    const workOrdersCompleted = workOrdersData?.filter(wo => {
-      if (!wo.completion_date) return false
-      const completedDate = new Date(wo.completion_date).toDateString()
-      const today = new Date().toDateString()
-      return completedDate === today
-    }).length || 0
-
-    // 3c. MakeReady Flags Summary
+    // 3c. MakeReady Flags
     const { data: makeReadyData } = await client
       .from('unit_flags')
-      .select('flag_type, severity, resolved_at')
+      .select('property_code, severity, resolved_at')
       .in('property_code', propertiesProcessed)
       .ilike('flag_type', 'makeready%')
 
-    const makeReadyActive = makeReadyData?.filter(f => !f.resolved_at).length || 0
-    const makeReadyOverdue = makeReadyData?.filter(f => !f.resolved_at && f.severity === 'error').length || 0
-
-    // 3d. Delinquencies Summary
+    // 3d. Delinquencies (include aging buckets for 30+ calculation)
     const { data: delinquenciesData } = await client
       .from('delinquencies')
-      .select('total_unpaid, days_90_plus, is_active')
+      .select('property_code, total_unpaid, days_31_60, days_61_90, days_90_plus')
       .in('property_code', propertiesProcessed)
       .eq('is_active', true)
 
-    const delinquenciesCount = delinquenciesData?.length || 0
-    const delinquenciesTotalAmount = delinquenciesData?.reduce((sum, d) => sum + (Number(d.total_unpaid) || 0), 0) || 0
-    const delinquenciesOver90 = delinquenciesData?.filter(d => Number(d.days_90_plus) > 0).length || 0
-
-    // 3e. Technical Health (Import Staging)
+    // 3e. Technical Health (run-wide, not property-scoped)
     const { data: stagingData } = await client
       .from('import_staging')
       .select('report_type, error_log')
@@ -102,37 +83,66 @@ export default defineEventHandler(async (event) => {
     const filesProcessed = stagingData?.length || 0
     const filesWithErrors = stagingData?.filter(s => s.error_log).length || 0
 
-    // Build operational summary object
-    const operationalSummary = {
-      alerts: {
-        active: alertsActive,
-        newToday: alertsNewToday,
-        closedToday: 0 // Not tracking closed alerts yet
-      },
-      workOrders: {
-        open: workOrdersOpen,
-        newToday: 0, // Not tracking "new" separately yet
-        completedToday: workOrdersCompleted
-      },
-      makeReady: {
-        active: makeReadyActive,
-        overdue: makeReadyOverdue,
-        readyThisWeek: 0 // Future enhancement
-      },
-      delinquencies: {
-        count: delinquenciesCount,
-        totalAmount: delinquenciesTotalAmount,
-        over90Days: delinquenciesOver90
-      },
-      technical: {
-        filesProcessed,
-        filesWithErrors,
-        status: run.status,
-        errorMessage: run.error_message
+    // 3f. Availability Snapshots — today and yesterday, for day-over-day deltas
+    const snapshotDate = new Date(run.upload_date).toISOString().split('T')[0]
+    const prevDate = new Date(run.upload_date)
+    prevDate.setDate(prevDate.getDate() - 1)
+    const prevDateStr = prevDate.toISOString().split('T')[0]
+
+    const { data: snapshotRows } = await client
+      .from('availability_snapshots')
+      .select('property_code, snapshot_date, available_count, avg_contracted_rent')
+      .in('property_code', propertiesProcessed)
+      .in('snapshot_date', [snapshotDate, prevDateStr])
+
+    // Build lookup maps: property_code → snapshot for each date
+    const todaySnaps = new Map(
+      (snapshotRows || [])
+        .filter(r => r.snapshot_date === snapshotDate)
+        .map(r => [r.property_code, r])
+    )
+    const prevSnaps = new Map(
+      (snapshotRows || [])
+        .filter(r => r.snapshot_date === prevDateStr)
+        .map(r => [r.property_code, r])
+    )
+
+    // Build deltas for all processed properties
+    const allSnapshotDeltas: PropertySnapshotDeltas = {}
+    for (const code of propertiesProcessed) {
+      const today = todaySnaps.get(code)
+      if (!today) continue
+      const prev = prevSnaps.get(code)
+      allSnapshotDeltas[code] = {
+        available_count: today.available_count ?? 0,
+        available_delta: prev != null ? (today.available_count ?? 0) - (prev.available_count ?? 0) : null,
+        avg_contracted_rent: today.avg_contracted_rent ?? 0,
+        rent_delta: prev != null ? Math.round((today.avg_contracted_rent ?? 0) - (prev.avg_contracted_rent ?? 0)) : null,
       }
     }
 
-    // 3. Fetch all active daily_summary recipients for these properties
+    // 3g. Renewal worksheet items — pending (not offered yet) and offered (awaiting response)
+    const { data: renewalItemsData } = await client
+      .from('renewal_worksheet_items')
+      .select('property_code, status')
+      .in('property_code', propertiesProcessed)
+      .in('status', ['pending', 'offered'])
+
+    // Build per-property renewal counts for all processed properties
+    const allRenewalCounts: PropertyRenewalCountsMap = {}
+    for (const code of propertiesProcessed) {
+      const items = renewalItemsData?.filter(r => r.property_code === code) || []
+      allRenewalCounts[code] = {
+        pending: items.filter(r => r.status === 'pending').length,
+        offered: items.filter(r => r.status === 'offered').length,
+      }
+    }
+
+    // Overdue threshold: open WOs with call_date > 3 days before upload_date
+    const overdueThreshold = new Date(run.upload_date)
+    overdueThreshold.setDate(overdueThreshold.getDate() - 3)
+
+    // 4. Fetch all active daily_summary recipients for these properties
     const { data: recipients, error: recError } = await client
       .from('property_notification_recipients')
       .select('email, property_code')
@@ -162,29 +172,79 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    const summaryData = run.summary as any
     const results = []
+    const baseUrl = getRequestURL(event).origin
 
-    // 6. Send consolidated emails
+    // 6. Send consolidated emails — each recipient gets a summary scoped to their properties
     for (const [email, propertyCodes] of Object.entries(emailToProperties)) {
-      // Filter events and summary for this recipient's properties
       const recipientEvents = allEvents.filter(e => propertyCodes.includes(e.property_code))
-      
-      // Create a scoped run object for the generator
+
       const scopedRun = {
         ...run,
         properties_processed: propertyCodes,
-        // We keep the main summary but the generator only iterates over properties_processed
       }
 
-      const baseUrl = getRequestURL(event).origin
-      const htmlContent = generateHighFidelityHtmlReport(scopedRun, recipientEvents, operationalSummary, baseUrl)
+      // Build operational summary scoped to this recipient's properties only
+      const ra = alertsData?.filter(a => propertyCodes.includes(a.property_code)) || []
+      const rwo = workOrdersData?.filter(w => propertyCodes.includes(w.property_code)) || []
+      const rmr = makeReadyData?.filter(f => propertyCodes.includes(f.property_code)) || []
+      const rd = delinquenciesData?.filter(d => propertyCodes.includes(d.property_code)) || []
+
+      const scopedOperationalSummary = {
+        alerts: {
+          active: ra.filter(a => a.is_active).length,
+          newToday: ra.filter(a => a.created_at && new Date(a.created_at).toDateString() === uploadDateStr).length,
+          closedToday: 0,
+        },
+        workOrders: {
+          open: rwo.filter(w => w.is_active && !w.completion_date).length,
+          newToday: rwo.filter(w => w.created_at && new Date(w.created_at).toDateString() === uploadDateStr).length,
+          completedToday: rwo.filter(w => w.completion_date && new Date(w.completion_date).toDateString() === uploadDateStr).length,
+          overdueOpen: rwo.filter(w => {
+            if (!w.is_active || w.completion_date) return false
+            const callDate = w.call_date ? new Date(w.call_date) : null
+            return callDate != null && callDate < overdueThreshold
+          }).length,
+        },
+        makeReady: {
+          active: rmr.filter(f => !f.resolved_at).length,
+          overdue: rmr.filter(f => !f.resolved_at && f.severity === 'error').length,
+          readyThisWeek: 0,
+        },
+        delinquencies: {
+          count: rd.length,
+          totalAmount: rd.reduce((sum, d) => sum + (Number(d.total_unpaid) || 0), 0),
+          over90Days: rd.filter(d => Number(d.days_90_plus) > 0).length,
+          amount30Plus: rd.reduce((sum, d) =>
+            sum + (Number(d.days_31_60) || 0) + (Number(d.days_61_90) || 0) + (Number(d.days_90_plus) || 0), 0),
+        },
+        technical: {
+          filesProcessed,
+          filesWithErrors,
+          status: run.status,
+          errorMessage: run.error_message,
+        },
+      }
+
+      // Scope snapshot deltas and renewal counts to this recipient's properties
+      const scopedSnapshotDeltas: PropertySnapshotDeltas = Object.fromEntries(
+        propertyCodes
+          .filter(code => allSnapshotDeltas[code])
+          .map(code => [code, allSnapshotDeltas[code]])
+      )
+      const scopedRenewalCounts: PropertyRenewalCountsMap = Object.fromEntries(
+        propertyCodes
+          .filter(code => allRenewalCounts[code])
+          .map(code => [code, allRenewalCounts[code]])
+      )
+
+      const htmlContent = generateHighFidelityHtmlReport(scopedRun, recipientEvents, scopedOperationalSummary, baseUrl, scopedSnapshotDeltas, scopedRenewalCounts)
 
       try {
         await transporter.sendMail({
           from: `"${config.public.mailersendSmtpName || 'EE Manager'}" <${config.public.mailersendUsername || 'noreply@ee-manager.com'}>`,
           to: email,
-          subject: `Daily Solver Summary - ${new Date().toLocaleDateString()}`,
+          subject: `Daily Solver Summary — ${new Date(run.upload_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
           html: htmlContent
         })
         results.push({ email, status: 'sent', propertyCount: propertyCodes.length })
