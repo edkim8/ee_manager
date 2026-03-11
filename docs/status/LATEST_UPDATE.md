@@ -1,126 +1,132 @@
-# Field Report — H-083/H-084: Daily Solver Email — Full Refinement + Live Report Page
+# Field Report — H-083 / H-084: Daily Solver Email + Live Report Page
 
 **Date:** 2026-03-11
-**Session:** H-083 (Tier 2 Builder — Goldfish) + H-084 continuation
-**Branch:** main
-**Commit:** `6f22798`
+**Sessions:** H-083 + H-084
+**Branch:** main (direct commits)
+**Commits:** `6f22798`, `6baa1e5`, `a92ee10`
 **Status:** COMPLETE ✓
+**Tests:** 793/793 passing
 
 ---
 
-## Objective
+## Summary
 
-Refine the Daily Solver Email Summary for maximum operational clarity, fix scoping bugs, add day-over-day snapshot deltas, reorganize property cards, add Live Report and Report Guide pages in-app, and surface action buttons in the email header.
+Two-session build:
+- **H-083** — Refined the Daily Solver Email from the ground up: removed noise, fixed a property-scoping bug that was sending all-5-property operational data to recipients who only subscribe to 2 properties, added day-over-day availability deltas, added renewal pipeline counts, reorganized property cards into two focused modules, fixed email subject date.
+- **H-084** — Created a live in-app report page and context guide accessible to all authenticated users. Added both pages to the Dashboard nav dropdown.
 
 ---
 
-## Changes Made
+## Modified Files
 
 ### `layers/base/utils/reporting.ts`
 
-**Removed (noise / dead code):**
+**Removed:**
 - `renderStatCard()` + "System Overview - Details" stat cards block
 - `renderAvailabilitiesSection()` — redundant stub
 - `renderLeaseSignedRow()` + `lease_signed` event section — dead event type
 
 **Added:**
-- `👤 New Residents` event table — `new_tenancy` events now surface as a full detail table
-- Individual resident detail rows in Notices section (no more "coming soon" placeholder)
-- New types: `SnapshotDelta`, `PropertySnapshotDeltas`, `PropertyRenewalCounts`, `PropertyRenewalCountsMap`
-- `renderDelta(delta, invert?)` and `renderRentDelta(delta)` helpers for color-coded deltas
-- `OperationalSummary.workOrders.overdueOpen?: number` — open WOs > 3 days
-- `OperationalSummary.delinquencies.amount30Plus?: number` — 30+ day aging bucket total
-- Header action buttons: `📊 Live Report →` and `❓ Report Guide` (rendered only when `baseUrl` is provided)
+- `👤 New Residents` event table — `new_tenancy` events with full detail (Resident / Unit / Property / Status / Move-In)
+- Individual resident detail rows in Notices section (removed "coming soon" placeholder)
+- Interfaces: `SnapshotDelta`, `PropertySnapshotDeltas`, `PropertyRenewalCounts`, `PropertyRenewalCountsMap`
+- `OperationalSummary.workOrders.overdueOpen?: number`
+- `OperationalSummary.delinquencies.amount30Plus?: number`
+- Delta helpers: `renderDelta(delta, invert?)` and `renderRentDelta(delta)`
+- Header action buttons: `📊 Live Report →` (`/solver/report`) and `❓ Report Guide` (`/solver/report-help`) — rendered only when `baseUrl` is provided
 
 **Restructured:**
-- Property cards split into **Availabilities** module (available_count + delta, applications, notices, avg contracted rent + delta) and **Renewals** module (Offer Pending, Awaiting Response, Completed This Run)
-- Email section order: ① Property Breakdown → ② Operational Summary (conditional) → ③ Today's Activity → ④ Technical Health
-- Operational Summary uses 2-column grid; Delinquencies shows 30+ Days amount; Work Orders shows "Open > 3 Days"
-- Header date: `"Monday, March 10, 2026"` (full weekday); batch ID is secondary
+- Property cards split into **Availabilities** module and **Renewals** module:
+  - Availabilities: available units count + delta, applications, notices, avg contracted rent + delta
+  - Renewals: Offer Pending (amber), Awaiting Response (indigo), Completed This Run (green)
+- Email section order: Property Breakdown → Operational Summary (conditional) → Today's Activity → Technical Health
+- Operational Summary: Delinquencies shows 30+ Days amount; Work Orders shows "Open > 3 Days"
+- Header: full weekday date format (`Monday, March 10, 2026`); batch ID is secondary
 - Fixed `new Set<string>(...)` for TS strict mode
 
 ### `layers/base/server/api/admin/notifications/send-summary.post.ts`
 
 **Bug fix — operational summary scoping:**
-- All 4 operational queries now include `property_code` in `.select()`
-- Operational summary computation moved inside the per-recipient loop using filtered subsets (`ra`, `rwo`, `rmr`, `rd`)
-- Previously: all-5-property summary sent to RS+SB-only recipients. Now correctly scoped.
+All 4 operational queries previously omitted `property_code` from `.select()`. Fixed — `property_code` added to every select, operational summary computation moved inside the per-recipient loop.
 
-**Added:**
-- Availability snapshots query (today + yesterday) → builds `allSnapshotDeltas` → scoped per recipient
-- `renewal_worksheet_items` query (pending + offered) → builds `allRenewalCounts` → scoped per recipient
-- `call_date` in work orders select; overdue threshold = 3 days before upload date
-- `days_31_60`, `days_61_90`, `days_90_plus` in delinquencies select; computes `amount30Plus`
-- `created_at` in work orders select; `newToday` now computed (was hardcoded 0)
+**Added queries:**
+- `availability_snapshots` (today + yesterday) → `allSnapshotDeltas` → scoped per recipient
+- `renewal_worksheet_items` (pending + offered) → `allRenewalCounts` → scoped per recipient
+
+**Added fields:**
+- `call_date` on work orders → `overdueOpen` (threshold: 3 days before upload_date)
+- `days_31_60`, `days_61_90`, `days_90_plus` on delinquencies → `amount30Plus`
+- `created_at` on work orders → `newToday` (was hardcoded 0)
 
 **Fixed:**
-- Email subject uses `run.upload_date` (not send time)
-- "Today" comparisons use `uploadDateStr` (from `run.upload_date`, not `new Date()`)
+- Email subject uses `run.upload_date`, not `new Date()` (wrong when sent after midnight)
+- All "today" comparisons use `uploadDateStr` from `run.upload_date`
 
-### New: `scripts/preview-email.ts`
+### `layers/base/components/AppNavigation.vue`
+- Dashboard nav item converted to dropdown with three children: Dashboard, Daily Report, Report Guide
+- Daily Report + Report Guide visible to all authenticated users
 
-Local preview generator — `npx tsx scripts/preview-email.ts` → `/tmp/solver-email-preview.html`
+### `tests/unit/base/reporting.test.ts`
+- 21 new tests for `generateHighFidelityHtmlReport` (was 21 for markdown only)
+- Groups: structure, event tables, notices, operational summary, property filtering, snapshot deltas
 
-Includes realistic 5-property mock data with snapshotDeltas, renewalCounts, and full event set.
+---
 
-### New: `layers/admin/server/api/solver/email-preview.get.ts`
+## New Files
 
-GET route returning `{ html, run }` for the most recent completed solver run.
-- Auth: service role (no email sending)
-- Fetches all operational data in parallel (`Promise.all`)
-- Returns full HTML from `generateHighFidelityHtmlReport`
+### `scripts/preview-email.ts`
+Local HTML preview generator. Run: `npx tsx scripts/preview-email.ts` → `/tmp/solver-email-preview.html`
 
-### New: `layers/admin/pages/admin/solver/report.vue`
+Realistic 5-property mock data including snapshotDeltas, renewalCounts, and full event set.
 
-In-app live report page at `/admin/solver/report`.
-- Calls `/api/solver/email-preview`
+### `layers/admin/server/api/solver/email-preview.get.ts`
+`GET /api/solver/email-preview` — returns `{ html, run }` for the most recent completed solver run.
+- Uses `serverSupabaseServiceRole` (auth-gated, no email sending)
+- All operational queries in parallel via `Promise.all`
+- Same data pipeline as `send-summary.post.ts`
+
+### `layers/admin/pages/solver/report.vue`
+Page at `/solver/report` — Live Solver Report.
+- Calls `/api/solver/email-preview` via `useFetch`
 - Renders email HTML inline via `v-html`
-- Includes Refresh button and Report Guide link
+- Refresh button + Report Guide link
+- `layout: 'dashboard'`, no admin middleware — accessible to all authenticated users
 
-### New: `layers/admin/pages/admin/solver/report-help.vue`
-
-Context guide at `/admin/solver/report-help` explaining every section:
-- Property Breakdown (Availabilities module, Renewals module)
-- Operational Summary (Alerts, Work Orders, MakeReady, Delinquencies)
-- Today's Activity (New Residents, Renewals, Price Changes, Applications, Notices)
-- Technical Health
-- Property Codes reference table
+### `layers/admin/pages/solver/report-help.vue`
+Page at `/solver/report-help` — Context Guide.
+- Explains every section: Property Breakdown (Availabilities + Renewals modules), Operational Summary (4 boxes), Today's Activity (5 event types), Technical Health
+- Property Codes reference table (RS/SB/CV/OB/WO)
+- `layout: 'dashboard'`, no admin middleware — accessible to all authenticated users
 
 ---
 
-## Tests
+## Access Model
 
-**File:** `tests/unit/base/reporting.test.ts`
+| Page | URL | Who can access |
+|---|---|---|
+| Live Report | `/solver/report` | All authenticated users |
+| Report Guide | `/solver/report-help` | All authenticated users |
+| Email Preview API | `/api/solver/email-preview` | All authenticated users (service role DB access, no RLS exposure) |
 
-793/793 tests passing across 31 files.
-
-42 tests in `reporting.test.ts` (21 new for `generateHighFidelityHtmlReport`):
-
-| Group | Tests |
-|---|---|
-| Structure | Date in header, batch ID, Property Breakdown, property names, footer |
-| Event tables | New residents, renewals, price changes, no stubs, no "coming soon", empty-event omission |
-| Notices | Aggregate summary, individual rows, multi-notice aggregation, omitted when empty |
-| Operational summary | All 4 boxes, delinquency currency, Technical Health, failed status, omitted when not provided |
-| Property filtering | Unknown codes excluded |
-| Snapshot deltas | available_count display, negative delta (green), zero = "no change", rent delta colors, null omitted, fallback to event counts |
+The `admin` middleware in `layers/admin/middleware/admin.ts` is opt-in per page. These pages do not declare it.
 
 ---
 
-## Email Structure
+## Email Structure (Final)
 
 1. Header (date prominent, batch ID secondary, **Live Report + Report Guide buttons**)
-2. Property Breakdown (Availabilities + Renewals modules per property)
-3. Operational Summary (conditional — only if provided)
-4. Today's Activity (👤 New Residents, 🔄 Renewals, 💰 Price Changes, 📝 Applications, 📋 Notices)
+2. Property Breakdown — one card per property, two modules each:
+   - Availabilities: units (snapshot+delta), applications, notices, avg rent (snapshot+delta)
+   - Renewals: Offer Pending / Awaiting Response / Completed This Run
+3. Operational Summary (conditional — Alerts, Work Orders, MakeReady, Delinquencies)
+4. Today's Activity (👤 New Residents · 🔄 Renewals · 💰 Price Changes · 📝 Applications · 📋 Notices)
 5. Technical Health (conditional)
 6. Footer
 
 ---
 
-## App Pages Added
+## Tests
 
-| Route | Purpose |
-|---|---|
-| `/admin/solver/report` | Live in-app render of the latest solver email |
-| `/admin/solver/report-help` | Context guide explaining every section |
+```
+793 tests passing across 31 files
+```
