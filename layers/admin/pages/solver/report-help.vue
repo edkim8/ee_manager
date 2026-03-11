@@ -170,11 +170,11 @@ definePageMeta({ layout: 'dashboard' })
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-              <tr><td class="py-2 pr-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">RS</td><td class="py-2 text-gray-700 dark:text-gray-300">The Residences at Stonebridge</td></tr>
-              <tr><td class="py-2 pr-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">SB</td><td class="py-2 text-gray-700 dark:text-gray-300">Stonebridge</td></tr>
-              <tr><td class="py-2 pr-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">CV</td><td class="py-2 text-gray-700 dark:text-gray-300">Coeur Vieux — uses AIRM (automated revenue management)</td></tr>
-              <tr><td class="py-2 pr-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">OB</td><td class="py-2 text-gray-700 dark:text-gray-300">One Biscayne</td></tr>
-              <tr><td class="py-2 pr-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">WO</td><td class="py-2 text-gray-700 dark:text-gray-300">Woodlands Office</td></tr>
+              <tr><td class="py-2 pr-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">RS</td><td class="py-2 text-gray-700 dark:text-gray-300">Residences at 4225</td></tr>
+              <tr><td class="py-2 pr-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">SB</td><td class="py-2 text-gray-700 dark:text-gray-300">Stonebridge Ranch</td></tr>
+              <tr><td class="py-2 pr-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">CV</td><td class="py-2 text-gray-700 dark:text-gray-300">City View — uses AIRM (automated revenue management)</td></tr>
+              <tr><td class="py-2 pr-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">OB</td><td class="py-2 text-gray-700 dark:text-gray-300">Ocean Breeze</td></tr>
+              <tr><td class="py-2 pr-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">WO</td><td class="py-2 text-gray-700 dark:text-gray-300">Whispering Oaks</td></tr>
             </tbody>
           </table>
         </div>
