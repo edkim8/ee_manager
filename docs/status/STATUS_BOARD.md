@@ -144,12 +144,14 @@
 - Database queries optimized for renewal tracking (fetch tenancy + resident data)
 
 ## Next Priority (Foreman Oversight)
-> **Goal**: Operational Detail Pages & Enhanced Tracking
+> **Goal**: Solver Email Report UX Enhancements & Inventory Barcodes
 > **Action**:
-> 1. Create holding pages for operational links (Alerts, Work Orders, MakeReady, Delinquencies)
-> 2. Enhance tracking to capture operational counts for summary boxes
-> 3. Add 30-day delinquency breakdown calculations
-> 4. Test enhanced email reports with next daily upload
+> 1. Add "Daily Report" link to dashboard widgets (surface "View Today's Report" card if run exists)
+> 2. Enhance Email recipient management UX (add "Send Test Report" button scoped to single property in `/admin/notifications`)
+> 3. Add run selector to Report page (date picker to navigate previous runs via `solver_runs` query)
+> 4. Add pre-commit validator in Applications to warn if lease_start_date > 7 days in the past (Architectural Optimization from H-085)
+> 5. Build Barcode Generation layout for Brother QL-810Wc (DK-1201 labels). Include QR code (left) + 4 lines text: Property Name, ID, Item, Installed Date.
+> 6. Update Inventory Catalog DB: add `expected_life_years` override to `inventory_item_definitions` and allow `property_code='ALL'` for global shared parts.
 
 ## Legend
 - **COMPLETED**: Deployed & Verified.

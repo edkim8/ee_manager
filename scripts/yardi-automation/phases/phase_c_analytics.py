@@ -107,6 +107,10 @@ def _run_delinquencies(
 
     # Report Type: Financial Aged Receivable
     frame.locator("#cmbReportType_DropDownList").select_option(label="Financial Aged Receivable")
+    
+    # WAIT FOR POSTBACK: Yardi reloads the iframe when Report Type changes.
+    # If we select the next dropdown too quickly, the reload wipes it out.
+    page.wait_for_timeout(2000)
 
     # Summary Type: Resident
     frame.locator("#cmbGroupby_DropDownList").select_option(label="Resident")
