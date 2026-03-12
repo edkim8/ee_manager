@@ -150,8 +150,8 @@
 > 2. Enhance Email recipient management UX (add "Send Test Report" button scoped to single property in `/admin/notifications`)
 > 3. Add run selector to Report page (date picker to navigate previous runs via `solver_runs` query)
 > 4. Add pre-commit validator in Applications to warn if lease_start_date > 7 days in the past (Architectural Optimization from H-085)
-> 5. Build Barcode Generation layout for Brother QL-810Wc (DK-1201 labels). Include QR code (left) + 4 lines text: Property Name, ID, Item, Installed Date.
-> 6. Update Inventory Catalog DB: add `expected_life_years` override to `inventory_item_definitions` and allow `property_code='ALL'` for global shared parts.
+> 5. Update Inventory Catalog DB: add `expected_life_years` override to `inventory_item_definitions` and allow `property_code='ALL'` for global shared parts.
+> *(Note: Decided on Option A for Barcodes—using purchased pre-printed sequential QR labels instead of building a custom Nuxt print view).*
 
 ## Legend
 - **COMPLETED**: Deployed & Verified.
