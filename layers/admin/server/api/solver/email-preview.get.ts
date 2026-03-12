@@ -6,17 +6,36 @@ export default defineEventHandler(async (event) => {
   const client = serverSupabaseServiceRole<Database>(event)
   const baseUrl = getRequestURL(event).origin
 
-  // Fetch the most recent completed solver run
-  const { data: run, error: runError } = await client
-    .from('solver_runs')
-    .select('*')
-    .eq('status', 'completed')
-    .order('upload_date', { ascending: false })
-    .limit(1)
-    .single()
+  // Accept optional ?date=YYYY-MM-DD to load a specific day's report.
+  // Defaults to the most recent completed run when omitted.
+  const dateParam = (getQuery(event).date as string | undefined) || null
+
+  const { data: run, error: runError } = await (() => {
+    const base = client
+      .from('solver_runs')
+      .select('*')
+      .eq('status', 'completed')
+      .order('upload_date', { ascending: false })
+      .limit(1)
+
+    if (dateParam) {
+      const nextDay = new Date(dateParam)
+      nextDay.setDate(nextDay.getDate() + 1)
+      return base
+        .gte('upload_date', dateParam)
+        .lt('upload_date', nextDay.toISOString().split('T')[0])
+        .single()
+    }
+    return base.single()
+  })()
 
   if (runError || !run) {
-    throw createError({ statusCode: 404, statusMessage: 'No completed solver run found' })
+    throw createError({
+      statusCode: 404,
+      statusMessage: dateParam
+        ? `No completed solver run found for ${dateParam}`
+        : 'No completed solver run found',
+    })
   }
 
   const propertiesProcessed = run.properties_processed || []

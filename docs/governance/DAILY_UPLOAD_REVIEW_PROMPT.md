@@ -1,5 +1,12 @@
 # Daily Upload Review Prompt
 
+> **Concept (updated 2026-03-12):** The Daily Solver Report is NOT just an output of today's
+> Yardi upload files. It is a comprehensive daily operational briefing. The morning Solver run
+> is the *trigger* — but the report draws on ALL data in the system to surface what is
+> critical, pending, overdue, and upcoming. The goal is to answer: "What do I need to know
+> and act on today?" See `docs/governance/MOVE_IN_MOVE_OUT_PROCESS.md` for the full vision,
+> including the planned move-in and move-out tracking pipeline.
+
 Copy and paste the prompt below into Claude Code every morning after the daily Yardi upload is complete.
 
 ---
@@ -27,8 +34,13 @@ CONTEXT & HISTORICAL ANALYSIS:
 
 WORKFLOW PHASE 1: EVALUATION
 1. DATA AUDIT:
-   - The user will paste today's Solver console log output directly into the chat.
-   - Parse the log to extract: batch_id, properties processed, row counts, new/updated
+   - Go to /solver/report in the EE Manager app. Click "Copy Audit Payload" — this
+     copies a structured text payload built directly from the database (no console log needed).
+     Paste the payload into this chat. It includes: batch_id, run ID, properties processed,
+     per-property summary counts, full event log (new_tenancy, notice_given, price_change,
+     silent_drop, discrepancy, status_auto_fix), snapshot deltas, and operational health.
+   - If the button is unavailable, fall back: paste the Solver console log directly.
+   - Parse the payload to extract: batch_id, properties processed, row counts, new/updated
      tenancies, leases created/updated, MakeReady flags, move-out overdue counts,
      alert/work order/delinquency sync results, and availability snapshots.
    - Identify the top properties by activity.

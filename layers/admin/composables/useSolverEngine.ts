@@ -364,6 +364,30 @@ export const useSolverEngine = () => {
                                 // Remove "Move Out Overdue" flag if exists
                                 unitsToRemoveOverdueFlag.push(newTenancy.unit_id)
 
+                                // Track move-out with full unit and resident detail
+                                const moveOutUnitRow = rows.find(r => r.tenancy_id === newTenancy.id)
+                                const moveOutResident = residentsToUpsert.find(r => r.tenancy_id === newTenancy.id && r.role === 'Primary')
+                                const missingMoveOut = !newTenancy.move_out_date
+                                const missingMoveInForOut = !newTenancy.move_in_date
+                                if (missingMoveOut) {
+                                    console.warn(`[Solver] ⚠️ DATA QUALITY: Move-out for ${moveOutUnitRow?.unit_name || newTenancy.unit_id} | ${pCode} — move_out_date missing. Expected from 5p_Notices or 5p_Residents_Status.`)
+                                }
+                                if (missingMoveInForOut) {
+                                    console.warn(`[Solver] ⚠️ DATA QUALITY: Move-out for ${moveOutUnitRow?.unit_name || newTenancy.unit_id} | ${pCode} — move_in_date missing (tenure cannot be calculated).`)
+                                }
+                                tracker.trackMoveOut(pCode, {
+                                    tenancy_id: newTenancy.id,
+                                    resident_name: moveOutResident?.name || 'Unknown',
+                                    unit_name: moveOutUnitRow?.unit_name || 'Unknown',
+                                    unit_id: newTenancy.unit_id,
+                                    move_in_date: newTenancy.move_in_date,
+                                    move_out_date: newTenancy.move_out_date,
+                                    previous_status: oldTenancy.status,
+                                    early_moveout: !!(newTenancy.move_out_date && newTenancy.move_out_date > today),
+                                    missing_move_out_date: missingMoveOut,
+                                    missing_move_in_date: missingMoveInForOut,
+                                })
+
                                 // Check for early move-out (log only, no flag)
                                 if (newTenancy.move_out_date && newTenancy.move_out_date > today) {
                                     const plannedDate = newTenancy.move_out_date
@@ -412,32 +436,29 @@ export const useSolverEngine = () => {
                                 if (error) throw error
                                 totalUpsertedTenancies += chunk.length // Treating both as "processed"
                              }
-                             // Track new tenancies (will add detailed tracking in residents section)
-                             tracker.trackTenancyUpdates(pCode, newTenancies.length)
-
-                             // ==========================================
-                             // TRACKING CODE START - New Leases Signed
-                             // ==========================================
-                             // Track new leases signed (Future/Applicant status)
+                             // Track every new tenancy individually with full unit and resident detail.
+                             // Replaces the old bulk trackTenancyUpdates + Future/Applicant-only loop
+                             // so move-in counts and unit info are accurate for all statuses.
                              for (const tenancy of newTenancies) {
-                                if (tenancy.status === 'Future' || tenancy.status === 'Applicant') {
-                                    // Find corresponding resident and lease data
-                                    const resident = residentsToUpsert.find(r => r.tenancy_id === tenancy.id && r.role === 'Primary')
-                                    const lease = leasesFromResidentsMap.get(tenancy.id)
-
-                                    tracker.trackNewLeaseSigned(pCode, {
-                                        tenancy_id: tenancy.id,
-                                        resident_name: resident?.name || 'Unknown',
-                                        unit_name: rows.find(r => r.tenancy_id === tenancy.id)?.unit_name || 'Unknown',
-                                        unit_id: tenancy.unit_id,
-                                        move_in_date: tenancy.move_in_date,
-                                        rent_amount: lease?.rent_amount,
-                                        previous_status: 'New'
-                                    })
+                                const resident = residentsToUpsert.find(r => r.tenancy_id === tenancy.id && r.role === 'Primary')
+                                const unitName = rows.find(r => r.tenancy_id === tenancy.id)?.unit_name || 'Unknown'
+                                const lease = leasesFromResidentsMap.get(tenancy.id)
+                                const missingMoveIn = !tenancy.move_in_date
+                                if (missingMoveIn) {
+                                    console.warn(`[Solver] ⚠️ DATA QUALITY: New tenancy ${tenancy.id} | Unit ${unitName} | ${pCode} — move_in_date missing. Expected from 5p_Residents_Status.`)
                                 }
+                                tracker.trackNewTenancy(pCode, {
+                                    tenancy_id: tenancy.id,
+                                    resident_name: resident?.name || 'Unknown',
+                                    unit_name: unitName,
+                                    unit_id: tenancy.unit_id,
+                                    move_in_date: tenancy.move_in_date,
+                                    status: tenancy.status,
+                                    source: 'yardi_sync',
+                                    rent_amount: lease?.rent_amount,
+                                    missing_move_in_date: missingMoveIn,
+                                })
                              }
-                             // TRACKING CODE END
-                             // ==========================================
                         }
 
                         // C. Update Existing
@@ -1381,14 +1402,20 @@ export const useSolverEngine = () => {
                         tenancyUpdates.push(updatePayload)
 
                         // Track notice given
+                        const noticeMoveOutDate = parseDate(row.move_out_date) || undefined
+                        const noticeMissingMoveOut = !noticeMoveOutDate
+                        if (noticeMissingMoveOut) {
+                            console.warn(`[Solver] ⚠️ DATA QUALITY: Notice for ${row.unit_name} | ${pCode} — move_out_date missing from 5p_Notices. Overdue tracking and pre-inspection alerts will not fire for this unit.`)
+                        }
                         tracker.trackNotice(pCode, {
                             tenancy_id: tenancy.id,
                             resident_name: row.resident || 'Unknown',
                             unit_name: row.unit_name,
                             unit_id: unitId,
                             move_in_date: tenancy.move_in_date,
-                            move_out_date: parseDate(row.move_out_date) || undefined,
-                            status_change: finalStatus !== tenancy.status ? `${tenancy.status} → ${finalStatus}` : undefined
+                            move_out_date: noticeMoveOutDate,
+                            status_change: finalStatus !== tenancy.status ? `${tenancy.status} → ${finalStatus}` : undefined,
+                            missing_move_out_date: noticeMissingMoveOut,
                         })
                         
                         // Track for availability update

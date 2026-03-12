@@ -105,17 +105,36 @@ def _run_delinquencies(
 
     print("[phase_c]   AR Analytics form loaded.")
 
-    # Report Type: Financial Aged Receivable
-    frame.locator("#cmbReportType_DropDownList").select_option(label="Financial Aged Receivable")
-    
-    # WAIT FOR POSTBACK: Yardi reloads the iframe when Report Type changes.
-    # If we select the next dropdown too quickly, the reload wipes it out.
-    page.wait_for_timeout(2000)
+    # ── Report Type: Financial Aged Receivable ────────────────────────────────
+    # Selecting Report Type fires an ASP.NET __doPostBack that fully re-renders
+    # the iframe form DOM. Capture the server response precisely rather than
+    # a static sleep — wait_for_timeout(2000) was racing against network latency
+    # and letting the postback reset #cmbGroupby_DropDownList to its default value.
+    print("[phase_c]   Selecting Report Type — waiting for postback response...")
+    with page.expect_response(
+        lambda r: "ARAnalytics_res.aspx" in r.url and r.request.method == "POST",
+        timeout=20_000,
+    ):
+        frame.locator("#cmbReportType_DropDownList").select_option(label="Financial Aged Receivable")
 
-    # Summary Type: Resident
-    frame.locator("#cmbGroupby_DropDownList").select_option(label="Resident")
+    # DOM is now rebuilt from the server response. The old #cmbGroupby_DropDownList
+    # reference is stale — re-acquire it from the fresh DOM.
+    groupby = frame.locator("#cmbGroupby_DropDownList")
+    groupby.wait_for(state="visible", timeout=10_000)
 
-    # Status: Current + Notice + Eviction (multi-select)
+    # ── Summary Type: Resident ────────────────────────────────────────────────
+    groupby.select_option(label="Resident")
+
+    # Fail loudly rather than silently download a wrong Property-level report.
+    actual_label = groupby.evaluate("el => el.options[el.selectedIndex].text")
+    if actual_label != "Resident":
+        raise RuntimeError(
+            f"[phase_c] Summary Type reverted to '{actual_label}' after postback. "
+            "Aborting — this would export a Property-level report instead of Resident-level."
+        )
+    print(f"[phase_c]   Summary Type confirmed: {actual_label} ✓")
+
+    # ── Status: Current + Notice + Eviction (multi-select) ───────────────────
     status_select = frame.locator("#tenstatus_MultiSelect")
     status_select.evaluate("""el => {
         for (let o of el.options) {
@@ -123,12 +142,49 @@ def _run_delinquencies(
         }
     }""")
 
-    # Properties: enter the 5 target codes (pipe-separated)
+    # ── Properties: all 5 individual property codes (pipe-separated) ─────────
     _fill_text(frame, "#PropertyLookup_LookupCode", PROPERTY_LIST)
     frame.locator("#PropertyLookup_LookupCode").press("Tab")
     page.wait_for_timeout(1_500)
 
-    # Archive and download
+    # ── Display: render the report so we can verify columns before downloading ─
+    print("[phase_c]   Clicking Display — waiting for report table to render...")
+    frame.locator("#btnDisplay_Button").click()
+    page.wait_for_timeout(2_000)
+
+    # Column verification: Resident mode → columns include 'Unit' and 'Resident'.
+    # Property mode → 'Property Name' column appears instead. That is the wrong
+    # export and must abort before downloading.
+    try:
+        frame.locator("table").first.wait_for(state="visible", timeout=30_000)
+
+        headers = frame.locator("table tr:first-child th, table tr:first-child td").all_inner_texts()
+        headers_clean = [h.strip() for h in headers if h.strip()]
+        print(f"[phase_c]   Columns detected: {headers_clean}")
+
+        has_property_name = any("Property Name" in h for h in headers_clean)
+        has_unit           = any("Unit"          in h for h in headers_clean)
+        has_resident       = any("Resident"      in h for h in headers_clean)
+
+        if has_property_name:
+            raise RuntimeError(
+                f"[phase_c] WRONG EXPORT MODE — 'Property Name' column present: {headers_clean}\n"
+                "Summary Type was reset to 'Property'. DO NOT DOWNLOAD. Re-run the script."
+            )
+
+        if has_unit and has_resident:
+            print("[phase_c]   Column check passed — Resident mode confirmed ✓")
+        elif has_unit:
+            print("[phase_c]   'Unit' column confirmed. 'Resident' column not found — proceeding.")
+        else:
+            print(f"[phase_c]   WARNING: Could not confirm Resident mode from headers: {headers_clean}")
+
+    except RuntimeError:
+        raise  # Always propagate mode-check failures
+    except Exception as col_err:
+        print(f"[phase_c]   WARNING: Column verification skipped ({col_err}) — proceeding.")
+
+    # ── Archive and download ──────────────────────────────────────────────────
     archive_if_exists(dest, archive_dir)
     with page.expect_download(timeout=60_000) as dl_info:
         frame.locator("#btnExcel_Button").click()
