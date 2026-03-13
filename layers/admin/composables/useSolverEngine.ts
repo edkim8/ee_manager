@@ -364,6 +364,30 @@ export const useSolverEngine = () => {
                                 // Remove "Move Out Overdue" flag if exists
                                 unitsToRemoveOverdueFlag.push(newTenancy.unit_id)
 
+                                // Track move-out with full unit and resident detail
+                                const moveOutUnitRow = rows.find(r => r.tenancy_id === newTenancy.id)
+                                const moveOutResident = residentsToUpsert.find(r => r.tenancy_id === newTenancy.id && r.role === 'Primary')
+                                const missingMoveOut = !newTenancy.move_out_date
+                                const missingMoveInForOut = !newTenancy.move_in_date
+                                if (missingMoveOut) {
+                                    console.warn(`[Solver] ⚠️ DATA QUALITY: Move-out for ${moveOutUnitRow?.unit_name || newTenancy.unit_id} | ${pCode} — move_out_date missing. Expected from 5p_Notices or 5p_Residents_Status.`)
+                                }
+                                if (missingMoveInForOut) {
+                                    console.warn(`[Solver] ⚠️ DATA QUALITY: Move-out for ${moveOutUnitRow?.unit_name || newTenancy.unit_id} | ${pCode} — move_in_date missing (tenure cannot be calculated).`)
+                                }
+                                tracker.trackMoveOut(pCode, {
+                                    tenancy_id: newTenancy.id,
+                                    resident_name: moveOutResident?.name || 'Unknown',
+                                    unit_name: moveOutUnitRow?.unit_name || 'Unknown',
+                                    unit_id: newTenancy.unit_id,
+                                    move_in_date: newTenancy.move_in_date,
+                                    move_out_date: newTenancy.move_out_date,
+                                    previous_status: oldTenancy.status,
+                                    early_moveout: !!(newTenancy.move_out_date && newTenancy.move_out_date > today),
+                                    missing_move_out_date: missingMoveOut,
+                                    missing_move_in_date: missingMoveInForOut,
+                                })
+
                                 // Check for early move-out (log only, no flag)
                                 if (newTenancy.move_out_date && newTenancy.move_out_date > today) {
                                     const plannedDate = newTenancy.move_out_date
@@ -412,32 +436,29 @@ export const useSolverEngine = () => {
                                 if (error) throw error
                                 totalUpsertedTenancies += chunk.length // Treating both as "processed"
                              }
-                             // Track new tenancies (will add detailed tracking in residents section)
-                             tracker.trackTenancyUpdates(pCode, newTenancies.length)
-
-                             // ==========================================
-                             // TRACKING CODE START - New Leases Signed
-                             // ==========================================
-                             // Track new leases signed (Future/Applicant status)
+                             // Track every new tenancy individually with full unit and resident detail.
+                             // Replaces the old bulk trackTenancyUpdates + Future/Applicant-only loop
+                             // so move-in counts and unit info are accurate for all statuses.
                              for (const tenancy of newTenancies) {
-                                if (tenancy.status === 'Future' || tenancy.status === 'Applicant') {
-                                    // Find corresponding resident and lease data
-                                    const resident = residentsToUpsert.find(r => r.tenancy_id === tenancy.id && r.role === 'Primary')
-                                    const lease = leasesFromResidentsMap.get(tenancy.id)
-
-                                    tracker.trackNewLeaseSigned(pCode, {
-                                        tenancy_id: tenancy.id,
-                                        resident_name: resident?.name || 'Unknown',
-                                        unit_name: rows.find(r => r.tenancy_id === tenancy.id)?.unit_name || 'Unknown',
-                                        unit_id: tenancy.unit_id,
-                                        move_in_date: tenancy.move_in_date,
-                                        rent_amount: lease?.rent_amount,
-                                        previous_status: 'New'
-                                    })
+                                const resident = residentsToUpsert.find(r => r.tenancy_id === tenancy.id && r.role === 'Primary')
+                                const unitName = rows.find(r => r.tenancy_id === tenancy.id)?.unit_name || 'Unknown'
+                                const lease = leasesFromResidentsMap.get(tenancy.id)
+                                const missingMoveIn = !tenancy.move_in_date
+                                if (missingMoveIn) {
+                                    console.warn(`[Solver] ⚠️ DATA QUALITY: New tenancy ${tenancy.id} | Unit ${unitName} | ${pCode} — move_in_date missing. Expected from 5p_Residents_Status.`)
                                 }
+                                tracker.trackNewTenancy(pCode, {
+                                    tenancy_id: tenancy.id,
+                                    resident_name: resident?.name || 'Unknown',
+                                    unit_name: unitName,
+                                    unit_id: tenancy.unit_id,
+                                    move_in_date: tenancy.move_in_date,
+                                    status: tenancy.status,
+                                    source: 'yardi_sync',
+                                    rent_amount: lease?.rent_amount,
+                                    missing_move_in_date: missingMoveIn,
+                                })
                              }
-                             // TRACKING CODE END
-                             // ==========================================
                         }
 
                         // C. Update Existing
@@ -1381,14 +1402,20 @@ export const useSolverEngine = () => {
                         tenancyUpdates.push(updatePayload)
 
                         // Track notice given
+                        const noticeMoveOutDate = parseDate(row.move_out_date) || undefined
+                        const noticeMissingMoveOut = !noticeMoveOutDate
+                        if (noticeMissingMoveOut) {
+                            console.warn(`[Solver] ⚠️ DATA QUALITY: Notice for ${row.unit_name} | ${pCode} — move_out_date missing from 5p_Notices. Overdue tracking and pre-inspection alerts will not fire for this unit.`)
+                        }
                         tracker.trackNotice(pCode, {
                             tenancy_id: tenancy.id,
                             resident_name: row.resident || 'Unknown',
                             unit_name: row.unit_name,
                             unit_id: unitId,
                             move_in_date: tenancy.move_in_date,
-                            move_out_date: parseDate(row.move_out_date) || undefined,
-                            status_change: finalStatus !== tenancy.status ? `${tenancy.status} → ${finalStatus}` : undefined
+                            move_out_date: noticeMoveOutDate,
+                            status_change: finalStatus !== tenancy.status ? `${tenancy.status} → ${finalStatus}` : undefined,
+                            missing_move_out_date: noticeMissingMoveOut,
                         })
                         
                         // Track for availability update
@@ -1566,6 +1593,325 @@ export const useSolverEngine = () => {
             }
 
             console.log('[Solver] Phase 2D.5 Complete: Move-out overdue check finished')
+
+            // ==========================================
+            // Phase 2D.6: Pre-Move-Out Inspection Alerts
+            // ==========================================
+            // Flag Notice tenancies whose move_out_date is within the next 3 days.
+            // Resolve flags for units that have already moved out or whose date is now
+            // beyond the window (overdue flags from 2D.5 cover the past side).
+            statusMessage.value = 'Checking pre-move-out inspection windows...'
+            {
+                const threeDaysOut = addDays(today, 3)
+
+                const { data: upcomingMoveOuts, error: upcomingMoveOutErr } = await supabase
+                    .from('tenancies')
+                    .select('id, unit_id, property_code, move_out_date, units(unit_name), residents(name, role)')
+                    .eq('status', 'Notice')
+                    .not('move_out_date', 'is', null)
+                    .gte('move_out_date', today)
+                    .lte('move_out_date', threeDaysOut)
+
+                if (upcomingMoveOutErr) {
+                    console.error('[Solver] Pre-Move-Out Inspection Query Error:', upcomingMoveOutErr)
+                } else {
+                    const flagType = 'premoveout_inspection'
+
+                    // Resolve stale pre-move-out flags (unit no longer in window)
+                    const unitIdsInWindow = (upcomingMoveOuts || []).map((t: any) => t.unit_id)
+                    const { data: staleFlags } = await supabase
+                        .from('unit_flags')
+                        .select('id, unit_id')
+                        .eq('flag_type', flagType)
+                        .is('resolved_at', null)
+                    const staleToResolve = (staleFlags || []).filter((f: any) => !unitIdsInWindow.includes(f.unit_id))
+                    if (staleToResolve.length > 0) {
+                        await supabase
+                            .from('unit_flags')
+                            .update({ resolved_at: getNowPST(), resolved_by: user.value?.id || null })
+                            .in('id', staleToResolve.map((f: any) => f.id))
+                        console.log(`[Solver] Resolved ${staleToResolve.length} stale pre-move-out inspection flags`)
+                    }
+
+                    if (upcomingMoveOuts && upcomingMoveOuts.length > 0) {
+                        const unitIds = upcomingMoveOuts.map((t: any) => t.unit_id)
+                        const { data: existingFlags } = await supabase
+                            .from('unit_flags')
+                            .select('id, unit_id')
+                            .eq('flag_type', flagType)
+                            .in('unit_id', unitIds)
+                            .is('resolved_at', null)
+                        const existingSet = new Set((existingFlags || []).map((f: any) => f.unit_id))
+
+                        const toCreate: any[] = []
+                        for (const t of upcomingMoveOuts) {
+                            if (existingSet.has(t.unit_id)) continue
+                            const daysOut = daysBetween(today, t.move_out_date)
+                            const primaryResident = (t.residents as any[])?.find((r: any) => r.role === 'Primary')
+                            toCreate.push({
+                                unit_id: t.unit_id,
+                                property_code: t.property_code,
+                                flag_type: flagType,
+                                severity: 'warning',
+                                title: 'Pre-Move-Out Inspection Due',
+                                message: `${primaryResident?.name || 'Resident'} moves out ${t.move_out_date} (${daysOut} day${daysOut === 1 ? '' : 's'})`,
+                                metadata: { tenancy_id: t.id, move_out_date: t.move_out_date, days_remaining: daysOut },
+                            })
+                        }
+                        if (toCreate.length > 0) {
+                            const { error: createErr } = await supabase.from('unit_flags').insert(toCreate)
+                            if (createErr) console.error('[Solver] Pre-Move-Out Inspection Flag Create Error:', createErr)
+                            else console.log(`[Solver] Created ${toCreate.length} pre-move-out inspection flags`)
+                        }
+                    }
+                }
+            }
+            console.log('[Solver] Phase 2D.6 Complete: Pre-move-out inspection check finished')
+
+            // ==========================================
+            // Phase 2D.7: Overdue Move-In Flags
+            // ==========================================
+            // Flag Future/Applicant tenancies whose move_in_date has passed.
+            // Severity: warning 1–3 days overdue, error 4+ days overdue.
+            // Resolve when tenancy transitions to Current/Past/Canceled.
+            statusMessage.value = 'Checking for overdue move-ins...'
+            {
+                const flagType = 'movein_overdue'
+
+                const { data: overdueMoveIns, error: overdueMoveInErr } = await supabase
+                    .from('tenancies')
+                    .select('id, unit_id, property_code, move_in_date, status, units(unit_name), residents(name, role)')
+                    .in('status', ['Future', 'Applicant'])
+                    .not('move_in_date', 'is', null)
+                    .lt('move_in_date', today)
+
+                if (overdueMoveInErr) {
+                    console.error('[Solver] Overdue Move-In Query Error:', overdueMoveInErr)
+                } else {
+                    // Resolve stale flags (unit is no longer Future/Applicant with a past date)
+                    const unitIdsOverdue = (overdueMoveIns || []).map((t: any) => t.unit_id)
+                    const { data: staleFlags } = await supabase
+                        .from('unit_flags')
+                        .select('id, unit_id')
+                        .eq('flag_type', flagType)
+                        .is('resolved_at', null)
+                    const staleToResolve = (staleFlags || []).filter((f: any) => !unitIdsOverdue.includes(f.unit_id))
+                    if (staleToResolve.length > 0) {
+                        await supabase
+                            .from('unit_flags')
+                            .update({ resolved_at: getNowPST(), resolved_by: user.value?.id || null })
+                            .in('id', staleToResolve.map((f: any) => f.id))
+                        console.log(`[Solver] Resolved ${staleToResolve.length} stale overdue move-in flags`)
+                    }
+
+                    if (overdueMoveIns && overdueMoveIns.length > 0) {
+                        const unitIds = overdueMoveIns.map((t: any) => t.unit_id)
+                        const { data: existingFlags } = await supabase
+                            .from('unit_flags')
+                            .select('id, unit_id, metadata')
+                            .eq('flag_type', flagType)
+                            .in('unit_id', unitIds)
+                            .is('resolved_at', null)
+                        const existingFlagMap = new Map<string, any>((existingFlags || []).map((f: any) => [f.unit_id, f]))
+
+                        const toCreate: any[] = []
+                        const toUpdate: any[] = []
+
+                        for (const t of overdueMoveIns) {
+                            const daysOverdue = daysBetween(t.move_in_date, today)
+                            const severity = daysOverdue <= 3 ? 'warning' : 'error'
+                            const primaryResident = (t.residents as any[])?.find((r: any) => r.role === 'Primary')
+                            const flagData = {
+                                unit_id: t.unit_id,
+                                property_code: t.property_code,
+                                flag_type: flagType,
+                                severity,
+                                title: 'Move-In Overdue',
+                                message: `${primaryResident?.name || 'Resident'} (${t.status}) — planned move-in ${t.move_in_date}, ${daysOverdue} day${daysOverdue === 1 ? '' : 's'} overdue`,
+                                metadata: { tenancy_id: t.id, move_in_date: t.move_in_date, days_overdue: daysOverdue },
+                            }
+                            const existing = existingFlagMap.get(t.unit_id)
+                            if (existing) toUpdate.push({ id: existing.id, ...flagData })
+                            else toCreate.push(flagData)
+                        }
+
+                        if (toCreate.length > 0) {
+                            const { error: createErr } = await supabase.from('unit_flags').insert(toCreate)
+                            if (createErr) console.error('[Solver] Overdue Move-In Flag Create Error:', createErr)
+                            else console.log(`[Solver] Created ${toCreate.length} overdue move-in flags`)
+                        }
+                        for (const flag of toUpdate) {
+                            await supabase.from('unit_flags')
+                                .update({ severity: flag.severity, message: flag.message, metadata: flag.metadata })
+                                .eq('id', flag.id)
+                        }
+                        if (toUpdate.length > 0) console.log(`[Solver] Updated ${toUpdate.length} overdue move-in flags`)
+                    }
+                }
+            }
+            console.log('[Solver] Phase 2D.7 Complete: Overdue move-in check finished')
+
+            // ==========================================
+            // Phase 2D.8: Pre-Move-In Inspection Alerts
+            // ==========================================
+            // Flag Future/Applicant tenancies whose move_in_date is within 3 days.
+            statusMessage.value = 'Checking pre-move-in inspection windows...'
+            {
+                const threeDaysOut = addDays(today, 3)
+                const flagType = 'premovein_inspection'
+
+                const { data: upcomingMoveIns, error: upcomingMoveInErr } = await supabase
+                    .from('tenancies')
+                    .select('id, unit_id, property_code, move_in_date, status, units(unit_name), residents(name, role)')
+                    .in('status', ['Future', 'Applicant'])
+                    .not('move_in_date', 'is', null)
+                    .gte('move_in_date', today)
+                    .lte('move_in_date', threeDaysOut)
+
+                if (upcomingMoveInErr) {
+                    console.error('[Solver] Pre-Move-In Inspection Query Error:', upcomingMoveInErr)
+                } else {
+                    const unitIdsInWindow = (upcomingMoveIns || []).map((t: any) => t.unit_id)
+                    const { data: staleFlags } = await supabase
+                        .from('unit_flags')
+                        .select('id, unit_id')
+                        .eq('flag_type', flagType)
+                        .is('resolved_at', null)
+                    const staleToResolve = (staleFlags || []).filter((f: any) => !unitIdsInWindow.includes(f.unit_id))
+                    if (staleToResolve.length > 0) {
+                        await supabase
+                            .from('unit_flags')
+                            .update({ resolved_at: getNowPST(), resolved_by: user.value?.id || null })
+                            .in('id', staleToResolve.map((f: any) => f.id))
+                        console.log(`[Solver] Resolved ${staleToResolve.length} stale pre-move-in inspection flags`)
+                    }
+
+                    if (upcomingMoveIns && upcomingMoveIns.length > 0) {
+                        const unitIds = upcomingMoveIns.map((t: any) => t.unit_id)
+                        const { data: existingFlags } = await supabase
+                            .from('unit_flags')
+                            .select('id, unit_id')
+                            .eq('flag_type', flagType)
+                            .in('unit_id', unitIds)
+                            .is('resolved_at', null)
+                        const existingSet = new Set((existingFlags || []).map((f: any) => f.unit_id))
+
+                        const toCreate: any[] = []
+                        for (const t of upcomingMoveIns) {
+                            if (existingSet.has(t.unit_id)) continue
+                            const daysOut = daysBetween(today, t.move_in_date)
+                            const primaryResident = (t.residents as any[])?.find((r: any) => r.role === 'Primary')
+                            toCreate.push({
+                                unit_id: t.unit_id,
+                                property_code: t.property_code,
+                                flag_type: flagType,
+                                severity: 'warning',
+                                title: 'Pre-Move-In Inspection Due',
+                                message: `${primaryResident?.name || 'Resident'} (${t.status}) moves in ${t.move_in_date} (${daysOut} day${daysOut === 1 ? '' : 's'})`,
+                                metadata: { tenancy_id: t.id, move_in_date: t.move_in_date, days_remaining: daysOut },
+                            })
+                        }
+                        if (toCreate.length > 0) {
+                            const { error: createErr } = await supabase.from('unit_flags').insert(toCreate)
+                            if (createErr) console.error('[Solver] Pre-Move-In Inspection Flag Create Error:', createErr)
+                            else console.log(`[Solver] Created ${toCreate.length} pre-move-in inspection flags`)
+                        }
+                    }
+                }
+            }
+            console.log('[Solver] Phase 2D.8 Complete: Pre-move-in inspection check finished')
+
+            // ==========================================
+            // Phase 2D.9: Make-Ready ↔ Move-In Conflict
+            // ==========================================
+            // For each Future/Applicant tenancy with a move_in_date within 14 days,
+            // check if the unit has an unresolved make-ready flag.
+            // If so, create a movein_makeready_conflict flag.
+            statusMessage.value = 'Checking make-ready / move-in conflicts...'
+            {
+                const fourteenDaysOut = addDays(today, 14)
+                const flagType = 'movein_makeready_conflict'
+
+                const { data: incomingTenancies, error: incomingErr } = await supabase
+                    .from('tenancies')
+                    .select('id, unit_id, property_code, move_in_date, status, units(unit_name), residents(name, role)')
+                    .in('status', ['Future', 'Applicant'])
+                    .not('move_in_date', 'is', null)
+                    .gte('move_in_date', today)
+                    .lte('move_in_date', fourteenDaysOut)
+
+                if (incomingErr) {
+                    console.error('[Solver] Make-Ready Conflict Query Error:', incomingErr)
+                } else {
+                    // Fetch open make-ready flags for the incoming units
+                    const incomingUnitIds = (incomingTenancies || []).map((t: any) => t.unit_id)
+
+                    const { data: openMakeReadyFlags } = incomingUnitIds.length > 0
+                        ? await supabase
+                            .from('unit_flags')
+                            .select('unit_id, id')
+                            .in('unit_id', incomingUnitIds)
+                            .ilike('flag_type', 'makeready%')
+                            .is('resolved_at', null)
+                        : { data: [] }
+
+                    const makeReadyUnitSet = new Set((openMakeReadyFlags || []).map((f: any) => f.unit_id))
+
+                    // Units with a conflict = incoming tenancy AND open make-ready flag
+                    const conflictTenancies = (incomingTenancies || []).filter((t: any) => makeReadyUnitSet.has(t.unit_id))
+
+                    // Resolve stale conflict flags (unit no longer in conflict window)
+                    const conflictUnitIds = conflictTenancies.map((t: any) => t.unit_id)
+                    const { data: staleFlags } = await supabase
+                        .from('unit_flags')
+                        .select('id, unit_id')
+                        .eq('flag_type', flagType)
+                        .is('resolved_at', null)
+                    const staleToResolve = (staleFlags || []).filter((f: any) => !conflictUnitIds.includes(f.unit_id))
+                    if (staleToResolve.length > 0) {
+                        await supabase
+                            .from('unit_flags')
+                            .update({ resolved_at: getNowPST(), resolved_by: user.value?.id || null })
+                            .in('id', staleToResolve.map((f: any) => f.id))
+                        console.log(`[Solver] Resolved ${staleToResolve.length} stale make-ready conflict flags`)
+                    }
+
+                    if (conflictTenancies.length > 0) {
+                        const { data: existingFlags } = await supabase
+                            .from('unit_flags')
+                            .select('id, unit_id')
+                            .eq('flag_type', flagType)
+                            .in('unit_id', conflictUnitIds)
+                            .is('resolved_at', null)
+                        const existingSet = new Set((existingFlags || []).map((f: any) => f.unit_id))
+
+                        const toCreate: any[] = []
+                        for (const t of conflictTenancies) {
+                            if (existingSet.has(t.unit_id)) continue
+                            const daysOut = daysBetween(today, t.move_in_date)
+                            const primaryResident = (t.residents as any[])?.find((r: any) => r.role === 'Primary')
+                            const unitName = (t.units as any)?.unit_name || 'Unknown'
+                            toCreate.push({
+                                unit_id: t.unit_id,
+                                property_code: t.property_code,
+                                flag_type: flagType,
+                                severity: daysOut <= 3 ? 'error' : 'warning',
+                                title: 'Make-Ready / Move-In Conflict',
+                                message: `${primaryResident?.name || 'Resident'} moves in ${t.move_in_date} (${daysOut}d) — unit ${unitName} still has open make-ready flag`,
+                                metadata: { tenancy_id: t.id, move_in_date: t.move_in_date, days_remaining: daysOut },
+                            })
+                        }
+                        if (toCreate.length > 0) {
+                            const { error: createErr } = await supabase.from('unit_flags').insert(toCreate)
+                            if (createErr) console.error('[Solver] Make-Ready Conflict Flag Create Error:', createErr)
+                            else console.log(`[Solver] Created ${toCreate.length} make-ready/move-in conflict flags`)
+                        }
+                    }
+
+                    console.log(`[Solver] Phase 2D.9: ${conflictTenancies?.length || 0} make-ready/move-in conflicts found`)
+                }
+            }
+            console.log('[Solver] Phase 2D.9 Complete: Make-ready/move-in conflict check finished')
 
             // ==========================================
             // Step 2C: MakeReady (Flag Overdue Units)

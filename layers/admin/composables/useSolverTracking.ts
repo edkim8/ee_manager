@@ -11,6 +11,7 @@ export const useSolverTracking = () => {
     const {
         trackNewTenancy,
         trackTenancyUpdates,
+        trackMoveOut,
         trackNewResident,
         trackResidentUpdates,
         trackLeaseRenewal,
@@ -123,6 +124,7 @@ export const useSolverTracking = () => {
         startRun,
         trackNewTenancy,
         trackTenancyUpdates,
+        trackMoveOut,
         trackNewResident,
         trackResidentUpdates,
         trackLeaseRenewal,

@@ -13,7 +13,7 @@ interface InstallationWithDetails {
   category_name: string
   expected_life_years: number
   brand: string | null
-  model: string | null
+  name: string | null
   manufacturer_part_number: string | null
   item_description: string | null
   serial_number: string | null
@@ -238,6 +238,35 @@ export const useInventoryInstallations = () => {
   }
 
   /**
+   * Get health summary for a location from view_inventory_summary_by_location
+   */
+  const getLocationSummary = async (
+    locationType: string,
+    locationId: string
+  ): Promise<{
+    total_items: number
+    healthy_count: number
+    warning_count: number
+    critical_count: number
+    expired_count: number
+    avg_age_years: number | null
+  } | null> => {
+    const { data, error } = await supabase
+      .from('view_inventory_summary_by_location')
+      .select('*')
+      .eq('location_type', locationType)
+      .eq('location_id', locationId)
+      .maybeSingle()
+
+    if (error) {
+      console.error('❌ Error fetching location summary:', error)
+      throw error
+    }
+
+    return data
+  }
+
+  /**
    * Look up a single installation by asset tag within a property
    * Returns null if not found (does not throw on PGRST116)
    */
@@ -268,6 +297,7 @@ export const useInventoryInstallations = () => {
     getInstallationCount,
     canDeleteItemDefinition,
     getInstallationsByLocation,
+    getLocationSummary,
     findByAssetTag,
   }
 }

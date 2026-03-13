@@ -80,7 +80,7 @@ const filteredItems = computed(() => {
   return itemDefinitions.value.filter(i =>
     !q ||
     i.brand?.toLowerCase().includes(q) ||
-    i.model?.toLowerCase().includes(q) ||
+    i.name?.toLowerCase().includes(q) ||
     i.category_name?.toLowerCase().includes(q)
   )
 })
@@ -203,7 +203,7 @@ const fmtDate = (d: string | null) =>
       >
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0 flex-1">
-            <p class="font-black text-sm text-gray-900 dark:text-white truncate">{{ inst.brand }} {{ inst.model }}</p>
+            <p class="font-black text-sm text-gray-900 dark:text-white truncate">{{ inst.brand }} {{ inst.name }}</p>
             <p class="text-[11px] text-gray-400 truncate">{{ inst.category_name }}</p>
             <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
               {{ inst.location_name || inst.location_type || '—' }}
@@ -298,7 +298,7 @@ const fmtDate = (d: string | null) =>
             <input
               v-model="itemSearch"
               type="search"
-              placeholder="Search by brand, model, or category..."
+              placeholder="Search by brand, name, or category..."
               class="w-full pl-10 pr-4 py-3 text-base bg-gray-100 dark:bg-gray-800 border-0 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -323,7 +323,7 @@ const fmtDate = (d: string | null) =>
                 <UIcon name="i-heroicons-archive-box" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-base font-bold text-gray-900 dark:text-white">{{ item.brand }} {{ item.model }}</p>
+                <p class="text-base font-bold text-gray-900 dark:text-white">{{ item.brand }} {{ item.name }}</p>
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ item.category_name }}</p>
               </div>
               <UIcon name="i-heroicons-chevron-right" class="w-5 h-5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
@@ -341,7 +341,7 @@ const fmtDate = (d: string | null) =>
         <div v-if="selectedItem" class="flex items-center gap-3 px-4 py-3 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800 flex-shrink-0">
           <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
           <div class="min-w-0">
-            <p class="text-sm font-bold text-primary-800 dark:text-primary-200 truncate">{{ selectedItem.brand }} {{ selectedItem.model }}</p>
+            <p class="text-sm font-bold text-primary-800 dark:text-primary-200 truncate">{{ selectedItem.brand }} {{ selectedItem.name }}</p>
             <p class="text-[11px] text-primary-600 dark:text-primary-400">{{ selectedItem.category_name }}</p>
           </div>
         </div>
@@ -407,7 +407,7 @@ const fmtDate = (d: string | null) =>
           <div class="flex items-center gap-3">
             <UIcon name="i-heroicons-archive-box" class="w-5 h-5 text-primary-500 flex-shrink-0" />
             <div class="min-w-0">
-              <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ selectedItem?.brand }} {{ selectedItem?.model }}</p>
+              <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ selectedItem?.brand }} {{ selectedItem?.name }}</p>
               <p class="text-xs text-gray-400">{{ selectedItem?.category_name }}</p>
             </div>
           </div>

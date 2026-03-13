@@ -231,7 +231,9 @@ const navigationItems = computed(() => {
       children: [
         { label: 'Dashboard', icon: 'i-heroicons-home', to: '/' },
         { label: 'Daily Report', icon: 'i-heroicons-document-chart-bar', to: '/solver/report' },
-        { label: 'Report Guide', icon: 'i-heroicons-question-mark-circle', to: '/solver/report-help' },
+        { label: 'Daily Report Guide', icon: 'i-heroicons-question-mark-circle', to: '/solver/report-help' },
+        { label: 'Weekly Report', icon: 'i-heroicons-calendar-days', to: '/solver/weekly-report' },
+        { label: 'Weekly Report Guide', icon: 'i-heroicons-question-mark-circle', to: '/solver/weekly-report-help' },
       ],
     },
     {
@@ -324,6 +326,7 @@ const navigationItems = computed(() => {
         { label: 'Parser Engine', icon: 'i-heroicons-document-text', to: '/admin/parse_engine' },
         { label: 'Unit Lookup Generator', icon: 'i-heroicons-code-bracket', to: '/admin/generators/unit-lookup' },
         { label: 'Email Notifications', icon: 'i-heroicons-envelope', to: '/admin/notifications' },
+        { label: 'Note Categories', icon: 'i-heroicons-tag', to: '/admin/note-categories' },
       ],
     })
   }

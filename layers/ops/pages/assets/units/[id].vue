@@ -21,8 +21,7 @@ const unitId = route.params.id as string
 
 const { isModalOpen: showImageModal, activeImage, openImageModal } = useImageActions()
 const { getUnitPricingBreakdown } = usePricingEngine()
-const { fetchItemsByLocation, fetchLocationSummary } = useInventoryItems()
-const { getHealthColor, getHealthLabel } = useInventoryLifecycle()
+const { getInstallationsByLocation, getLocationSummary, getHealthColor, getHealthLabel } = { ...useInventoryInstallations(), ...useInventoryLifecycle() }
 
 const activeTab = ref('overview')
 
@@ -71,11 +70,11 @@ const { data: pricingBreakdown } = await useAsyncData(`unit-pricing-${unitId}`, 
 
 // ── Inventory ─────────────────────────────────────────────────────────────
 const { data: inventoryItems } = await useAsyncData(`unit-inventory-${unitId}`, async () => {
-  try { return await fetchItemsByLocation('unit', unitId) } catch { return [] }
+  try { return await getInstallationsByLocation('unit', unitId) } catch { return [] }
 })
 
 const { data: inventorySummary } = await useAsyncData(`unit-inventory-summary-${unitId}`, async () => {
-  try { return await fetchLocationSummary('unit', unitId) } catch { return null }
+  try { return await getLocationSummary('unit', unitId) } catch { return null }
 })
 
 // ── Table columns ─────────────────────────────────────────────────────────
@@ -461,6 +460,15 @@ const saveUnit = async () => {
                 <AttachmentManager :record-id="unitId" record-type="unit" title="Unit Photos & Files" />
               </div>
 
+              <!-- Installed Assets (desktop) -->
+              <div class="hidden md:block">
+                <InventoryLocationAssetsWidget
+                  location-type="unit"
+                  :location-id="unitId"
+                  title="Installed Assets"
+                />
+              </div>
+
               <!-- Amenities pricing -->
               <div v-if="pricingBreakdown" class="bg-white dark:bg-gray-900/80 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
                 <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Amenities</h3>
@@ -536,7 +544,7 @@ const saveUnit = async () => {
                 >
                   <template #cell-item="{ row }">
                     <span class="text-sm text-gray-700 dark:text-gray-300">
-                      {{ [row.brand, row.model].filter(Boolean).join(' ') || '—' }}
+                      {{ [row.brand, row.name].filter(Boolean).join(' ') || '—' }}
                     </span>
                   </template>
                   <template #cell-serial_number="{ value }">

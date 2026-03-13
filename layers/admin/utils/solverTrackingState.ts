@@ -18,6 +18,7 @@ export interface SolverEvent {
 export interface PropertySummary {
   tenanciesNew: number
   tenanciesUpdated: number
+  moveOutsProcessed: number
   residentsNew: number
   residentsUpdated: number
   leasesNew: number
@@ -58,6 +59,7 @@ export function createSolverTrackingState() {
       propertySummaries[propertyCode] = {
         tenanciesNew: 0,
         tenanciesUpdated: 0,
+        moveOutsProcessed: 0,
         residentsNew: 0,
         residentsUpdated: 0,
         leasesNew: 0,
@@ -100,6 +102,24 @@ export function createSolverTrackingState() {
   const trackTenancyUpdates = (propertyCode: string, count: number): void => {
     initProperty(propertyCode)
     propertySummaries[propertyCode].tenanciesUpdated += count
+  }
+
+  const trackMoveOut = (
+    propertyCode: string,
+    details: {
+      tenancy_id: string
+      resident_name: string
+      unit_name: string
+      unit_id: string
+      move_in_date?: string | null
+      move_out_date?: string | null
+      previous_status: string
+      early_moveout: boolean
+    },
+  ): void => {
+    initProperty(propertyCode)
+    propertySummaries[propertyCode].moveOutsProcessed++
+    events.push({ property_code: propertyCode, event_type: 'move_out', unit_id: details.unit_id, tenancy_id: details.tenancy_id, details })
   }
 
   const trackNewResident = (
@@ -273,6 +293,7 @@ export function createSolverTrackingState() {
     // Trackers
     trackNewTenancy,
     trackTenancyUpdates,
+    trackMoveOut,
     trackNewResident,
     trackResidentUpdates,
     trackLeaseRenewal,

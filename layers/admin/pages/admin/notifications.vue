@@ -29,8 +29,63 @@ const newRecipient = ref({
 
 const notificationTypeOptions = [
   { label: 'Daily Summary', value: 'daily_summary' },
-  { label: 'Audit Report', value: 'audit' }
+  { label: 'Audit Report', value: 'audit' },
+  { label: 'Weekly Summary', value: 'weekly_summary' },
 ]
+
+function typeLabel(type: string): string {
+  return notificationTypeOptions.find(o => o.value === type)?.label ?? type
+}
+
+function typeColor(type: string): string {
+  if (type === 'audit') return 'amber'
+  if (type === 'weekly_summary') return 'success'
+  return 'primary'
+}
+
+// ── Inline editing ────────────────────────────────────────────────────────────
+const editingId = ref<string | null>(null)
+const editingTypes = ref<string[]>([])
+
+function startEdit(row: any) {
+  editingId.value = row.id
+  editingTypes.value = [...(row.notification_types || [])]
+}
+
+function cancelEdit() {
+  editingId.value = null
+  editingTypes.value = []
+}
+
+function toggleEditType(type: string, checked: boolean) {
+  if (checked) {
+    if (!editingTypes.value.includes(type)) editingTypes.value.push(type)
+  } else {
+    editingTypes.value = editingTypes.value.filter(t => t !== type)
+  }
+}
+
+const saving = ref(false)
+
+async function saveTypes(id: string) {
+  saving.value = true
+  try {
+    const { error } = await supabase
+      .from('property_notification_recipients')
+      .update({ notification_types: editingTypes.value })
+      .eq('id', id)
+
+    if (error) throw error
+
+    toast.add({ title: 'Saved', description: 'Notification types updated.', color: 'success' })
+    editingId.value = null
+    await fetchRecipients()
+  } catch (error: any) {
+    toast.add({ title: 'Error', description: error.message || 'Failed to save.', color: 'error' })
+  } finally {
+    saving.value = false
+  }
+}
 
 function toggleNotificationType(type: string, checked: boolean) {
   if (checked) {
@@ -142,6 +197,7 @@ async function deleteRecipient(id: string) {
 
 const sendingTest = ref(false)
 const sendingTestAudit = ref(false)
+const sendingTestWeekly = ref(false)
 
 async function sendTestAudit() {
   sendingTestAudit.value = true
@@ -222,6 +278,28 @@ async function sendTestSummary() {
   }
 }
 
+async function sendTestWeekly() {
+  sendingTestWeekly.value = true
+  try {
+    const response: any = await $fetch('/api/admin/notifications/send-weekly', {
+      method: 'POST',
+      body: {}
+    })
+    if (response.success) {
+      const failures = response.results?.filter((r: any) => r.status === 'failed') || []
+      if (failures.length > 0) {
+        toast.add({ title: 'Partial Success', description: `Sent to ${response.results.length - failures.length}, failed for ${failures.length}.`, color: 'warning' })
+      } else {
+        toast.add({ title: 'Success', description: `Weekly summary sent to ${response.results?.length || 0} recipient(s).`, color: 'success' })
+      }
+    }
+  } catch (error: any) {
+    toast.add({ title: 'Error', description: error.message || 'Failed to send weekly summary.', color: 'error' })
+  } finally {
+    sendingTestWeekly.value = false
+  }
+}
+
 onMounted(() => {
   fetchRecipients()
 })
@@ -258,6 +336,14 @@ const columns: TableColumn[] = [
           label="Send Test Summary"
           :loading="sendingTest"
           @click="sendTestSummary"
+        />
+        <UButton
+          icon="i-heroicons-calendar-days"
+          color="neutral"
+          variant="outline"
+          label="Send Test Weekly"
+          :loading="sendingTestWeekly"
+          @click="sendTestWeekly"
         />
       </div>
     </div>
@@ -343,12 +429,23 @@ const columns: TableColumn[] = [
             </template>
 
             <template #cell-notification_types="{ row }">
-              <div class="flex gap-1 flex-wrap">
+              <!-- Edit mode: checkboxes -->
+              <div v-if="editingId === row.id" class="flex flex-wrap gap-3">
+                <UCheckbox
+                  v-for="opt in notificationTypeOptions"
+                  :key="opt.value"
+                  :model-value="editingTypes.includes(opt.value)"
+                  :label="opt.label"
+                  @update:model-value="toggleEditType(opt.value, $event)"
+                />
+              </div>
+              <!-- Read mode: badges -->
+              <div v-else class="flex gap-1 flex-wrap">
                 <UBadge
                   v-for="t in (row.notification_types || ['daily_summary'])"
                   :key="t"
-                  :label="t === 'daily_summary' ? 'Summary' : 'Audit'"
-                  :color="t === 'audit' ? 'amber' : 'primary'"
+                  :label="typeLabel(t)"
+                  :color="typeColor(t)"
                   variant="subtle"
                   size="xs"
                 />
@@ -367,13 +464,42 @@ const columns: TableColumn[] = [
 
             <template #cell-actions="{ row }">
               <div class="flex justify-end gap-2">
-                <UButton
-                  color="gray"
-                  variant="ghost"
-                  icon="i-heroicons-trash"
-                  size="xs"
-                  @click="deleteRecipient(row.id)"
-                />
+                <!-- Editing this row -->
+                <template v-if="editingId === row.id">
+                  <UButton
+                    color="primary"
+                    variant="solid"
+                    icon="i-heroicons-check"
+                    size="xs"
+                    :loading="saving"
+                    :disabled="editingTypes.length === 0"
+                    @click="saveTypes(row.id)"
+                  />
+                  <UButton
+                    color="neutral"
+                    variant="ghost"
+                    icon="i-heroicons-x-mark"
+                    size="xs"
+                    @click="cancelEdit"
+                  />
+                </template>
+                <!-- Normal row -->
+                <template v-else>
+                  <UButton
+                    color="neutral"
+                    variant="ghost"
+                    icon="i-heroicons-pencil-square"
+                    size="xs"
+                    @click="startEdit(row)"
+                  />
+                  <UButton
+                    color="error"
+                    variant="ghost"
+                    icon="i-heroicons-trash"
+                    size="xs"
+                    @click="deleteRecipient(row.id)"
+                  />
+                </template>
               </div>
             </template>
           </GenericDataTable>

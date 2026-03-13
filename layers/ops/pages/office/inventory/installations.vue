@@ -10,12 +10,170 @@ const { activeProperty } = usePropertyState()
 const { fetchInstallations, createInstallation, updateInstallation, deleteInstallation } = useInventoryInstallations()
 const { fetchItemDefinitions } = useInventoryItemDefinitions()
 const { fetchUnits, fetchBuildings, fetchLocations } = useLocationSelector()
+const { addAttachment, fetchAttachments, deleteAttachment } = useAttachments()
+const {
+  fetchNotes, addNote, deleteNote,
+  addNoteAttachment, deleteNoteAttachment,
+  fetchCategories,
+} = useNotes()
+
+const NOTE_CATEGORIES = ref([])
+fetchCategories('installation').then(cats => { NOTE_CATEGORIES.value = cats })
 
 // ── Data ──────────────────────────────────────────────────────────────────
 const allInstallations = ref([])
 const itemDefinitions   = ref([])
 const loading = ref(false)
 const error   = ref(null)
+
+// ── Installation Photos ────────────────────────────────────────────────────
+const installationPhotos = ref([])
+
+const loadInstallationPhotos = async (installationId: string) => {
+  const attachments = await fetchAttachments(installationId, 'inventory_installation')
+  installationPhotos.value = attachments.filter(a => a.file_type === 'image')
+}
+
+const handleInstallationPhotoUpload = async (event: Event) => {
+  if (!editingInstallation.value) return
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  try {
+    loading.value = true
+    await addAttachment(editingInstallation.value.id, 'inventory_installation', file, 'image')
+    await loadInstallationPhotos(editingInstallation.value.id)
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+    ;(event.target as HTMLInputElement).value = ''
+  }
+}
+
+const handleDeleteInstallationPhoto = async (attachment: any) => {
+  if (!confirm('Delete this photo?')) return
+  try {
+    loading.value = true
+    await deleteAttachment(attachment)
+    if (editingInstallation.value) {
+      await loadInstallationPhotos(editingInstallation.value.id)
+    }
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+
+// ── Installation Documents ─────────────────────────────────────────────────
+const installationDocs = ref([])
+
+const loadInstallationDocs = async (installationId: string) => {
+  const attachments = await fetchAttachments(installationId, 'inventory_installation')
+  installationDocs.value = attachments.filter(a => a.file_type === 'document')
+}
+
+const handleInstallationDocUpload = async (event: Event) => {
+  if (!editingInstallation.value) return
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  try {
+    loading.value = true
+    await addAttachment(editingInstallation.value.id, 'inventory_installation', file, 'document')
+    await loadInstallationDocs(editingInstallation.value.id)
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+    ;(event.target as HTMLInputElement).value = ''
+  }
+}
+
+const handleDeleteInstallationDoc = async (attachment: any) => {
+  if (!confirm('Delete this document?')) return
+  try {
+    loading.value = true
+    await deleteAttachment(attachment)
+    if (editingInstallation.value) await loadInstallationDocs(editingInstallation.value.id)
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+
+// ── Installation Notes ─────────────────────────────────────────────────────
+const installationNotes = ref([])
+const newNoteText     = ref('')
+const newNoteCategory = ref('general')
+const newNoteCost     = ref('')
+const newNoteVendor   = ref('')
+const noteLoading = ref(false)
+
+const loadInstallationNotes = async (installationId: string) => {
+  installationNotes.value = await fetchNotes(installationId, 'installation')
+}
+
+const handleAddNote = async () => {
+  if (!editingInstallation.value || !newNoteText.value.trim()) return
+  try {
+    noteLoading.value = true
+    const cost = newNoteCost.value !== '' ? parseFloat(newNoteCost.value) : null
+    await addNote(
+      editingInstallation.value.id, 'installation', newNoteText.value.trim(), newNoteCategory.value,
+      { cost: isNaN(cost) ? null : cost, vendor: newNoteVendor.value || null }
+    )
+    newNoteText.value     = ''
+    newNoteCategory.value = 'general'
+    newNoteCost.value     = ''
+    newNoteVendor.value   = ''
+    await loadInstallationNotes(editingInstallation.value.id)
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    noteLoading.value = false
+  }
+}
+
+const handleDeleteNote = async (noteId: string) => {
+  if (!confirm('Delete this note?')) return
+  try {
+    noteLoading.value = true
+    await deleteNote(noteId)
+    if (editingInstallation.value) await loadInstallationNotes(editingInstallation.value.id)
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    noteLoading.value = false
+  }
+}
+
+const handleNoteAttachment = async (noteId: string, event: Event, fileType: 'image' | 'document') => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  try {
+    noteLoading.value = true
+    await addNoteAttachment(noteId, file, fileType)
+    if (editingInstallation.value) await loadInstallationNotes(editingInstallation.value.id)
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    noteLoading.value = false
+    ;(event.target as HTMLInputElement).value = ''
+  }
+}
+
+const handleDeleteNoteAttachment = async (attachmentId: string) => {
+  try {
+    noteLoading.value = true
+    await deleteNoteAttachment(attachmentId)
+    if (editingInstallation.value) await loadInstallationNotes(editingInstallation.value.id)
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    noteLoading.value = false
+  }
+}
 
 // Location data for the install form
 const units     = ref([])
@@ -160,7 +318,7 @@ const filteredInstallations = computed(() => {
         inst.serial_number?.toLowerCase().includes(q) ||
         inst.asset_tag?.toLowerCase().includes(q) ||
         inst.brand?.toLowerCase().includes(q) ||
-        inst.model?.toLowerCase().includes(q) ||
+        inst.name?.toLowerCase().includes(q) ||
         inst.location_name?.toLowerCase().includes(q) ||
         inst.category_name?.toLowerCase().includes(q)
       if (!hit) return false
@@ -199,6 +357,9 @@ const installationForm = ref({
 const openInstallationForm = (installation = null) => {
   if (installation) {
     editingInstallation.value = installation
+    loadInstallationPhotos(installation.id)
+    loadInstallationDocs(installation.id)
+    loadInstallationNotes(installation.id)
     installationForm.value = {
       item_definition_id: installation.item_definition_id,
       serial_number:      installation.serial_number || '',
@@ -215,6 +376,13 @@ const openInstallationForm = (installation = null) => {
     }
   } else {
     editingInstallation.value = null
+    installationPhotos.value = []
+    installationDocs.value = []
+    installationNotes.value = []
+    newNoteText.value     = ''
+    newNoteCategory.value = 'general'
+    newNoteCost.value     = ''
+    newNoteVendor.value   = ''
     installationForm.value = {
       item_definition_id: '',
       serial_number: '',
@@ -236,13 +404,18 @@ const openInstallationForm = (installation = null) => {
 const saveInstallationForm = async () => {
   try {
     loading.value = true
+    const payload = {
+      ...installationForm.value,
+      install_date: installationForm.value.install_date || null,
+      warranty_expiration: installationForm.value.warranty_expiration || null,
+      purchase_price: installationForm.value.purchase_price ? parseFloat(installationForm.value.purchase_price) : null,
+    }
     if (editingInstallation.value) {
-      await updateInstallation(editingInstallation.value.id, installationForm.value)
+      await updateInstallation(editingInstallation.value.id, payload)
     } else {
       await createInstallation({
-        ...installationForm.value,
+        ...payload,
         property_code: activeProperty.value,
-        purchase_price: installationForm.value.purchase_price ? parseFloat(installationForm.value.purchase_price) : null
       })
     }
     showInstallationForm.value = false
@@ -576,7 +749,7 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
             <div class="flex items-start justify-between">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-2 flex-wrap">
-                  <h3 class="font-semibold text-gray-900 dark:text-white">{{ inst.brand }} {{ inst.model }}</h3>
+                  <h3 class="font-semibold text-gray-900 dark:text-white">{{ inst.brand }} {{ inst.name }}</h3>
                   <span class="text-xs text-gray-500 dark:text-gray-400">{{ inst.category_name }}</span>
                 </div>
 
@@ -636,7 +809,7 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
         <form @submit.prevent="saveInstallationForm" class="space-y-4">
           <LocationSelector
             v-model="installationForm.item_definition_id"
-            :options="itemDefinitions.map(item => ({ id: item.id, name: `${item.category_name} - ${item.brand} ${item.model}` }))"
+            :options="itemDefinitions.map(item => ({ id: item.id, name: `${item.category_name} - ${item.brand} ${item.name}` }))"
             label="Item"
             placeholder="Select item from catalog..."
             required
@@ -726,6 +899,192 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
           <div>
             <label class="block text-sm font-medium mb-1">Notes</label>
             <textarea v-model="installationForm.notes" rows="3" placeholder="Installation notes, maintenance history, etc." class="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700" />
+          </div>
+
+          <!-- Photos (edit mode only) -->
+          <div v-if="editingInstallation" class="border-t pt-4">
+            <label class="block text-sm font-medium mb-3">📸 Photos</label>
+
+            <!-- Primary photo (large) + rest in grid -->
+            <div v-if="installationPhotos.length > 0" class="space-y-2 mb-3">
+              <!-- Primary -->
+              <div class="relative group rounded-lg overflow-hidden h-48 bg-gray-100 dark:bg-gray-900">
+                <img
+                  :src="installationPhotos[0].file_url"
+                  :alt="installationPhotos[0].file_name"
+                  class="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  @click="handleDeleteInstallationPhoto(installationPhotos[0])"
+                  class="absolute top-2 right-2 bg-red-600 text-white w-7 h-7 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                >
+                  ✕
+                </button>
+              </div>
+              <!-- Additional photos grid -->
+              <div v-if="installationPhotos.length > 1" class="grid grid-cols-4 gap-2">
+                <div
+                  v-for="photo in installationPhotos.slice(1)"
+                  :key="photo.id"
+                  class="relative group h-20 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900"
+                >
+                  <img :src="photo.file_url" :alt="photo.file_name" class="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    @click="handleDeleteInstallationPhoto(photo)"
+                    class="absolute top-1 right-1 bg-red-600 text-white w-5 h-5 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty state -->
+            <div v-else class="bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center mb-3">
+              <span class="text-4xl mb-2 block">📷</span>
+              <p class="text-sm text-gray-500">No photos yet.</p>
+            </div>
+
+            <!-- Upload button -->
+            <label class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer inline-block text-sm">
+              <input type="file" accept="image/*" @change="handleInstallationPhotoUpload" class="hidden" />
+              ➕ Add Photo
+            </label>
+          </div>
+
+          <!-- Documents (edit mode only) -->
+          <div v-if="editingInstallation" class="border-t pt-4">
+            <label class="block text-sm font-medium mb-3">📄 Documents</label>
+            <div v-if="installationDocs.length" class="space-y-1 mb-3">
+              <div
+                v-for="doc in installationDocs"
+                :key="doc.id"
+                class="flex items-center justify-between bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded-lg"
+              >
+                <a :href="doc.file_url" target="_blank" class="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate">
+                  📄 {{ doc.file_name }}
+                </a>
+                <button type="button" @click="handleDeleteInstallationDoc(doc)" class="ml-2 text-red-500 hover:text-red-700 text-xs flex-shrink-0">Delete</button>
+              </div>
+            </div>
+            <p v-else class="text-sm text-gray-400 mb-3">No documents yet.</p>
+            <label class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer inline-block text-sm">
+              <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv" @change="handleInstallationDocUpload" class="hidden" />
+              ➕ Add Document
+            </label>
+          </div>
+
+          <!-- Notes (edit mode only) -->
+          <div v-if="editingInstallation" class="border-t pt-4 space-y-4">
+            <label class="block text-sm font-medium">🗒️ Service Notes</label>
+
+            <!-- Existing notes -->
+            <div v-if="installationNotes.length" class="space-y-3">
+              <div
+                v-for="note in installationNotes"
+                :key="note.id"
+                class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3"
+              >
+                <div class="flex items-start justify-between gap-2 mb-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 capitalize">
+                      {{ note.category.replace('_', ' ') }}
+                    </span>
+                    <span class="text-xs text-gray-400">{{ note.creator_name }}</span>
+                    <span class="text-xs text-gray-400">{{ new Date(note.created_at).toLocaleDateString() }}</span>
+                  </div>
+                  <button type="button" @click="handleDeleteNote(note.id)" class="text-red-400 hover:text-red-600 text-xs flex-shrink-0">Delete</button>
+                </div>
+                <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ note.note_text }}</p>
+
+                <!-- Cost / Vendor -->
+                <div v-if="note.cost != null || note.vendor" class="flex gap-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <span v-if="note.cost != null">💰 <span class="font-semibold text-gray-700 dark:text-gray-200">${{ Number(note.cost).toFixed(2) }}</span></span>
+                  <span v-if="note.vendor">🏢 <span class="font-semibold text-gray-700 dark:text-gray-200">{{ note.vendor }}</span></span>
+                </div>
+
+                <!-- Note attachments -->
+                <div v-if="note.attachments?.length" class="mt-2 flex flex-wrap gap-2">
+                  <template v-for="att in note.attachments" :key="att.id">
+                    <div v-if="att.file_type === 'image'" class="relative group">
+                      <img :src="att.file_url" class="w-16 h-16 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
+                      <button type="button" @click="handleDeleteNoteAttachment(att.id)"
+                        class="absolute top-0.5 right-0.5 bg-red-600 text-white w-4 h-4 rounded-full text-[10px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">✕</button>
+                    </div>
+                    <div v-else class="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+                      <a :href="att.file_url" target="_blank" class="hover:underline">📄 {{ att.file_name }}</a>
+                      <button type="button" @click="handleDeleteNoteAttachment(att.id)" class="text-red-400 hover:text-red-600">✕</button>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Add attachment to existing note -->
+                <div class="mt-2 flex gap-2">
+                  <label class="text-xs text-gray-400 hover:text-gray-600 cursor-pointer">
+                    <input type="file" accept="image/*" @change="e => handleNoteAttachment(note.id, e, 'image')" class="hidden" />
+                    + Photo
+                  </label>
+                  <label class="text-xs text-gray-400 hover:text-gray-600 cursor-pointer">
+                    <input type="file" accept=".pdf,.doc,.docx" @change="e => handleNoteAttachment(note.id, e, 'document')" class="hidden" />
+                    + File
+                  </label>
+                </div>
+              </div>
+            </div>
+            <p v-else class="text-sm text-gray-400">No notes yet.</p>
+
+            <!-- Add new note -->
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+              <div class="flex gap-2">
+                <select
+                  v-model="newNoteCategory"
+                  class="text-sm px-2 py-1.5 border rounded-lg dark:bg-gray-900 dark:border-gray-700 flex-shrink-0"
+                >
+                  <option v-for="cat in NOTE_CATEGORIES" :key="cat.value" :value="cat.value">{{ cat.label }}</option>
+                </select>
+              </div>
+              <textarea
+                v-model="newNoteText"
+                rows="2"
+                placeholder="Add a service note, repair description, inspection finding…"
+                class="w-full text-sm px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 resize-none"
+              />
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Cost ($) <span class="text-gray-300">optional</span></label>
+                  <input
+                    v-model="newNoteCost"
+                    type="number" min="0" step="0.01" placeholder="0.00"
+                    class="w-full text-sm px-2 py-1.5 border rounded-lg dark:bg-gray-900 dark:border-gray-700"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Vendor / Contractor <span class="text-gray-300">optional</span></label>
+                  <input
+                    v-model="newNoteVendor"
+                    type="text" placeholder="e.g. ABC HVAC Services"
+                    class="w-full text-sm px-2 py-1.5 border rounded-lg dark:bg-gray-900 dark:border-gray-700"
+                  />
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <button
+                  type="button"
+                  @click="handleAddNote"
+                  :disabled="noteLoading || !newNoteText.trim()"
+                  class="px-3 py-1.5 text-sm bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg hover:opacity-80 disabled:opacity-40"
+                >
+                  {{ noteLoading ? 'Saving…' : 'Add Note' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Create mode notice -->
+          <div v-if="!editingInstallation" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900 rounded-lg p-3 text-sm text-blue-800 dark:text-blue-400">
+            💡 <strong>Tip:</strong> After saving, open the installation to add photos, documents, and service notes.
           </div>
 
           <div class="flex justify-end gap-2 pt-4 border-t">

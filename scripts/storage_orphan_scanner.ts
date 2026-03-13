@@ -91,13 +91,9 @@ async function scanBucket(bucket: string) {
       .select('*', { count: 'exact', head: true })
       .eq('source_image_url', publicUrl)
 
-    // Check location_note_attachments table (legacy or specialized)
-    const { count: noteAttCount } = await supabase
-        .from('location_note_attachments')
-        .select('*', { count: 'exact', head: true })
-        .eq('file_url', publicUrl)
-
-    const isReferenced = (attCount || 0) > 0 || (locCount || 0) > 0 || (noteAttCount || 0) > 0
+    // Note: all note attachments now live in the `attachments` table (record_type='note')
+    // so the attCount check above already covers them.
+    const isReferenced = (attCount || 0) > 0 || (locCount || 0) > 0
 
     if (!isReferenced) {
       orphans.push(file.path)
