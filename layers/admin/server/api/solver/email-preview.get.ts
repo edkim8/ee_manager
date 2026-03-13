@@ -1,6 +1,6 @@
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { Database } from '../../../../../types/supabase'
-import { generateHighFidelityHtmlReport, type PropertySnapshotDeltas, type PropertyRenewalCountsMap } from '../../../../base/utils/reporting'
+import { generateHighFidelityHtmlReport, type PropertySnapshotDeltas, type PropertyRenewalCountsMap, type PipelineMoveOutRow, type PipelineMoveInRow } from '../../../../base/utils/reporting'
 
 export default defineEventHandler(async (event) => {
   const client = serverSupabaseServiceRole<Database>(event)
@@ -61,6 +61,8 @@ export default defineEventHandler(async (event) => {
     { data: stagingData },
     { data: snapshotRows },
     { data: renewalItemsData },
+    { data: moveOutPipelineData },
+    { data: moveInPipelineData },
   ] = await Promise.all([
     client.from('view_table_alerts_unified')
       .select('property_code, is_active, created_at')
@@ -71,7 +73,7 @@ export default defineEventHandler(async (event) => {
       .in('property_code', propertiesProcessed),
 
     client.from('unit_flags')
-      .select('property_code, severity, resolved_at')
+      .select('unit_id, property_code, severity, resolved_at')
       .in('property_code', propertiesProcessed)
       .ilike('flag_type', 'makeready%'),
 
@@ -99,6 +101,22 @@ export default defineEventHandler(async (event) => {
       .select('property_code, status')
       .in('property_code', propertiesProcessed)
       .in('status', ['pending', 'offered']),
+
+    // Move-out pipeline: all Notice tenancies with a move_out_date
+    client.from('tenancies')
+      .select('id, unit_id, property_code, move_out_date, units(unit_name), residents(name, role)')
+      .in('property_code', propertiesProcessed)
+      .eq('status', 'Notice')
+      .not('move_out_date', 'is', null)
+      .order('move_out_date', { ascending: true }),
+
+    // Move-in pipeline: all Future/Applicant tenancies with a move_in_date
+    client.from('tenancies')
+      .select('id, unit_id, property_code, move_in_date, status, units(unit_name), residents(name, role)')
+      .in('property_code', propertiesProcessed)
+      .in('status', ['Future', 'Applicant'])
+      .not('move_in_date', 'is', null)
+      .order('move_in_date', { ascending: true }),
   ])
 
   const filesProcessed = stagingData?.length || 0
@@ -180,6 +198,33 @@ export default defineEventHandler(async (event) => {
     },
   }
 
+  // Build move-out pipeline rows
+  const moveOutPipeline: PipelineMoveOutRow[] = (moveOutPipelineData || []).map((t: any) => {
+    const primary = (t.residents as any[])?.find((r: any) => r.role === 'Primary')
+    return {
+      unit_name: (t.units as any)?.unit_name || '?',
+      property_code: t.property_code,
+      resident_name: primary?.name || 'Unknown',
+      move_out_date: t.move_out_date,
+    }
+  })
+
+  // Build move-in pipeline rows, cross-referencing open make-ready flags
+  const makeReadyUnitIds = new Set(
+    (makeReadyData || []).filter(f => !f.resolved_at).map(f => (f as any).unit_id as string)
+  )
+  const moveInPipeline: PipelineMoveInRow[] = (moveInPipelineData || []).map((t: any) => {
+    const primary = (t.residents as any[])?.find((r: any) => r.role === 'Primary')
+    return {
+      unit_name: (t.units as any)?.unit_name || '?',
+      property_code: t.property_code,
+      resident_name: primary?.name || 'Unknown',
+      move_in_date: t.move_in_date,
+      status: t.status,
+      makeready_conflict: makeReadyUnitIds.has(t.unit_id),
+    }
+  })
+
   const html = generateHighFidelityHtmlReport(
     run,
     allEvents,
@@ -187,6 +232,8 @@ export default defineEventHandler(async (event) => {
     baseUrl,
     snapshotDeltas,
     renewalCounts,
+    moveOutPipeline,
+    moveInPipeline,
   )
 
   return { html, run }

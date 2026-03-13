@@ -76,6 +76,22 @@ export interface SnapshotDelta {
 
 export type PropertySnapshotDeltas = Record<string, SnapshotDelta>
 
+export interface PipelineMoveOutRow {
+    unit_name: string
+    property_code: string
+    resident_name: string
+    move_out_date: string
+}
+
+export interface PipelineMoveInRow {
+    unit_name: string
+    property_code: string
+    resident_name: string
+    move_in_date: string
+    status: string
+    makeready_conflict: boolean
+}
+
 /**
  * Generate a premium HTML report for a Solver run.
  * Optimized for email clients with inline CSS.
@@ -87,6 +103,8 @@ export function generateHighFidelityHtmlReport(
     baseUrl: string = '',
     snapshotDeltas?: PropertySnapshotDeltas,
     renewalCountsMap?: PropertyRenewalCountsMap,
+    moveOutPipeline?: PipelineMoveOutRow[],
+    moveInPipeline?: PipelineMoveInRow[],
 ): string {
     const summaryData = run.summary as Record<string, PropertySummary>
     const knownCodes = new Set<string>(PROPERTY_LIST.map(p => p.code))
@@ -99,24 +117,28 @@ export function generateHighFidelityHtmlReport(
     <div style="font-family: 'Inter', sans-serif, system-ui; max-width: 800px; margin: 0 auto; color: #1f2937; line-height: 1.5;">
         <!-- Header -->
         <div style="background-color: #4f46e5; padding: 32px; border-radius: 12px 12px 0 0; color: white;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
-                <div>
-                    <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.025em;">Daily Solver Report</h1>
-                    <p style="margin: 8px 0 0; opacity: 0.9; font-size: 14px;">
-                        ${uploadDateStr}
-                    </p>
-                    <p style="margin: 4px 0 0; opacity: 0.75; font-size: 12px;">
-                        Batch: <code style="background: rgba(255,255,255,0.2); padding: 2px 4px; border-radius: 4px;">${run.batch_id}</code>
-                    </p>
-                </div>
-                ${baseUrl ? `
-                <div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
-                    <a href="${baseUrl}/solver/report" style="display: inline-block; background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; border: 1px solid rgba(255,255,255,0.3);">📊 Today Report →</a>
-                    <a href="${baseUrl}/office/availabilities/analysis" style="display: inline-block; background: rgba(255,255,255,0.15); color: white; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; border: 1px solid rgba(255,255,255,0.25);">📈 Availability Analysis →</a>
-                    <a href="${baseUrl}/solver/report-help" style="display: inline-block; background: rgba(255,255,255,0.1); color: white; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; border: 1px solid rgba(255,255,255,0.25);">❓ Report Guide</a>
-                </div>
-                ` : ''}
-            </div>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="vertical-align: top;">
+                        <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.025em; color: white;">Daily Solver Report</h1>
+                        <p style="margin: 8px 0 0; opacity: 0.9; font-size: 14px; color: white;">
+                            ${uploadDateStr}
+                        </p>
+                        <p style="margin: 4px 0 0; opacity: 0.75; font-size: 12px; color: white;">
+                            Batch: <code style="background: rgba(255,255,255,0.2); padding: 2px 4px; border-radius: 4px;">${run.batch_id}</code>
+                        </p>
+                    </td>
+                    ${baseUrl ? `
+                    <td style="vertical-align: top; text-align: right; white-space: nowrap; padding-left: 16px; width: 1%;">
+                        <table style="border-collapse: collapse; margin-left: auto;">
+                            <tr><td style="padding-bottom: 6px;"><a href="${baseUrl}/solver/report" style="display: inline-block; background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 1px solid rgba(255,255,255,0.3);">📊 Today Report →</a></td></tr>
+                            <tr><td style="padding-bottom: 6px;"><a href="${baseUrl}/office/availabilities/analysis" style="display: inline-block; background: rgba(255,255,255,0.15); color: white; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 1px solid rgba(255,255,255,0.25);">📈 Availability Analysis →</a></td></tr>
+                            <tr><td><a href="${baseUrl}/solver/report-help" style="display: inline-block; background: rgba(255,255,255,0.1); color: white; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 1px solid rgba(255,255,255,0.25);">❓ Report Guide</a></td></tr>
+                        </table>
+                    </td>
+                    ` : ''}
+                </tr>
+            </table>
         </div>
 
         <div style="padding: 32px; background-color: #ffffff; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
@@ -131,42 +153,53 @@ export function generateHighFidelityHtmlReport(
             ${operationalSummary ? `
             <div style="margin-bottom: 48px;">
                 <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Operational Summary</h2>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px;">
-
-                    ${renderSummaryBox('Alerts', '🚨', [
-                        { label: 'Open', value: operationalSummary.alerts.active.toString() },
-                        { label: 'New Today', value: operationalSummary.alerts.newToday.toString() },
-                        { label: 'Closed Today', value: operationalSummary.alerts.closedToday.toString() },
-                    ], 'View Alerts', `${baseUrl}/office/alerts`)}
-
-                    ${renderSummaryBox('Work Orders', '🔧', [
-                        { label: 'Open', value: operationalSummary.workOrders.open.toString() },
-                        { label: 'New Today', value: operationalSummary.workOrders.newToday.toString() },
-                        { label: 'Completed Today', value: operationalSummary.workOrders.completedToday.toString() },
-                        ...(operationalSummary.workOrders.overdueOpen != null
-                            ? [{ label: 'Open > 3 Days', value: operationalSummary.workOrders.overdueOpen.toString(), highlight: operationalSummary.workOrders.overdueOpen > 0 }]
-                            : []),
-                    ], 'View Work Orders', `${baseUrl}/maintenance/work-orders`)}
-
-                    ${renderSummaryBox('MakeReady', '🏠', [
-                        { label: 'Active Units', value: operationalSummary.makeReady.active.toString() },
-                        { label: 'Overdue', value: operationalSummary.makeReady.overdue.toString(), highlight: operationalSummary.makeReady.overdue > 0 },
-                        { label: 'Ready This Week', value: operationalSummary.makeReady.readyThisWeek > 0 ? operationalSummary.makeReady.readyThisWeek.toString() : '0' },
-                    ], 'View MakeReady', `${baseUrl}/office/makeready`)}
-
-                    ${renderSummaryBox('Delinquencies', '💵', [
-                        { label: 'Residents', value: operationalSummary.delinquencies.count.toString(), highlight: operationalSummary.delinquencies.count > 0 },
-                        { label: 'Total Owed', value: '$' + operationalSummary.delinquencies.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
-                        ...(operationalSummary.delinquencies.amount30Plus != null
-                            ? [{ label: '30+ Days', value: '$' + operationalSummary.delinquencies.amount30Plus.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), highlight: operationalSummary.delinquencies.amount30Plus > 0 }]
-                            : [{ label: '90+ Days Count', value: operationalSummary.delinquencies.over90Days.toString(), highlight: operationalSummary.delinquencies.over90Days > 0 }]),
-                    ], 'View Delinquencies', `${baseUrl}/office/delinquencies`)}
-
-                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 50%; padding: 0 8px 8px 0; vertical-align: top;">
+                            ${renderSummaryBox('Alerts', '🚨', [
+                                { label: 'Open', value: operationalSummary.alerts.active.toString() },
+                                { label: 'New Today', value: operationalSummary.alerts.newToday.toString() },
+                                { label: 'Closed Today', value: operationalSummary.alerts.closedToday.toString() },
+                            ], 'View Alerts', `${baseUrl}/office/alerts`)}
+                        </td>
+                        <td style="width: 50%; padding: 0 0 8px 8px; vertical-align: top;">
+                            ${renderSummaryBox('Work Orders', '🔧', [
+                                { label: 'Open', value: operationalSummary.workOrders.open.toString() },
+                                { label: 'New Today', value: operationalSummary.workOrders.newToday.toString() },
+                                { label: 'Completed Today', value: operationalSummary.workOrders.completedToday.toString() },
+                                ...(operationalSummary.workOrders.overdueOpen != null
+                                    ? [{ label: 'Open > 3 Days', value: operationalSummary.workOrders.overdueOpen.toString(), highlight: operationalSummary.workOrders.overdueOpen > 0 }]
+                                    : []),
+                            ], 'View Work Orders', `${baseUrl}/maintenance/work-orders`)}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 50%; padding: 0 8px 0 0; vertical-align: top;">
+                            ${renderSummaryBox('MakeReady', '🏠', [
+                                { label: 'Active Units', value: operationalSummary.makeReady.active.toString() },
+                                { label: 'Overdue', value: operationalSummary.makeReady.overdue.toString(), highlight: operationalSummary.makeReady.overdue > 0 },
+                                { label: 'Ready This Week', value: operationalSummary.makeReady.readyThisWeek > 0 ? operationalSummary.makeReady.readyThisWeek.toString() : '0' },
+                            ], 'View MakeReady', `${baseUrl}/office/makeready`)}
+                        </td>
+                        <td style="width: 50%; padding: 0 0 0 8px; vertical-align: top;">
+                            ${renderSummaryBox('Delinquencies', '💵', [
+                                { label: 'Residents', value: operationalSummary.delinquencies.count.toString(), highlight: operationalSummary.delinquencies.count > 0 },
+                                { label: 'Total Owed', value: '$' + operationalSummary.delinquencies.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
+                                ...(operationalSummary.delinquencies.amount30Plus != null
+                                    ? [{ label: '30+ Days', value: '$' + operationalSummary.delinquencies.amount30Plus.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), highlight: operationalSummary.delinquencies.amount30Plus > 0 }]
+                                    : [{ label: '90+ Days Count', value: operationalSummary.delinquencies.over90Days.toString(), highlight: operationalSummary.delinquencies.over90Days > 0 }]),
+                            ], 'View Delinquencies', `${baseUrl}/office/delinquencies`)}
+                        </td>
+                    </tr>
+                </table>
             </div>
             ` : ''}
 
-            <!-- ③ Event Detail Tables -->
+            <!-- ③ Pipeline Sections -->
+            ${renderMoveOutPipeline(moveOutPipeline || [])}
+            ${renderMoveInPipeline(moveInPipeline || [])}
+
+            <!-- ④ Event Detail Tables -->
             <div>
                 <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Today's Activity</h2>
                 ${renderEventSection('👤 New Residents', events.filter(e => e.event_type === 'new_tenancy'), renderNewTenancyRow)}
@@ -177,27 +210,29 @@ export function generateHighFidelityHtmlReport(
                 ${!events.length ? '<p style="color: #9ca3af; font-size: 13px; margin: 0;">No activity events recorded for this run.</p>' : ''}
             </div>
 
-            <!-- ④ Technical Health -->
+            <!-- ⑤ Technical Health -->
             ${operationalSummary ? `
             <div style="margin-top: 48px;">
                 <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">⚙️ Technical Health</h2>
                 <div style="background-color: ${operationalSummary.technical.status === 'completed' ? '#ecfdf5' : operationalSummary.technical.status === 'failed' ? '#fef2f2' : '#fef3c7'}; border-radius: 8px; padding: 20px; border: 1px solid ${operationalSummary.technical.status === 'completed' ? '#d1fae5' : operationalSummary.technical.status === 'failed' ? '#fecaca' : '#fde68a'};">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: ${operationalSummary.technical.errorMessage ? '16px' : '0'};">
-                        <div>
-                            <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600;">Status</div>
-                            <div style="font-size: 16px; font-weight: 700; color: ${operationalSummary.technical.status === 'completed' ? '#065f46' : operationalSummary.technical.status === 'failed' ? '#991b1b' : '#92400e'}; margin-top: 4px; text-transform: uppercase;">
-                                ${operationalSummary.technical.status === 'completed' ? '✓ SUCCESS' : operationalSummary.technical.status === 'failed' ? '✗ FAILED' : '⋯ RUNNING'}
-                            </div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600;">Files Processed</div>
-                            <div style="font-size: 16px; font-weight: 700; color: #4f46e5; margin-top: 4px;">${operationalSummary.technical.filesProcessed}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600;">Parse Errors</div>
-                            <div style="font-size: 16px; font-weight: 700; color: ${operationalSummary.technical.filesWithErrors > 0 ? '#dc2626' : '#059669'}; margin-top: 4px;">${operationalSummary.technical.filesWithErrors}</div>
-                        </div>
-                    </div>
+                    <table style="border-collapse: collapse; width: 100%; margin-bottom: ${operationalSummary.technical.errorMessage ? '16px' : '0'};">
+                        <tr>
+                            <td style="vertical-align: top; padding-right: 24px; white-space: nowrap;">
+                                <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600;">Status</div>
+                                <div style="font-size: 16px; font-weight: 700; color: ${operationalSummary.technical.status === 'completed' ? '#065f46' : operationalSummary.technical.status === 'failed' ? '#991b1b' : '#92400e'}; margin-top: 4px; text-transform: uppercase;">
+                                    ${operationalSummary.technical.status === 'completed' ? '✓ SUCCESS' : operationalSummary.technical.status === 'failed' ? '✗ FAILED' : '⋯ RUNNING'}
+                                </div>
+                            </td>
+                            <td style="vertical-align: top; padding-right: 24px; white-space: nowrap;">
+                                <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600;">Files Processed</div>
+                                <div style="font-size: 16px; font-weight: 700; color: #4f46e5; margin-top: 4px;">${operationalSummary.technical.filesProcessed}</div>
+                            </td>
+                            <td style="vertical-align: top; white-space: nowrap;">
+                                <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600;">Parse Errors</div>
+                                <div style="font-size: 16px; font-weight: 700; color: ${operationalSummary.technical.filesWithErrors > 0 ? '#dc2626' : '#059669'}; margin-top: 4px;">${operationalSummary.technical.filesWithErrors}</div>
+                            </td>
+                        </tr>
+                    </table>
                     ${operationalSummary.technical.errorMessage ? `
                         <div style="margin-top: 12px; padding: 12px; background-color: rgba(0,0,0,0.05); border-radius: 6px; font-size: 13px; color: #991b1b; font-family: 'Courier New', monospace;">
                             <strong>Error:</strong> ${operationalSummary.technical.errorMessage}
@@ -218,12 +253,113 @@ export function generateHighFidelityHtmlReport(
     return html
 }
 
+function renderMoveOutPipeline(rows: PipelineMoveOutRow[]): string {
+    if (rows.length === 0) return ''
+
+    const today = new Date().toISOString().split('T')[0]
+    const thStyle = 'padding: 10px; text-align: left; font-weight: 600; color: #4b5563; font-size: 12px;'
+
+    const rowsHtml = rows.map(r => {
+        const daysUntil = Math.round((new Date(r.move_out_date).getTime() - new Date(today).getTime()) / 86400000)
+        const isOverdue = daysUntil < 0
+        const isUrgent = daysUntil >= 0 && daysUntil <= 3
+        const dateColor = isOverdue ? '#dc2626' : isUrgent ? '#d97706' : '#374151'
+        const dateBadge = isOverdue
+            ? `<span style="background:#fee2e2;color:#dc2626;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:600;">OVERDUE</span>`
+            : isUrgent
+            ? `<span style="background:#fff7ed;color:#c2410c;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:600;">${daysUntil}d</span>`
+            : `<span style="color:#6b7280;font-size:11px;margin-left:6px;">(${daysUntil}d)</span>`
+        return `
+        <tr>
+            <td style="${cellStyle}"><strong>${r.resident_name}</strong></td>
+            <td style="${cellStyle}">${r.unit_name}</td>
+            <td style="${cellStyle}">${r.property_code}</td>
+            <td style="${cellStyle};color:${dateColor};font-weight:600;">${r.move_out_date}${dateBadge}</td>
+        </tr>`
+    }).join('')
+
+    return `
+    <div style="margin-bottom: 32px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+            Move-Out Pipeline
+            <span style="margin-left: 8px; background: #fff7ed; color: #c2410c; font-size: 12px; padding: 2px 8px; border-radius: 9999px; font-weight: 500;">${rows.length} on notice</span>
+        </h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+                <tr style="background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                    <th style="${thStyle}">Resident</th>
+                    <th style="${thStyle}">Unit</th>
+                    <th style="${thStyle}">Property</th>
+                    <th style="${thStyle}">Move-Out Date</th>
+                </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+        </table>
+    </div>`
+}
+
+function renderMoveInPipeline(rows: PipelineMoveInRow[]): string {
+    if (rows.length === 0) return ''
+
+    const today = new Date().toISOString().split('T')[0]
+    const thStyle = 'padding: 10px; text-align: left; font-weight: 600; color: #4b5563; font-size: 12px;'
+
+    const rowsHtml = rows.map(r => {
+        const daysUntil = Math.round((new Date(r.move_in_date).getTime() - new Date(today).getTime()) / 86400000)
+        const isOverdue = daysUntil < 0
+        const isUrgent = daysUntil >= 0 && daysUntil <= 3
+        const dateColor = isOverdue ? '#dc2626' : isUrgent ? '#d97706' : '#374151'
+        const dateBadge = isOverdue
+            ? `<span style="background:#fee2e2;color:#dc2626;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:600;">OVERDUE</span>`
+            : isUrgent
+            ? `<span style="background:#fff7ed;color:#c2410c;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:600;">${daysUntil}d</span>`
+            : `<span style="color:#6b7280;font-size:11px;margin-left:6px;">(${daysUntil}d)</span>`
+        const conflictBadge = r.makeready_conflict
+            ? `<span style="background:#fef2f2;color:#dc2626;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;">MakeReady Open</span>`
+            : `<span style="background:#ecfdf5;color:#065f46;font-size:10px;padding:2px 6px;border-radius:4px;">Ready</span>`
+        const statusBadge = `<span style="background:#e0e7ff;color:#3730a3;font-size:10px;padding:2px 6px;border-radius:4px;">${r.status}</span>`
+        return `
+        <tr>
+            <td style="${cellStyle}"><strong>${r.resident_name}</strong></td>
+            <td style="${cellStyle}">${r.unit_name}</td>
+            <td style="${cellStyle}">${r.property_code}</td>
+            <td style="${cellStyle}">${statusBadge}</td>
+            <td style="${cellStyle};color:${dateColor};font-weight:600;">${r.move_in_date}${dateBadge}</td>
+            <td style="${cellStyle}">${conflictBadge}</td>
+        </tr>`
+    }).join('')
+
+    const conflicts = rows.filter(r => r.makeready_conflict).length
+
+    return `
+    <div style="margin-bottom: 32px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+            Move-In Pipeline
+            <span style="margin-left: 8px; background: #e0e7ff; color: #3730a3; font-size: 12px; padding: 2px 8px; border-radius: 9999px; font-weight: 500;">${rows.length} incoming</span>
+            ${conflicts > 0 ? `<span style="margin-left: 6px; background: #fee2e2; color: #dc2626; font-size: 12px; padding: 2px 8px; border-radius: 9999px; font-weight: 600;">${conflicts} make-ready conflict${conflicts > 1 ? 's' : ''}</span>` : ''}
+        </h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+                <tr style="background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                    <th style="${thStyle}">Resident</th>
+                    <th style="${thStyle}">Unit</th>
+                    <th style="${thStyle}">Property</th>
+                    <th style="${thStyle}">Status</th>
+                    <th style="${thStyle}">Move-In Date</th>
+                    <th style="${thStyle}">Make-Ready</th>
+                </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+        </table>
+    </div>`
+}
+
 function renderEventSection(title: string, events: SolverEvent[], rowRenderer: (e: SolverEvent) => string) {
     if (events.length === 0) return ''
 
     return `
     <div style="margin-bottom: 40px;">
-        <h3 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 12px; display: flex; align-items: center;">
+        <h3 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 12px;">
             ${title}
             <span style="margin-left: 8px; background: #e0e7ff; color: #4338ca; font-size: 12px; padding: 2px 8px; border-radius: 9999px;">${events.length}</span>
         </h3>
@@ -422,7 +558,7 @@ function renderNoticesSummarySection(noticeEvents: SolverEvent[]) {
 
     return `
     <div style="margin-bottom: 40px;">
-        <h3 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 12px; display: flex; align-items: center;">
+        <h3 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 12px;">
             📋 Notices on File
             <span style="margin-left: 8px; background: #fff7ed; color: #c2410c; font-size: 12px; padding: 2px 8px; border-radius: 9999px;">${noticeEvents.length} total</span>
         </h3>
@@ -458,19 +594,19 @@ function renderNoticesSummarySection(noticeEvents: SolverEvent[]) {
 }
 
 function renderSummaryBox(title: string, icon: string, items: {label: string, value: string, highlight?: boolean}[], linkText: string = 'View Details', linkUrl: string = '#') {
+    const metricCells = items.map(item => `
+        <td style="padding: 0 10px 0 0; vertical-align: top; white-space: nowrap;">
+            <div style="font-size: 10px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">${item.label}</div>
+            <div style="font-size: 18px; font-weight: 700; color: ${item.highlight ? '#dc2626' : '#4f46e5'}; margin-top: 3px;">${item.value}</div>
+        </td>`).join('')
     return `
     <div style="background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; padding: 20px;">
-        <h3 style="font-size: 14px; font-weight: 700; color: #374151; margin: 0 0 14px 0; display: flex; align-items: center; text-transform: uppercase; letter-spacing: 0.05em;">
-            <span style="margin-right: 6px;">${icon}</span> ${title}
-        </h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 14px;">
-            ${items.map(item => `
-                <div>
-                    <div style="font-size: 10px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">${item.label}</div>
-                    <div style="font-size: 18px; font-weight: 700; color: ${item.highlight ? '#dc2626' : '#4f46e5'}; margin-top: 3px;">${item.value}</div>
-                </div>
-            `).join('')}
+        <div style="font-size: 14px; font-weight: 700; color: #374151; margin: 0 0 14px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+            ${icon} ${title}
         </div>
+        <table style="border-collapse: collapse; margin-bottom: 14px; width: 100%;">
+            <tr>${metricCells}</tr>
+        </table>
         <a href="${linkUrl}" style="display: inline-block; padding: 6px 14px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 500;">
             ${linkText} →
         </a>
@@ -497,8 +633,7 @@ function renderRentDelta(delta: number | null): string {
 }
 
 const moduleLabel = 'font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #9ca3af; margin-bottom: 10px;'
-const moduleGrid  = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; font-size: 12px;'
-const metricLabel = 'color: #6b7280; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;'
+const metricLabel = 'color: #6b7280; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; padding-right: 16px;'
 const metricValue = 'font-weight: 700; margin-top: 3px; font-size: 14px;'
 
 function renderPropertySummary(code: string, s: PropertySummary, delta?: SnapshotDelta, renewals?: PropertyRenewalCounts) {
@@ -519,44 +654,48 @@ function renderPropertySummary(code: string, s: PropertySummary, delta?: Snapsho
         <!-- Availabilities module -->
         <div style="margin-bottom: 14px;">
             <div style="${moduleLabel}">Availabilities</div>
-            <div style="${moduleGrid}">
-                <div>
-                    <div style="${metricLabel}">Available Units</div>
-                    <div style="${metricValue}">${availUnits}</div>
-                </div>
-                <div>
-                    <div style="${metricLabel}">Applications</div>
-                    <div style="${metricValue}">${s.applicationsSaved}</div>
-                </div>
-                <div>
-                    <div style="${metricLabel}">Notices</div>
-                    <div style="${metricValue}">${s.noticesProcessed}</div>
-                </div>
-                ${avgRent ? `
-                <div>
-                    <div style="${metricLabel}">Avg Contracted Rent</div>
-                    <div style="${metricValue}">${avgRent}</div>
-                </div>` : ''}
-            </div>
+            <table style="border-collapse: collapse; font-size: 12px; width: 100%;">
+                <tr>
+                    <td style="vertical-align: top; padding-right: 20px; white-space: nowrap;">
+                        <div style="${metricLabel}">Available Units</div>
+                        <div style="${metricValue}">${availUnits}</div>
+                    </td>
+                    <td style="vertical-align: top; padding-right: 20px; white-space: nowrap;">
+                        <div style="${metricLabel}">Applications</div>
+                        <div style="${metricValue}">${s.applicationsSaved}</div>
+                    </td>
+                    <td style="vertical-align: top; padding-right: 20px; white-space: nowrap;">
+                        <div style="${metricLabel}">Notices</div>
+                        <div style="${metricValue}">${s.noticesProcessed}</div>
+                    </td>
+                    ${avgRent ? `
+                    <td style="vertical-align: top; white-space: nowrap;">
+                        <div style="${metricLabel}">Avg Contracted Rent</div>
+                        <div style="${metricValue}">${avgRent}</div>
+                    </td>` : ''}
+                </tr>
+            </table>
         </div>
 
         <!-- Renewals module -->
         <div style="border-top: 1px solid #e5e7eb; padding-top: 12px;">
             <div style="${moduleLabel}">Renewals</div>
-            <div style="${moduleGrid}">
-                <div>
-                    <div style="${metricLabel}">Offer Pending</div>
-                    <div style="${metricValue}; color: ${(renewals?.pending ?? 0) > 0 ? '#d97706' : 'inherit'}">${renewals?.pending ?? 0}</div>
-                </div>
-                <div>
-                    <div style="${metricLabel}">Awaiting Response</div>
-                    <div style="${metricValue}; color: ${(renewals?.offered ?? 0) > 0 ? '#4f46e5' : 'inherit'}">${renewals?.offered ?? 0}</div>
-                </div>
-                <div>
-                    <div style="${metricLabel}">Completed This Run</div>
-                    <div style="${metricValue}">${s.leasesRenewed}</div>
-                </div>
-            </div>
+            <table style="border-collapse: collapse; font-size: 12px; width: 100%;">
+                <tr>
+                    <td style="vertical-align: top; padding-right: 20px; white-space: nowrap;">
+                        <div style="${metricLabel}">Offer Pending</div>
+                        <div style="${metricValue}; color: ${(renewals?.pending ?? 0) > 0 ? '#d97706' : 'inherit'}">${renewals?.pending ?? 0}</div>
+                    </td>
+                    <td style="vertical-align: top; padding-right: 20px; white-space: nowrap;">
+                        <div style="${metricLabel}">Awaiting Response</div>
+                        <div style="${metricValue}; color: ${(renewals?.offered ?? 0) > 0 ? '#4f46e5' : 'inherit'}">${renewals?.offered ?? 0}</div>
+                    </td>
+                    <td style="vertical-align: top; white-space: nowrap;">
+                        <div style="${metricLabel}">Completed This Run</div>
+                        <div style="${metricValue}">${s.leasesRenewed}</div>
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
     `
