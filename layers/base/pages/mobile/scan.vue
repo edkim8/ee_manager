@@ -145,7 +145,7 @@ const fmtDate = (d: string | null) =>
           <!-- Item name + health -->
           <div class="flex items-start justify-between gap-2">
             <div>
-              <p class="text-lg font-black text-gray-900 dark:text-white">{{ found.brand }} {{ found.model }}</p>
+              <p class="text-lg font-black text-gray-900 dark:text-white">{{ found.brand }} {{ found.name }}</p>
               <p class="text-sm text-gray-500 dark:text-gray-400">{{ found.category_name }}</p>
             </div>
             <span class="text-sm font-black uppercase tracking-wide" :class="HEALTH_COLOR[found.health_status]">

@@ -326,6 +326,7 @@ const navigationItems = computed(() => {
         { label: 'Parser Engine', icon: 'i-heroicons-document-text', to: '/admin/parse_engine' },
         { label: 'Unit Lookup Generator', icon: 'i-heroicons-code-bracket', to: '/admin/generators/unit-lookup' },
         { label: 'Email Notifications', icon: 'i-heroicons-envelope', to: '/admin/notifications' },
+        { label: 'Note Categories', icon: 'i-heroicons-tag', to: '/admin/note-categories' },
       ],
     })
   }

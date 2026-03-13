@@ -10,9 +10,14 @@ interface ItemDefinitionWithDetails {
   property_code: string | null
   category_id: string
   category_name: string
+  /** Effective lifespan — COALESCE(item override, category default) */
   expected_life_years: number
+  /** Item-level override; null means "use category default" */
+  item_expected_life_years: number | null
+  /** Category default lifespan */
+  category_expected_life_years: number
   brand: string | null
-  model: string | null
+  name: string | null
   manufacturer_part_number: string | null
   description: string | null
   notes: string | null
@@ -32,7 +37,7 @@ interface FetchItemsFilters {
 
 /**
  * Inventory Item Definitions Composable
- * Manages master catalog of item types (brand/model combinations)
+ * Manages master catalog of item types (brand/name combinations)
  */
 export const useInventoryItemDefinitions = () => {
   const supabase = useSupabaseClient<Database>()
@@ -47,8 +52,10 @@ export const useInventoryItemDefinitions = () => {
       .select('*')
 
     // Apply filters
+    // When scoping to a property, also include global ('ALL') items so mobile
+    // techs can bind pre-printed barcodes to globally-shared catalog entries.
     if (filters?.propertyCode) {
-      query = query.eq('property_code', filters.propertyCode)
+      query = query.or(`property_code.eq.${filters.propertyCode},property_code.eq.ALL`)
     }
     if (filters?.categoryId) {
       query = query.eq('category_id', filters.categoryId)
@@ -57,11 +64,11 @@ export const useInventoryItemDefinitions = () => {
       query = query.ilike('brand', `%${filters.brand}%`)
     }
     if (filters?.searchTerm) {
-      query = query.or(`brand.ilike.%${filters.searchTerm}%,model.ilike.%${filters.searchTerm}%,description.ilike.%${filters.searchTerm}%`)
+      query = query.or(`brand.ilike.%${filters.searchTerm}%,name.ilike.%${filters.searchTerm}%,description.ilike.%${filters.searchTerm}%`)
     }
 
     query = query.order('brand', { ascending: true })
-    query = query.order('model', { ascending: true })
+    query = query.order('name', { ascending: true })
 
     const { data, error } = await query
 

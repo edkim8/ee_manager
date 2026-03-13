@@ -4,31 +4,23 @@
  */
 
 /**
- * Formats a new asset tag based on property, item category, and serial/id.
- * Pattern: EE-[PROP]-[CAT]-[SERIAL]
- * Example: EE-AP-HV-101
- * 
- * @param propertyCode - e.g. 'CV', 'AP', 'RS'
- * @param categoryCode - e.g. 'HVAC' -> 'HV', 'APPL' -> 'AP'
- * @param identifier - e.g. '101', 'SN1234'
+ * Formats a pre-printed Asset Tag from its two components.
+ * Pattern: [PROPERTY]-[6-digit sequence]
+ * Example: SB-000001, CV-000452
+ *
+ * @param propertyCode - 2-char property code, e.g. 'SB', 'CV', 'WO'
+ * @param sequence - sequential number (will be zero-padded to 6 digits)
  * @returns Formatted Asset Tag
  */
-export function formatAssetTag(
-  propertyCode: string,
-  categoryCode: string,
-  identifier: string
-): string {
+export function formatAssetTag(propertyCode: string, sequence: number): string {
   const p = propertyCode.toUpperCase().trim()
-  const c = categoryCode.toUpperCase().trim()
-  const i = identifier.toUpperCase().trim()
-  
-  return `EE-${p}-${c}-${i}`
+  const seq = String(sequence).padStart(6, '0')
+  return `${p}-${seq}`
 }
 
 /**
- * Generates a mock Asset Tag for testing or placeholders.
+ * Generates a placeholder Asset Tag for testing or UI previews.
  */
 export function generatePlaceholderTag(): string {
-  const randomId = Math.floor(1000 + Math.random() * 9000)
-  return `EE-XX-YY-${randomId}`
+  return 'XX-000000'
 }

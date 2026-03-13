@@ -8,7 +8,7 @@ const props = defineProps<{
 }>()
 
 // Composables
-const { fetchItemsByLocation, fetchLocationSummary } = useInventoryItems()
+const { getInstallationsByLocation, getLocationSummary } = useInventoryInstallations()
 const { getHealthColor, getHealthLabel } = useInventoryLifecycle()
 
 // State
@@ -30,8 +30,8 @@ const loadData = async () => {
 
     // Load items and summary in parallel
     const [itemsData, summaryData] = await Promise.all([
-      fetchItemsByLocation(props.locationType, props.locationId),
-      fetchLocationSummary(props.locationType, props.locationId),
+      getInstallationsByLocation(props.locationType, props.locationId),
+      getLocationSummary(props.locationType, props.locationId),
     ])
 
     items.value = itemsData
@@ -141,7 +141,7 @@ const getHealthIcon = (status: string): string => {
               </h4>
             </div>
             <p class="text-xs text-gray-600 dark:text-gray-400 truncate">
-              {{ item.brand }} {{ item.model }}
+              {{ item.brand }} {{ item.name }}
             </p>
           </div>
           <UBadge :color="getHealthColor(item.health_status)" size="xs" class="shrink-0">

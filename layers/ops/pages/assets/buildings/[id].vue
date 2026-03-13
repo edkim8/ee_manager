@@ -19,8 +19,7 @@ const supabase = useSupabaseClient()
 const buildingId = route.params.id as string
 
 const { isModalOpen: showImageModal, activeImage, openImageModal } = useImageActions()
-const { fetchItemsByLocation, fetchLocationSummary } = useInventoryItems()
-const { getHealthColor, getHealthLabel } = useInventoryLifecycle()
+const { getInstallationsByLocation, getLocationSummary, getHealthColor, getHealthLabel } = { ...useInventoryInstallations(), ...useInventoryLifecycle() }
 
 const activeTab = ref('overview')
 
@@ -58,7 +57,7 @@ const { data: inventoryItems } = await useAsyncData(
   `building-inventory-${buildingId}`,
   async () => {
     try {
-      return await fetchItemsByLocation('building', buildingId)
+      return await getInstallationsByLocation('building', buildingId)
     } catch {
       return []
     }
@@ -69,7 +68,7 @@ const { data: inventorySummary } = await useAsyncData(
   `building-inventory-summary-${buildingId}`,
   async () => {
     try {
-      return await fetchLocationSummary('building', buildingId)
+      return await getLocationSummary('building', buildingId)
     } catch {
       return null
     }
@@ -336,6 +335,15 @@ const saveBuilding = async () => {
               <div class="hidden md:block bg-white dark:bg-gray-900/80 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-gray-200/50 dark:shadow-none">
                 <AttachmentManager :record-id="buildingId" record-type="building" title="Building Photos & Files" />
               </div>
+
+              <!-- Installed Assets (desktop) -->
+              <div class="hidden md:block">
+                <InventoryLocationAssetsWidget
+                  location-type="building"
+                  :location-id="buildingId"
+                  title="Installed Assets"
+                />
+              </div>
             </div>
           </div>
         </template>
@@ -399,7 +407,7 @@ const saveBuilding = async () => {
                 >
                   <template #cell-item="{ row }">
                     <span class="text-sm text-gray-700 dark:text-gray-300">
-                      {{ [row.brand, row.model].filter(Boolean).join(' ') || '—' }}
+                      {{ [row.brand, row.name].filter(Boolean).join(' ') || '—' }}
                     </span>
                   </template>
 

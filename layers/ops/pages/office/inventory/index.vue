@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useSupabaseClient } from '#imports'
 
 definePageMeta({
   layout: 'dashboard'
@@ -30,6 +31,7 @@ const { addAttachment, fetchAttachments, deleteAttachment } = useAttachments()
 const activeTab = ref<'categories' | 'items'>('items')
 const categories = ref([])
 const items = ref([])
+const properties = ref<{ code: string; name: string }[]>([])
 const selectedCategoryFilter = ref('')
 const searchTerm = ref('')
 const loading = ref(false)
@@ -48,10 +50,21 @@ const categoryForm = ref({
   expected_life_years: 10,
 })
 
-const itemForm = ref({
+const itemForm = ref<{
+  category_id: string
+  property_code: string
+  expected_life_years: number | null
+  brand: string
+  model: string
+  manufacturer_part_number: string
+  description: string
+  notes: string
+}>({
   category_id: '',
+  property_code: activeProperty.value || 'ALL',
+  expected_life_years: null,
   brand: '',
-  model: '',
+  name: '',
   manufacturer_part_number: '',
   description: '',
   notes: '',
@@ -70,7 +83,13 @@ const loadData = async () => {
   try {
     loading.value = true
     error.value = null
-    categories.value = await fetchCategories()
+    const supabase = useSupabaseClient()
+    const [cats, { data: props }] = await Promise.all([
+      fetchCategories(),
+      supabase.from('properties').select('code, name').order('code'),
+    ])
+    categories.value = cats
+    properties.value = props ?? []
     await loadItems()
   } catch (err) {
     error.value = err.message
@@ -83,11 +102,10 @@ const loadData = async () => {
 const loadItems = async () => {
   const filters: any = {}
 
-  // Always filter by active property
+  // Scoping by active property also pulls in global 'ALL' items (handled in composable)
   if (activeProperty.value) {
     filters.propertyCode = activeProperty.value
   }
-
   if (selectedCategoryFilter.value) {
     filters.categoryId = selectedCategoryFilter.value
   }
@@ -179,8 +197,10 @@ const openItemForm = (item = null) => {
     editingItem.value = item
     itemForm.value = {
       category_id: item.category_id,
+      property_code: item.property_code || 'ALL',
+      expected_life_years: item.item_expected_life_years ?? null,
       brand: item.brand || '',
-      model: item.model || '',
+      name: item.name || '',
       manufacturer_part_number: item.manufacturer_part_number || '',
       description: item.description || '',
       notes: item.notes || '',
@@ -191,8 +211,10 @@ const openItemForm = (item = null) => {
     editingItem.value = null
     itemForm.value = {
       category_id: selectedCategoryFilter.value || '',
+      property_code: activeProperty.value || 'ALL',
+      expected_life_years: null,
       brand: '',
-      model: '',
+      name: '',
       manufacturer_part_number: '',
       description: '',
       notes: '',
@@ -215,16 +237,39 @@ const loadItemAttachments = async (itemId: string) => {
 const saveItemForm = async () => {
   try {
     loading.value = true
-    if (editingItem.value) {
-      await updateItemDefinition(editingItem.value.id, itemForm.value)
-    } else {
-      // Add property_code when creating new items
-      const itemData = {
-        ...itemForm.value,
-        property_code: activeProperty.value
-      }
-      await createItemDefinition(itemData)
+    const payload = {
+      ...itemForm.value,
+      // Store null when field is cleared so the view falls back to category lifespan
+      expected_life_years: itemForm.value.expected_life_years || null,
     }
+    if (editingItem.value) {
+      await updateItemDefinition(editingItem.value.id, payload)
+    } else {
+      await createItemDefinition(payload)
+    }
+    showItemForm.value = false
+    await loadItems()
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleDuplicateItem = async () => {
+  if (!editingItem.value) return
+  try {
+    loading.value = true
+    await createItemDefinition({
+      category_id: editingItem.value.category_id,
+      property_code: editingItem.value.property_code,
+      expected_life_years: editingItem.value.item_expected_life_years ?? undefined,
+      brand: editingItem.value.brand,
+      name: editingItem.value.name ? `${editingItem.value.name} (copy)` : '(copy)',
+      manufacturer_part_number: editingItem.value.manufacturer_part_number,
+      description: editingItem.value.description,
+      notes: editingItem.value.notes,
+    })
     showItemForm.value = false
     await loadItems()
   } catch (err) {
@@ -239,6 +284,7 @@ const handleDeleteItem = async (itemId: string) => {
   try {
     loading.value = true
     await deleteItemDefinition(itemId)
+    showItemForm.value = false
     await loadItems()
   } catch (err) {
     error.value = err.message
@@ -301,6 +347,12 @@ const filteredItems = computed(() => items.value)
 const getCategoryName = (categoryId: string) => {
   return categories.value.find(c => c.id === categoryId)?.name || 'Unknown'
 }
+
+/** Category default lifespan for the item currently being edited/created */
+const selectedCategoryLifeYears = computed<number | null>(() => {
+  const cat = categories.value.find(c => c.id === itemForm.value.category_id)
+  return cat?.expected_life_years ?? null
+})
 </script>
 
 <template>
@@ -363,7 +415,7 @@ const getCategoryName = (categoryId: string) => {
           v-model="searchTerm"
           @input="loadItems"
           type="text"
-          placeholder="Search by brand, model, description..."
+          placeholder="Search by brand, name, description..."
           class="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700"
         />
 
@@ -378,7 +430,7 @@ const getCategoryName = (categoryId: string) => {
 
       <!-- Items Grid -->
       <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div v-for="i in 6" :key="i" class="h-48 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>
+        <div v-for="i in 6" :key="i" class="h-28 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>
       </div>
 
       <div v-else-if="filteredItems.length === 0" class="text-center py-12">
@@ -390,51 +442,50 @@ const getCategoryName = (categoryId: string) => {
         <div
           v-for="item in filteredItems"
           :key="item.id"
-          class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+          class="flex bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
           @click="openItemForm(item)"
         >
-          <!-- Photo Thumbnail (if exists) -->
-          <div v-if="item.photo_count > 0" class="h-32 bg-gray-100 dark:bg-gray-900 overflow-hidden">
+          <!-- Left: Information -->
+          <div class="flex-1 p-4 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ item.category_name }}</span>
+              <span
+                v-if="item.property_code"
+                class="text-xs font-mono px-1.5 py-0.5 rounded"
+                :class="item.property_code === 'ALL'
+                  ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300'
+                  : 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'"
+              >
+                {{ item.property_code === 'ALL' ? 'ALL' : item.property_code }}
+              </span>
+            </div>
+            <h3 class="font-semibold text-base leading-tight">{{ item.brand }}</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">{{ item.name }}</p>
+
+            <p v-if="item.description" class="text-xs text-gray-500 dark:text-gray-400 mt-2 line-clamp-2">
+              {{ item.description }}
+            </p>
+
+            <div class="flex items-center gap-3 mt-3 text-xs text-gray-400 dark:text-gray-500">
+              <span v-if="item.photo_count > 0">📸 {{ item.photo_count }}</span>
+              <span v-if="item.document_count > 0">📄 {{ item.document_count }}</span>
+              <span v-if="item.manufacturer_part_number" class="font-mono truncate">
+                #{{ item.manufacturer_part_number }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Right: Photo -->
+          <div class="w-28 flex-shrink-0 bg-gray-100 dark:bg-gray-900">
             <img
+              v-if="item.photo_count > 0"
               :src="getItemThumbnail(item.id)"
               :alt="item.brand"
               class="w-full h-full object-cover"
               @error="$event.target.style.display='none'"
             />
-          </div>
-          <div v-else class="h-32 bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-            <span class="text-gray-400 text-4xl">📦</span>
-          </div>
-
-          <div class="p-4">
-            <!-- Item Header -->
-            <div class="flex items-start justify-between mb-2">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ item.category_name }}
-                  </span>
-                  <span v-if="item.property_code" class="text-xs font-mono px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-                    {{ item.property_code }}
-                  </span>
-                </div>
-                <h3 class="font-semibold text-lg">{{ item.brand }}</h3>
-                <p class="text-gray-600 dark:text-gray-400">{{ item.model }}</p>
-              </div>
-            </div>
-
-            <!-- Description -->
-            <p v-if="item.description" class="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-              {{ item.description }}
-            </p>
-
-            <!-- Attachments Count -->
-            <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-              <span v-if="item.photo_count > 0">📸 {{ item.photo_count }}</span>
-              <span v-if="item.document_count > 0">📄 {{ item.document_count }}</span>
-              <span v-if="item.manufacturer_part_number" class="font-mono">
-                #{{ item.manufacturer_part_number }}
-              </span>
+            <div v-else class="w-full h-full flex items-center justify-center">
+              <span class="text-gray-300 dark:text-gray-600 text-3xl">📦</span>
             </div>
           </div>
         </div>
@@ -583,6 +634,38 @@ const getCategoryName = (categoryId: string) => {
                 </option>
               </select>
             </div>
+
+            <!-- Property Scope -->
+            <div>
+              <label class="block text-sm font-medium mb-1">Property Scope *</label>
+              <select
+                v-model="itemForm.property_code"
+                required
+                class="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700"
+              >
+                <option value="ALL">ALL Properties (Global)</option>
+                <option v-for="prop in properties" :key="prop.code" :value="prop.code">
+                  {{ prop.code }} — {{ prop.name }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Item-Specific Lifespan Override -->
+            <div>
+              <label class="block text-sm font-medium mb-1">Expected Lifespan (years)</label>
+              <input
+                v-model.number="itemForm.expected_life_years"
+                type="number"
+                min="1"
+                :placeholder="selectedCategoryLifeYears ? `Category default: ${selectedCategoryLifeYears} yrs` : 'Same as category'"
+                class="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700"
+              />
+              <p class="text-xs text-gray-500 mt-1">
+                Leave blank to inherit the category default
+                <span v-if="selectedCategoryLifeYears">({{ selectedCategoryLifeYears }} yrs)</span>.
+              </p>
+            </div>
+
             <div>
               <label class="block text-sm font-medium mb-1">Brand</label>
               <input
@@ -593,11 +676,11 @@ const getCategoryName = (categoryId: string) => {
               />
             </div>
             <div>
-              <label class="block text-sm font-medium mb-1">Model</label>
+              <label class="block text-sm font-medium mb-1">Name</label>
               <input
-                v-model="itemForm.model"
+                v-model="itemForm.name"
                 type="text"
-                placeholder="e.g. RF28R7201SR"
+                placeholder="e.g. French Door Refrigerator"
                 class="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700"
               />
             </div>
@@ -701,7 +784,31 @@ const getCategoryName = (categoryId: string) => {
             💡 <strong>Tip:</strong> After creating this item, you can click it to add photos and documents.
           </div>
 
-          <div class="flex justify-end gap-2 pt-4 border-t">
+          <div class="flex justify-between gap-2 pt-4 border-t">
+            <!-- Left actions: Delete + Duplicate (edit mode only) -->
+            <div class="flex gap-2">
+              <button
+                v-if="editingItem && canDeleteItem(editingItem)"
+                type="button"
+                @click="handleDeleteItem(editingItem.id)"
+                :disabled="loading"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                Delete
+              </button>
+              <button
+                v-if="editingItem"
+                type="button"
+                @click="handleDuplicateItem"
+                :disabled="loading"
+                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+              >
+                Duplicate
+              </button>
+            </div>
+            <div v-if="!editingItem" />
+
+            <div class="flex gap-2">
             <button
               type="button"
               @click="showItemForm = false"
@@ -716,6 +823,7 @@ const getCategoryName = (categoryId: string) => {
             >
               {{ loading ? 'Saving...' : 'Save' }}
             </button>
+            </div>
           </div>
         </form>
       </div>

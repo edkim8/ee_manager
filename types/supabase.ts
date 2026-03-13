@@ -721,7 +721,7 @@ export type Database = {
           id: string
           is_active: boolean
           manufacturer_part_number: string | null
-          model: string | null
+          name: string | null
           notes: string | null
           property_code: string | null
           updated_at: string
@@ -735,7 +735,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           manufacturer_part_number?: string | null
-          model?: string | null
+          name?: string | null
           notes?: string | null
           property_code?: string | null
           updated_at?: string
@@ -749,7 +749,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           manufacturer_part_number?: string | null
-          model?: string | null
+          name?: string | null
           notes?: string | null
           property_code?: string | null
           updated_at?: string
@@ -827,94 +827,65 @@ export type Database = {
           },
         ]
       }
-      location_note_attachments: {
+      note_category_configs: {
         Row: {
-          file_name: string
-          file_size: number | null
-          file_type: string
-          file_url: string
-          id: string
-          mime_type: string | null
-          note_id: string
-          uploaded_at: string
-          uploaded_by: string | null
+          categories: Json
+          record_type: string
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
-          file_name: string
-          file_size?: number | null
-          file_type: string
-          file_url: string
-          id?: string
-          mime_type?: string | null
-          note_id: string
-          uploaded_at?: string
-          uploaded_by?: string | null
+          categories?: Json
+          record_type: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Update: {
-          file_name?: string
-          file_size?: number | null
-          file_type?: string
-          file_url?: string
-          id?: string
-          mime_type?: string | null
-          note_id?: string
-          uploaded_at?: string
-          uploaded_by?: string | null
+          categories?: Json
+          record_type?: string
+          updated_at?: string
+          updated_by?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "location_note_attachments_note_id_fkey"
-            columns: ["note_id"]
-            isOneToOne: false
-            referencedRelation: "location_notes"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      location_notes: {
+      notes: {
         Row: {
           category: string
+          cost: number | null
           created_at: string
           created_by: string | null
           id: string
-          location_id: string
           note_text: string
+          record_id: string
+          record_type: string
           updated_at: string
+          vendor: string | null
         }
         Insert: {
-          category: string
+          category?: string
+          cost?: number | null
           created_at?: string
           created_by?: string | null
           id?: string
-          location_id: string
           note_text: string
+          record_id: string
+          record_type: string
           updated_at?: string
+          vendor?: string | null
         }
         Update: {
           category?: string
+          cost?: number | null
           created_at?: string
           created_by?: string | null
           id?: string
-          location_id?: string
           note_text?: string
+          record_id?: string
+          record_type?: string
           updated_at?: string
+          vendor?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "location_notes_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "location_notes_summary"
-            referencedColumns: ["location_id"]
-          },
-          {
-            foreignKeyName: "location_notes_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       locations: {
         Row: {
@@ -2225,18 +2196,6 @@ export type Database = {
       }
     }
     Views: {
-      location_notes_summary: {
-        Row: {
-          category_breakdown: Json | null
-          icon_type: string | null
-          last_note_date: string | null
-          location_id: string | null
-          property_code: string | null
-          total_attachments: number | null
-          total_notes: number | null
-        }
-        Relationships: []
-      }
       view_availabilities_metrics: {
         Row: {
           amenities: Json | null
@@ -2436,14 +2395,16 @@ export type Database = {
           brand: string | null
           category_id: string | null
           category_name: string | null
+          category_expected_life_years: number | null
           created_at: string | null
           description: string | null
           document_count: number | null
           expected_life_years: number | null
           id: string | null
           is_active: boolean | null
+          item_expected_life_years: number | null
           manufacturer_part_number: string | null
-          model: string | null
+          name: string | null
           notes: string | null
           photo_count: number | null
           property_code: string | null
