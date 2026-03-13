@@ -11,7 +11,7 @@ import {
   type PipelineMoveOutRow,
   type PipelineMoveInRow,
 } from '../../../../utils/reporting'
-import { PROPERTY_LIST } from '../../../../../constants/properties'
+import { PROPERTY_LIST } from '../../../../constants/properties'
 
 /**
  * POST /api/admin/notifications/send-weekly
