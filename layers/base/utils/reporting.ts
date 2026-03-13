@@ -701,6 +701,282 @@ function renderPropertySummary(code: string, s: PropertySummary, delta?: Snapsho
     `
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Weekly Summary Report
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface WeeklyOccupancyRow {
+    property_code: string
+    available_today: number
+    available_7d_ago: number | null
+    available_delta: number | null
+    avg_rent_today: number
+    avg_rent_7d_ago: number | null
+    rent_delta: number | null
+}
+
+export interface WeeklyActivitySummary {
+    property_code: string
+    move_ins: number          // new_tenancy events where status = 'Current'
+    move_outs: number         // move_out events
+    silent_drops: number      // silent_drop events
+    notices_given: number     // notice_given events
+    renewals: number          // lease_renewal events
+    pipeline_added: number    // new_tenancy events where status = 'Future' | 'Applicant'
+}
+
+export interface WeeklyMakeReadyStats {
+    property_code: string
+    completed_this_week: number
+    currently_overdue: number
+}
+
+export interface WeeklyWorkOrderStats {
+    property_code: string
+    opened_this_week: number
+    completed_this_week: number
+    currently_overdue: number
+}
+
+export interface WeeklyDelinquencyRow {
+    property_code: string
+    count: number
+    total_unpaid: number
+    amount_30_plus: number
+}
+
+export interface WeeklyReportInput {
+    weekEndDate: string          // ISO date string (Sunday)
+    weekStartDate: string        // ISO date string (Monday 7 days prior)
+    propertyCodes: string[]
+    occupancy: WeeklyOccupancyRow[]
+    activity: WeeklyActivitySummary[]
+    moveOutPipeline: PipelineMoveOutRow[]
+    moveInPipeline: PipelineMoveInRow[]
+    makeReady: WeeklyMakeReadyStats[]
+    workOrders: WeeklyWorkOrderStats[]
+    delinquencies: WeeklyDelinquencyRow[]
+    baseUrl?: string
+}
+
+export function generateWeeklyHtmlReport(input: WeeklyReportInput): string {
+    const {
+        weekEndDate, weekStartDate, propertyCodes,
+        occupancy, activity, moveOutPipeline, moveInPipeline,
+        makeReady, workOrders, delinquencies, baseUrl = '',
+    } = input
+
+    const weekLabel = `${new Date(weekStartDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${new Date(weekEndDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+
+    const thStyle = 'padding: 10px; text-align: left; font-weight: 600; color: #4b5563; font-size: 12px;'
+    const tdStyle = 'padding: 10px; border-bottom: 1px solid #f3f4f6; font-size: 13px;'
+    const sectionHead = (title: string, badge?: string) => `
+        <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 32px 0 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+            ${title}${badge ? ` <span style="margin-left:8px;background:#e0e7ff;color:#3730a3;font-size:12px;padding:2px 8px;border-radius:9999px;font-weight:500;">${badge}</span>` : ''}
+        </h2>`
+
+    // ── Occupancy WoW ──────────────────────────────────────────────────────────
+    const occupancyRows = propertyCodes.map(code => {
+        const row = occupancy.find(r => r.property_code === code)
+        if (!row) return `<tr><td style="${tdStyle}" colspan="5">${code} — no snapshot</td></tr>`
+        const availDelta = row.available_delta
+        const rentDelta = row.rent_delta
+        const availColor = availDelta != null && availDelta < 0 ? '#059669' : availDelta != null && availDelta > 0 ? '#dc2626' : '#6b7280'
+        const rentColor = rentDelta != null && rentDelta > 0 ? '#059669' : rentDelta != null && rentDelta < 0 ? '#dc2626' : '#6b7280'
+        return `
+        <tr>
+            <td style="${tdStyle}"><strong>${code}</strong> — ${getPropertyName(code)}</td>
+            <td style="${tdStyle};font-weight:600;">${row.available_today}</td>
+            <td style="${tdStyle};color:${availColor};font-weight:600;">${availDelta != null ? (availDelta > 0 ? '+' : '') + availDelta : '—'}</td>
+            <td style="${tdStyle};">$${row.avg_rent_today.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+            <td style="${tdStyle};color:${rentColor};font-weight:600;">${rentDelta != null ? (rentDelta > 0 ? '+$' : '-$') + Math.abs(rentDelta) : '—'}</td>
+        </tr>`
+    }).join('')
+
+    // ── Leasing Activity ───────────────────────────────────────────────────────
+    const activityRows = propertyCodes.map(code => {
+        const a = activity.find(r => r.property_code === code) ?? { move_ins: 0, move_outs: 0, silent_drops: 0, notices_given: 0, renewals: 0, pipeline_added: 0, property_code: code }
+        return `
+        <tr>
+            <td style="${tdStyle}"><strong>${code}</strong></td>
+            <td style="${tdStyle};text-align:center;color:${a.move_ins > 0 ? '#059669' : '#6b7280'};font-weight:${a.move_ins > 0 ? '700' : '400'};">${a.move_ins}</td>
+            <td style="${tdStyle};text-align:center;color:${a.move_outs > 0 ? '#dc2626' : '#6b7280'};">${a.move_outs}</td>
+            <td style="${tdStyle};text-align:center;color:${a.silent_drops > 0 ? '#d97706' : '#6b7280'};">${a.silent_drops}</td>
+            <td style="${tdStyle};text-align:center;color:${a.notices_given > 0 ? '#7c3aed' : '#6b7280'};">${a.notices_given}</td>
+            <td style="${tdStyle};text-align:center;color:${a.renewals > 0 ? '#0891b2' : '#6b7280'};">${a.renewals}</td>
+            <td style="${tdStyle};text-align:center;">${a.pipeline_added}</td>
+        </tr>`
+    }).join('')
+
+    // ── Make-Ready ─────────────────────────────────────────────────────────────
+    const makeReadyRows = propertyCodes.map(code => {
+        const mr = makeReady.find(r => r.property_code === code) ?? { completed_this_week: 0, currently_overdue: 0, property_code: code }
+        return `
+        <tr>
+            <td style="${tdStyle}"><strong>${code}</strong> — ${getPropertyName(code)}</td>
+            <td style="${tdStyle};text-align:center;color:${mr.completed_this_week > 0 ? '#059669' : '#6b7280'};font-weight:${mr.completed_this_week > 0 ? '700' : '400'};">${mr.completed_this_week}</td>
+            <td style="${tdStyle};text-align:center;color:${mr.currently_overdue > 0 ? '#dc2626' : '#059669'};font-weight:${mr.currently_overdue > 0 ? '700' : '400'};">${mr.currently_overdue}</td>
+        </tr>`
+    }).join('')
+
+    // ── Work Orders ────────────────────────────────────────────────────────────
+    const workOrderRows = propertyCodes.map(code => {
+        const wo = workOrders.find(r => r.property_code === code) ?? { opened_this_week: 0, completed_this_week: 0, currently_overdue: 0, property_code: code }
+        return `
+        <tr>
+            <td style="${tdStyle}"><strong>${code}</strong></td>
+            <td style="${tdStyle};text-align:center;">${wo.opened_this_week}</td>
+            <td style="${tdStyle};text-align:center;color:${wo.completed_this_week > 0 ? '#059669' : '#6b7280'};">${wo.completed_this_week}</td>
+            <td style="${tdStyle};text-align:center;color:${wo.currently_overdue > 0 ? '#dc2626' : '#059669'};font-weight:${wo.currently_overdue > 0 ? '700' : '400'};">${wo.currently_overdue}</td>
+        </tr>`
+    }).join('')
+
+    // ── Delinquencies ──────────────────────────────────────────────────────────
+    const deliqRows = delinquencies.length > 0
+        ? delinquencies.map(d => `
+        <tr>
+            <td style="${tdStyle}"><strong>${d.property_code}</strong> — ${getPropertyName(d.property_code)}</td>
+            <td style="${tdStyle};text-align:center;color:${d.count > 0 ? '#dc2626' : '#059669'};font-weight:600;">${d.count}</td>
+            <td style="${tdStyle};">$${d.total_unpaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td style="${tdStyle};color:${d.amount_30_plus > 0 ? '#dc2626' : '#6b7280'};">$${d.amount_30_plus.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        </tr>`).join('')
+        : `<tr><td style="${tdStyle}" colspan="4">No active delinquencies.</td></tr>`
+
+    const totalMoveIns = activity.reduce((s, a) => s + a.move_ins, 0)
+    const totalMoveOuts = activity.reduce((s, a) => s + a.move_outs + a.silent_drops, 0)
+    const totalRenewals = activity.reduce((s, a) => s + a.renewals, 0)
+    const totalOverdueMR = makeReady.reduce((s, m) => s + m.currently_overdue, 0)
+    const totalDelinq = delinquencies.reduce((s, d) => s + d.total_unpaid, 0)
+
+    return `
+    <div style="font-family: 'Inter', sans-serif, system-ui; max-width: 800px; margin: 0 auto; color: #1f2937; line-height: 1.5;">
+
+        <!-- Header -->
+        <div style="background-color: #1e40af; padding: 32px; border-radius: 12px 12px 0 0; color: white;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="vertical-align: top;">
+                        <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.025em; color: white;">Weekly Operational Summary</h1>
+                        <p style="margin: 8px 0 0; opacity: 0.9; font-size: 14px; color: white;">${weekLabel}</p>
+                        <p style="margin: 8px 0 0; opacity: 0.75; font-size: 12px; color: white;">
+                            ${totalMoveIns} move-in${totalMoveIns !== 1 ? 's' : ''} &nbsp;·&nbsp;
+                            ${totalMoveOuts} move-out${totalMoveOuts !== 1 ? 's' : ''} &nbsp;·&nbsp;
+                            ${totalRenewals} renewal${totalRenewals !== 1 ? 's' : ''}
+                            ${totalOverdueMR > 0 ? ` &nbsp;·&nbsp; <strong style="color:#fbbf24;">${totalOverdueMR} overdue make-ready</strong>` : ''}
+                        </p>
+                    </td>
+                    ${baseUrl ? `
+                    <td style="vertical-align: top; text-align: right; padding-left: 16px; width: 1%; white-space: nowrap;">
+                        <table style="border-collapse: collapse; margin-left: auto;">
+                            <tr><td style="padding-bottom: 6px;"><a href="${baseUrl}/solver/report" style="display:inline-block;background:rgba(255,255,255,0.2);color:white;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,0.3);">📊 Today Report →</a></td></tr>
+                            <tr><td><a href="${baseUrl}/office/availabilities/analysis" style="display:inline-block;background:rgba(255,255,255,0.15);color:white;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,0.25);">📈 Availability Analysis →</a></td></tr>
+                        </table>
+                    </td>
+                    ` : ''}
+                </tr>
+            </table>
+        </div>
+
+        <div style="padding: 32px; background-color: #ffffff; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+
+            <!-- Delinquency call-out (if any) -->
+            ${totalDelinq > 0 ? `
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+                <strong style="color:#dc2626;">Delinquencies:</strong>
+                <span style="color:#7f1d1d;font-size:14px;">
+                    ${delinquencies.reduce((s, d) => s + d.count, 0)} residents owe a combined
+                    $${totalDelinq.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} across all properties.
+                </span>
+            </div>
+            ` : ''}
+
+            <!-- ① Occupancy WoW -->
+            ${sectionHead('Occupancy — Week over Week')}
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:32px;">
+                <thead>
+                    <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                        <th style="${thStyle}">Property</th>
+                        <th style="${thStyle}">Available Now</th>
+                        <th style="${thStyle}">WoW Change</th>
+                        <th style="${thStyle}">Avg Rent</th>
+                        <th style="${thStyle}">Rent Change</th>
+                    </tr>
+                </thead>
+                <tbody>${occupancyRows}</tbody>
+            </table>
+
+            <!-- ② Leasing Activity -->
+            ${sectionHead('Leasing Activity', 'This Week')}
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:32px;">
+                <thead>
+                    <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                        <th style="${thStyle}">Property</th>
+                        <th style="${thStyle};text-align:center;">Move-Ins</th>
+                        <th style="${thStyle};text-align:center;">Move-Outs</th>
+                        <th style="${thStyle};text-align:center;">Silent Drops</th>
+                        <th style="${thStyle};text-align:center;">Notices Given</th>
+                        <th style="${thStyle};text-align:center;">Renewals</th>
+                        <th style="${thStyle};text-align:center;">Pipeline Added</th>
+                    </tr>
+                </thead>
+                <tbody>${activityRows}</tbody>
+            </table>
+
+            <!-- ③ Move-Out Pipeline -->
+            ${renderMoveOutPipeline(moveOutPipeline)}
+
+            <!-- ④ Move-In Pipeline -->
+            ${renderMoveInPipeline(moveInPipeline)}
+
+            <!-- ⑤ Make-Ready -->
+            ${sectionHead('Make-Ready Status')}
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:32px;">
+                <thead>
+                    <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                        <th style="${thStyle}">Property</th>
+                        <th style="${thStyle};text-align:center;">Completed This Week</th>
+                        <th style="${thStyle};text-align:center;">Currently Overdue</th>
+                    </tr>
+                </thead>
+                <tbody>${makeReadyRows}</tbody>
+            </table>
+
+            <!-- ⑥ Work Orders -->
+            ${sectionHead('Work Orders', 'This Week')}
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:32px;">
+                <thead>
+                    <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                        <th style="${thStyle}">Property</th>
+                        <th style="${thStyle};text-align:center;">Opened</th>
+                        <th style="${thStyle};text-align:center;">Completed</th>
+                        <th style="${thStyle};text-align:center;">Overdue (Open > 3d)</th>
+                    </tr>
+                </thead>
+                <tbody>${workOrderRows}</tbody>
+            </table>
+
+            <!-- ⑦ Delinquencies -->
+            ${sectionHead('Delinquencies — Current')}
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:32px;">
+                <thead>
+                    <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                        <th style="${thStyle}">Property</th>
+                        <th style="${thStyle};text-align:center;">Residents</th>
+                        <th style="${thStyle}">Total Owed</th>
+                        <th style="${thStyle}">30+ Days</th>
+                    </tr>
+                </thead>
+                <tbody>${deliqRows}</tbody>
+            </table>
+
+            <!-- Footer -->
+            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+                <p>Weekly Operational Summary from <strong>EE Manager V2</strong> &nbsp;·&nbsp; Week ending ${weekEndDate}</p>
+            </div>
+        </div>
+    </div>`
+}
+
 export function generateMarkdownReport(run: any, events: SolverEvent[]): string {
     const lines: string[] = []
     const summaryData = run.summary as Record<string, PropertySummary>
