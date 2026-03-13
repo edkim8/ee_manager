@@ -92,6 +92,11 @@ export interface PipelineMoveInRow {
     makeready_conflict: boolean
 }
 
+export interface PipelineOptions {
+    truncateDays?: number   // show only rows with date ≤ today + N days (includes overdue); omit = show all
+    viewAllUrl?: string     // "View full pipeline →" link shown when truncated
+}
+
 /**
  * Generate a premium HTML report for a Solver run.
  * Optimized for email clients with inline CSS.
@@ -105,6 +110,7 @@ export function generateHighFidelityHtmlReport(
     renewalCountsMap?: PropertyRenewalCountsMap,
     moveOutPipeline?: PipelineMoveOutRow[],
     moveInPipeline?: PipelineMoveInRow[],
+    pipelineOpts?: PipelineOptions,
 ): string {
     const summaryData = run.summary as Record<string, PropertySummary>
     const knownCodes = new Set<string>(PROPERTY_LIST.map(p => p.code))
@@ -196,8 +202,8 @@ export function generateHighFidelityHtmlReport(
             ` : ''}
 
             <!-- ③ Pipeline Sections -->
-            ${renderMoveOutPipeline(moveOutPipeline || [])}
-            ${renderMoveInPipeline(moveInPipeline || [])}
+            ${renderMoveOutPipeline(moveOutPipeline || [], pipelineOpts)}
+            ${renderMoveInPipeline(moveInPipeline || [], pipelineOpts)}
 
             <!-- ④ Event Detail Tables -->
             <div>
@@ -253,13 +259,26 @@ export function generateHighFidelityHtmlReport(
     return html
 }
 
-function renderMoveOutPipeline(rows: PipelineMoveOutRow[]): string {
+function renderMoveOutPipeline(rows: PipelineMoveOutRow[], opts?: PipelineOptions): string {
     if (rows.length === 0) return ''
 
     const today = new Date().toISOString().split('T')[0]
     const thStyle = 'padding: 10px; text-align: left; font-weight: 600; color: #4b5563; font-size: 12px;'
 
-    const rowsHtml = rows.map(r => {
+    // Apply truncation: show only rows that are overdue OR within truncateDays
+    let visibleRows = rows
+    let hiddenCount = 0
+    if (opts?.truncateDays !== undefined) {
+        const cutoffDate = new Date(today + 'T12:00:00')
+        cutoffDate.setDate(cutoffDate.getDate() + opts.truncateDays)
+        const cutoffStr = cutoffDate.toISOString().split('T')[0]
+        visibleRows = rows.filter(r => r.move_out_date <= cutoffStr)
+        hiddenCount = rows.length - visibleRows.length
+    }
+
+    if (visibleRows.length === 0) return ''
+
+    const rowsHtml = visibleRows.map(r => {
         const daysUntil = Math.round((new Date(r.move_out_date).getTime() - new Date(today).getTime()) / 86400000)
         const isOverdue = daysUntil < 0
         const isUrgent = daysUntil >= 0 && daysUntil <= 3
@@ -278,6 +297,13 @@ function renderMoveOutPipeline(rows: PipelineMoveOutRow[]): string {
         </tr>`
     }).join('')
 
+    const viewMoreLink = hiddenCount > 0 && opts?.viewAllUrl
+        ? `<p style="margin-top:10px;font-size:12px;color:#4b5563;">
+            ${hiddenCount} more move-out${hiddenCount > 1 ? 's' : ''} not shown —
+            <a href="${opts.viewAllUrl}" style="color:#4f46e5;font-weight:600;">View full pipeline →</a>
+           </p>`
+        : ''
+
     return `
     <div style="margin-bottom: 32px;">
         <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
@@ -295,16 +321,30 @@ function renderMoveOutPipeline(rows: PipelineMoveOutRow[]): string {
             </thead>
             <tbody>${rowsHtml}</tbody>
         </table>
+        ${viewMoreLink}
     </div>`
 }
 
-function renderMoveInPipeline(rows: PipelineMoveInRow[]): string {
+function renderMoveInPipeline(rows: PipelineMoveInRow[], opts?: PipelineOptions): string {
     if (rows.length === 0) return ''
 
     const today = new Date().toISOString().split('T')[0]
     const thStyle = 'padding: 10px; text-align: left; font-weight: 600; color: #4b5563; font-size: 12px;'
 
-    const rowsHtml = rows.map(r => {
+    // Apply truncation: show only rows that are overdue OR within truncateDays
+    let visibleRows = rows
+    let hiddenCount = 0
+    if (opts?.truncateDays !== undefined) {
+        const cutoffDate = new Date(today + 'T12:00:00')
+        cutoffDate.setDate(cutoffDate.getDate() + opts.truncateDays)
+        const cutoffStr = cutoffDate.toISOString().split('T')[0]
+        visibleRows = rows.filter(r => r.move_in_date <= cutoffStr)
+        hiddenCount = rows.length - visibleRows.length
+    }
+
+    if (visibleRows.length === 0) return ''
+
+    const rowsHtml = visibleRows.map(r => {
         const daysUntil = Math.round((new Date(r.move_in_date).getTime() - new Date(today).getTime()) / 86400000)
         const isOverdue = daysUntil < 0
         const isUrgent = daysUntil >= 0 && daysUntil <= 3
@@ -331,6 +371,13 @@ function renderMoveInPipeline(rows: PipelineMoveInRow[]): string {
 
     const conflicts = rows.filter(r => r.makeready_conflict).length
 
+    const viewMoreLink = hiddenCount > 0 && opts?.viewAllUrl
+        ? `<p style="margin-top:10px;font-size:12px;color:#4b5563;">
+            ${hiddenCount} more move-in${hiddenCount > 1 ? 's' : ''} not shown —
+            <a href="${opts.viewAllUrl}" style="color:#4f46e5;font-weight:600;">View full pipeline →</a>
+           </p>`
+        : ''
+
     return `
     <div style="margin-bottom: 32px;">
         <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
@@ -351,6 +398,7 @@ function renderMoveInPipeline(rows: PipelineMoveInRow[]): string {
             </thead>
             <tbody>${rowsHtml}</tbody>
         </table>
+        ${viewMoreLink}
     </div>`
 }
 
@@ -757,13 +805,14 @@ export interface WeeklyReportInput {
     workOrders: WeeklyWorkOrderStats[]
     delinquencies: WeeklyDelinquencyRow[]
     baseUrl?: string
+    pipelineOpts?: PipelineOptions
 }
 
 export function generateWeeklyHtmlReport(input: WeeklyReportInput): string {
     const {
         weekEndDate, weekStartDate, propertyCodes,
         occupancy, activity, moveOutPipeline, moveInPipeline,
-        makeReady, workOrders, delinquencies, baseUrl = '',
+        makeReady, workOrders, delinquencies, baseUrl = '', pipelineOpts,
     } = input
 
     const weekLabel = `${new Date(weekStartDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${new Date(weekEndDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
@@ -924,10 +973,10 @@ export function generateWeeklyHtmlReport(input: WeeklyReportInput): string {
             </table>
 
             <!-- ③ Move-Out Pipeline -->
-            ${renderMoveOutPipeline(moveOutPipeline)}
+            ${renderMoveOutPipeline(moveOutPipeline, pipelineOpts)}
 
             <!-- ④ Move-In Pipeline -->
-            ${renderMoveInPipeline(moveInPipeline)}
+            ${renderMoveInPipeline(moveInPipeline, pipelineOpts)}
 
             <!-- ⑤ Make-Ready -->
             ${sectionHead('Make-Ready Status')}

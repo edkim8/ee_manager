@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { Database } from '../../../../../types/supabase'
-import { generateHighFidelityHtmlReport, type PropertySnapshotDeltas, type PropertyRenewalCountsMap } from '../../../../utils/reporting'
+import { generateHighFidelityHtmlReport, type PropertySnapshotDeltas, type PropertyRenewalCountsMap, type PipelineMoveOutRow, type PipelineMoveInRow, type PipelineOptions } from '../../../../utils/reporting'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -142,6 +142,59 @@ export default defineEventHandler(async (event) => {
     const overdueThreshold = new Date(run.upload_date)
     overdueThreshold.setDate(overdueThreshold.getDate() - 3)
 
+    // 3h. Pipeline — Notice tenancies with move_out_date
+    const { data: moveOutTenancies } = await client
+      .from('tenancies')
+      .select('id, unit_id, property_code, move_out_date, units(unit_name), residents(name, role)')
+      .in('property_code', propertiesProcessed)
+      .eq('status', 'Notice')
+      .not('move_out_date', 'is', null)
+      .order('move_out_date', { ascending: true })
+
+    // 3i. Pipeline — Future/Applicant tenancies with move_in_date
+    const { data: moveInTenancies } = await client
+      .from('tenancies')
+      .select('id, unit_id, property_code, move_in_date, status, units(unit_name), residents(name, role)')
+      .in('property_code', propertiesProcessed)
+      .in('status', ['Future', 'Applicant'])
+      .not('move_in_date', 'is', null)
+      .order('move_in_date', { ascending: true })
+
+    // 3j. Open make-ready unit IDs (for conflict detection in move-in pipeline)
+    const { data: makeReadyFlagsForPipeline } = await client
+      .from('unit_flags')
+      .select('unit_id, property_code')
+      .in('property_code', propertiesProcessed)
+      .ilike('flag_type', 'makeready%')
+      .is('resolved_at', null)
+
+    const openMakeReadyUnitIds = new Set(
+      (makeReadyFlagsForPipeline || []).map(f => (f as any).unit_id as string)
+    )
+
+    // Build full pipeline arrays (scoped to recipient later)
+    const allMoveOutPipeline: (PipelineMoveOutRow & { property_code: string })[] = (moveOutTenancies || []).map((t: any) => {
+      const primary = (t.residents as any[])?.find((r: any) => r.role === 'Primary')
+      return {
+        unit_name: (t.units as any)?.unit_name || '?',
+        property_code: t.property_code,
+        resident_name: primary?.name || 'Unknown',
+        move_out_date: t.move_out_date,
+      }
+    })
+
+    const allMoveInPipeline: (PipelineMoveInRow & { property_code: string })[] = (moveInTenancies || []).map((t: any) => {
+      const primary = (t.residents as any[])?.find((r: any) => r.role === 'Primary')
+      return {
+        unit_name: (t.units as any)?.unit_name || '?',
+        property_code: t.property_code,
+        resident_name: primary?.name || 'Unknown',
+        move_in_date: t.move_in_date,
+        status: t.status,
+        makeready_conflict: openMakeReadyUnitIds.has(t.unit_id),
+      }
+    })
+
     // 4. Fetch all active daily_summary recipients for these properties
     const { data: recipients, error: recError } = await client
       .from('property_notification_recipients')
@@ -238,7 +291,19 @@ export default defineEventHandler(async (event) => {
           .map(code => [code, allRenewalCounts[code]])
       )
 
-      const htmlContent = generateHighFidelityHtmlReport(scopedRun, recipientEvents, scopedOperationalSummary, baseUrl, scopedSnapshotDeltas, scopedRenewalCounts)
+      const scopedMoveOutPipeline = allMoveOutPipeline.filter(r => propertyCodes.includes(r.property_code))
+      const scopedMoveInPipeline = allMoveInPipeline.filter(r => propertyCodes.includes(r.property_code))
+
+      const pipelineOpts: PipelineOptions = {
+        truncateDays: 7,
+        viewAllUrl: `${baseUrl}/solver/report?showAll=1`,
+      }
+
+      const htmlContent = generateHighFidelityHtmlReport(
+        scopedRun, recipientEvents, scopedOperationalSummary, baseUrl,
+        scopedSnapshotDeltas, scopedRenewalCounts,
+        scopedMoveOutPipeline, scopedMoveInPipeline, pipelineOpts,
+      )
 
       try {
         await transporter.sendMail({

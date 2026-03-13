@@ -30,6 +30,9 @@ const STEP_ANCHOR = '2025-01-06' // confirmed Monday
 // The selected week-start Monday. Empty string = this week.
 const selectedMonday = ref(thisMonday)
 
+// When true, show full pipeline (no truncation). Default: overdue + 7 days only.
+const showAllPipeline = ref(false)
+
 const weekEnd = computed(() => {
   const d = new Date(selectedMonday.value + 'T12:00:00')
   d.setDate(d.getDate() + 6)
@@ -60,7 +63,11 @@ function onDateChange(value: string) {
 
 // ── Data fetch ──────────────────────────────────────────────────────────────
 const { data, pending, error, refresh } = useFetch(
-  () => `/api/solver/weekly-preview?date=${selectedMonday.value}`,
+  () => {
+    const params = new URLSearchParams({ date: selectedMonday.value })
+    if (showAllPipeline.value) params.set('showAll', '1')
+    return `/api/solver/weekly-preview?${params.toString()}`
+  },
   { lazy: true }
 )
 
@@ -124,6 +131,18 @@ const weekLabel = computed(() =>
           @click="goToThisWeek"
         >
           This Week
+        </UButton>
+
+        <!-- Pipeline toggle -->
+        <UButton
+          :icon="showAllPipeline ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+          variant="soft"
+          :color="showAllPipeline ? 'primary' : 'neutral'"
+          size="sm"
+          title="Toggle full pipeline view"
+          @click="showAllPipeline = !showAllPipeline"
+        >
+          {{ showAllPipeline ? 'Compact Pipeline' : 'Full Pipeline' }}
         </UButton>
 
         <!-- Availability Analysis -->

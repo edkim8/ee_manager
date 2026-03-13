@@ -10,6 +10,7 @@ import {
   type WeeklyDelinquencyRow,
   type PipelineMoveOutRow,
   type PipelineMoveInRow,
+  type PipelineOptions,
 } from '../../../../utils/reporting'
 import { PROPERTY_LIST } from '../../../../constants/properties'
 
@@ -246,6 +247,11 @@ export default defineEventHandler(async (event) => {
     const propertyCodes = [...propSet]
 
     // Scope all data to this recipient's subscribed properties
+    const pipelineOpts: PipelineOptions = {
+      truncateDays: 7,
+      viewAllUrl: `${baseUrl}/solver/weekly-report?showAll=1`,
+    }
+
     const scopedInput = {
       weekEndDate,
       weekStartDate,
@@ -258,6 +264,7 @@ export default defineEventHandler(async (event) => {
       workOrders: workOrders.filter(r => propertyCodes.includes(r.property_code)),
       delinquencies: delinquencies.filter(r => propertyCodes.includes(r.property_code)),
       baseUrl,
+      pipelineOpts,
     }
 
     const htmlContent = generateWeeklyHtmlReport(scopedInput)

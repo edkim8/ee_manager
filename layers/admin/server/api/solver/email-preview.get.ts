@@ -1,6 +1,6 @@
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { Database } from '../../../../../types/supabase'
-import { generateHighFidelityHtmlReport, type PropertySnapshotDeltas, type PropertyRenewalCountsMap, type PipelineMoveOutRow, type PipelineMoveInRow } from '../../../../base/utils/reporting'
+import { generateHighFidelityHtmlReport, type PropertySnapshotDeltas, type PropertyRenewalCountsMap, type PipelineMoveOutRow, type PipelineMoveInRow, type PipelineOptions } from '../../../../base/utils/reporting'
 
 export default defineEventHandler(async (event) => {
   const client = serverSupabaseServiceRole<Database>(event)
@@ -8,7 +8,9 @@ export default defineEventHandler(async (event) => {
 
   // Accept optional ?date=YYYY-MM-DD to load a specific day's report.
   // Defaults to the most recent completed run when omitted.
+  // Accept optional ?showAll=1 to show full pipeline without truncation.
   const dateParam = (getQuery(event).date as string | undefined) || null
+  const showAll = (getQuery(event).showAll as string | undefined) === '1'
 
   const { data: run, error: runError } = await (() => {
     const base = client
@@ -225,6 +227,10 @@ export default defineEventHandler(async (event) => {
     }
   })
 
+  const pipelineOpts: PipelineOptions | undefined = showAll
+    ? undefined
+    : { truncateDays: 7, viewAllUrl: `${baseUrl}/solver/report?showAll=1` }
+
   const html = generateHighFidelityHtmlReport(
     run,
     allEvents,
@@ -234,6 +240,7 @@ export default defineEventHandler(async (event) => {
     renewalCounts,
     moveOutPipeline,
     moveInPipeline,
+    pipelineOpts,
   )
 
   return { html, run }

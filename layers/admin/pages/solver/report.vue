@@ -6,9 +6,19 @@ const today = new Date().toISOString().split('T')[0]
 // Empty string means "most recent run" — matches the API default behaviour.
 const selectedDate = ref('')
 
-// Reactive fetch: re-requests automatically when selectedDate changes.
+// When true, show full pipeline (no truncation). Default: truncated to overdue + 7 days.
+const showAllPipeline = ref(false)
+
+// Reactive fetch: re-requests automatically when selectedDate or showAllPipeline changes.
 const { data, pending, error, refresh } = useFetch(
-  () => `/api/solver/email-preview${selectedDate.value ? `?date=${selectedDate.value}` : ''}`,
+  () => {
+    const base = `/api/solver/email-preview`
+    const params = new URLSearchParams()
+    if (selectedDate.value) params.set('date', selectedDate.value)
+    if (showAllPipeline.value) params.set('showAll', '1')
+    const qs = params.toString()
+    return qs ? `${base}?${qs}` : base
+  },
   { lazy: true }
 )
 
@@ -106,6 +116,20 @@ async function copyAuditPayload() {
           title="Next day"
           @click="goToNextDay"
         />
+
+        <UDivider orientation="vertical" class="h-6 mx-1" />
+
+        <!-- Pipeline toggle -->
+        <UButton
+          :icon="showAllPipeline ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+          variant="soft"
+          :color="showAllPipeline ? 'primary' : 'neutral'"
+          size="sm"
+          title="Toggle full pipeline view"
+          @click="showAllPipeline = !showAllPipeline"
+        >
+          {{ showAllPipeline ? 'Compact Pipeline' : 'Full Pipeline' }}
+        </UButton>
 
         <UDivider orientation="vertical" class="h-6 mx-1" />
 

@@ -9,6 +9,7 @@ import {
   type WeeklyDelinquencyRow,
   type PipelineMoveOutRow,
   type PipelineMoveInRow,
+  type PipelineOptions,
 } from '../../../../base/utils/reporting'
 import { PROPERTY_LIST } from '../../../../base/constants/properties'
 
@@ -23,6 +24,7 @@ export default defineEventHandler(async (event) => {
   const client = serverSupabaseServiceRole<Database>(event)
   const baseUrl = getRequestURL(event).origin
   const dateParam = (getQuery(event).date as string | undefined) || null
+  const showAll = (getQuery(event).showAll as string | undefined) === '1'
 
   // Anchor to Monday. If date provided use it; otherwise find most recent Monday.
   function toMonday(isoDate: string): string {
@@ -202,6 +204,10 @@ export default defineEventHandler(async (event) => {
     }
   })
 
+  const pipelineOpts: PipelineOptions | undefined = showAll
+    ? undefined
+    : { truncateDays: 7, viewAllUrl: `${baseUrl}/solver/weekly-report?showAll=1` }
+
   const html = generateWeeklyHtmlReport({
     weekEndDate,
     weekStartDate,
@@ -214,6 +220,7 @@ export default defineEventHandler(async (event) => {
     workOrders,
     delinquencies,
     baseUrl,
+    pipelineOpts,
   })
 
   return { html, weekStartDate, weekEndDate }
