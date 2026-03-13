@@ -300,11 +300,30 @@ def run_phase_c(context: BrowserContext, script_page: Page, dates: dict, data_di
 
     tab, frame = _find_analytics_form(context, script_page, "#cmbReportType_DropDownList")
 
-    frame.locator("#cmbReportType_DropDownList").select_option(label="Financial Aged Receivable")
-    print("  Report Type = Financial Aged Receivable")
+    # Selecting Report Type fires an ASP.NET __doPostBack that rebuilds the form DOM.
+    # Wait for the POST response before touching any other field — otherwise the
+    # #cmbGroupby_DropDownList reference goes stale and silently reverts to "Property",
+    # producing a property-level summary export instead of individual resident rows.
+    print("  Report Type = Financial Aged Receivable  (waiting for postback...)")
+    with tab.expect_response(
+        lambda r: "ARAnalytics_res.aspx" in r.url and r.request.method == "POST",
+        timeout=20_000,
+    ):
+        frame.locator("#cmbReportType_DropDownList").select_option(label="Financial Aged Receivable")
 
-    frame.locator("#cmbGroupby_DropDownList").select_option(label="Resident")
-    print("  Group By    = Resident")
+    # Re-acquire groupby from the freshly rebuilt DOM.
+    groupby = frame.locator("#cmbGroupby_DropDownList")
+    groupby.wait_for(state="visible", timeout=10_000)
+    groupby.select_option(label="Resident")
+
+    # Hard verification — abort rather than silently download a property-level file.
+    actual_label = groupby.evaluate("el => el.options[el.selectedIndex].text")
+    if actual_label != "Resident":
+        raise RuntimeError(
+            f"  ERROR: Summary Type reverted to '{actual_label}' after postback. "
+            "Aborting — this would produce a property-level summary instead of resident rows."
+        )
+    print(f"  Group By    = {actual_label} ✓")
 
     frame.locator("#tenstatus_MultiSelect").evaluate("""el => {
         for (let o of el.options)
@@ -318,6 +337,30 @@ def run_phase_c(context: BrowserContext, script_page: Page, dates: dict, data_di
     frame.locator("#PropertyLookup_LookupCode").press("Tab")
     tab.wait_for_timeout(1_500)
     print(f"  Properties  = {prop_list}")
+
+    # Click Display first and verify column headers before downloading.
+    # If "Property Name" appears, Yardi rendered a property-level summary — abort.
+    print("  Clicking Display — verifying column headers...")
+    frame.locator("#btnDisplay_Button").click()
+    tab.wait_for_timeout(2_000)
+    try:
+        frame.locator("table").first.wait_for(state="visible", timeout=30_000)
+        headers = frame.locator("table tr:first-child th, table tr:first-child td").all_inner_texts()
+        headers_clean = [h.strip() for h in headers if h.strip()]
+        print(f"  Columns: {headers_clean}")
+        if any("Property Name" in h for h in headers_clean):
+            raise RuntimeError(
+                f"  ERROR: 'Property Name' column detected — Yardi exported a property-level "
+                f"summary instead of resident rows: {headers_clean}. DO NOT DOWNLOAD. Re-run."
+            )
+        if any("Resident" in h for h in headers_clean) and any("Unit" in h for h in headers_clean):
+            print("  Column check passed — Resident mode confirmed ✓")
+        else:
+            print(f"  WARNING: Could not confirm Resident columns from headers — proceeding.")
+    except RuntimeError:
+        raise
+    except Exception as col_err:
+        print(f"  WARNING: Column check skipped ({col_err}) — proceeding.")
 
     filename = build_filename("Delinquencies", dates)
     dest = data_dir / filename
