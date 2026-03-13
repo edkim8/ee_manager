@@ -78,7 +78,7 @@ WORKFLOW PHASE 1: EVALUATION
    - YARDI DATE SANITY: Check the lease start dates to ensure there are no year-typos
      (e.g., 2102 instead of 2026). If the solver accepted an anomalous future date, flag it.
    - Check for any error messages or failed phases in the console log.
-   - Evaluate pipeline health: available / applied / leased counts per property.
+   - Evaluate pipeline health: available / applied / leased counts per property. Also briefly check the `/solver/weekly-report` pipeline data for anomalies if today is near the weekend.
    - Note any alert churn (> 3 adds or removes at a single property in one run).
    - Code Efficiency Sweep: Flag if any unit is resolved multiple times (duplicate TRACE
      logs for same unit ID) — potential redundant DB calls.
