@@ -126,12 +126,35 @@ If the user provides feedback, incorporate it. When the user explicitly says "Do
    - `gh pr create --title "Daily Solver Audit YYYY-MM-DD" --body "Automated daily solver forensic report"`
    - `gh pr merge --merge --auto`
 
-5. Send the audit email via the API endpoint:
+5. Compose the Manager Brief — a short, plain-language draft email for property managers.
+   Rules for the brief:
+   - Include ONLY items that require a manager to take action (⚠️ WARNING or 🔴 FATAL).
+   - No solver jargon, no batch IDs, no technical terms. Write as if emailing a property manager.
+   - Each item: property name in full (not code), unit number, resident name, what the issue is,
+     and what action is needed. One short paragraph per item.
+   - Do NOT include ✅ CLEAN items, 7-day trends, architectural notes, or audit metadata.
+   - If there are zero action items today, state: "No manager action required today."
+   - Format as plain paragraphs with bold headers per property, ready to forward as-is.
+   Example item format:
+     **Woodbury Oaks — Unit 464-E (Karina Sanchez)**
+     Karina's unit was not confirmed ready as of this morning. Her move-in is scheduled for
+     today (Monday). Please confirm the unit is complete and update the status in Yardi
+     immediately. If there is a delay, please contact Karina directly to arrange alternatives.
+
+6. Send the audit email AND manager brief via the API endpoint:
    POST to `/api/admin/notifications/send-audit`
-   Body: { content: "<full markdown audit text>", date: "YYYY-MM-DD", batchId: "<batch_id>" }
+   Body: {
+     content: "<full markdown audit text>",
+     date: "YYYY-MM-DD",
+     batchId: "<batch_id>",
+     managerBrief: "<manager brief plain text>"
+   }
+   Two emails will be sent to audit recipients:
+   - "Daily Audit Report — YYYY-MM-DD" (full technical audit, for you)
+   - "[DRAFT] Manager Brief — YYYY-MM-DD" (plain-language action items, review and forward)
    Confirm the response shows success and list the recipient emails.
 
-6. Suggest 1 architectural optimization for the solver based on today's data patterns.
+7. Suggest 1 architectural optimization for the solver based on today's data patterns.
 
 7. TERMINATE: Provide a "Shift Handoff" summary — key items for the next session to
    be aware of (unresolved warnings, pending follow-ups, upcoming maintenance windows).
