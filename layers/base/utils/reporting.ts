@@ -868,8 +868,9 @@ export function generateWeeklyHtmlReport(input: WeeklyReportInput): string {
                     ${baseUrl ? `
                     <td style="vertical-align: top; text-align: right; padding-left: 16px; width: 1%; white-space: nowrap;">
                         <table style="border-collapse: collapse; margin-left: auto;">
-                            <tr><td style="padding-bottom: 6px;"><a href="${baseUrl}/solver/report" style="display:inline-block;background:rgba(255,255,255,0.2);color:white;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,0.3);">📊 Today Report →</a></td></tr>
-                            <tr><td><a href="${baseUrl}/office/availabilities/analysis" style="display:inline-block;background:rgba(255,255,255,0.15);color:white;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,0.25);">📈 Availability Analysis →</a></td></tr>
+                            <tr><td style="padding-bottom: 6px;"><a href="${baseUrl}/solver/weekly-report" style="display:inline-block;background:rgba(255,255,255,0.2);color:white;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,0.3);">📅 Weekly Report →</a></td></tr>
+                            <tr><td style="padding-bottom: 6px;"><a href="${baseUrl}/office/availabilities/analysis" style="display:inline-block;background:rgba(255,255,255,0.15);color:white;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,0.25);">📈 Availability Analysis →</a></td></tr>
+                            <tr><td><a href="${baseUrl}/solver/weekly-report-help" style="display:inline-block;background:rgba(255,255,255,0.1);color:white;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,0.25);">❓ Report Guide</a></td></tr>
                         </table>
                     </td>
                     ` : ''}
