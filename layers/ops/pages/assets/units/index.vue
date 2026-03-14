@@ -154,12 +154,22 @@ const handleRowClick = (row: any) => {
         </div>
       </template>
 
-      <!-- Unit name as link -->
+      <!-- Unit name as link + Installations shortcut -->
       <template #cell-unit_name="{ value, row }">
-        <CellsLinkCell
-          :value="value"
-          :to="`/assets/units/${row.id}`"
-        />
+        <div class="flex items-center gap-2">
+          <CellsLinkCell
+            :value="value"
+            :to="`/assets/units/${row.id}`"
+          />
+          <NuxtLink
+            :to="`/office/inventory/installations?unit_id=${row.id}`"
+            class="shrink-0 text-gray-300 hover:text-primary-500 transition-colors"
+            title="View Installations for this Unit"
+            @click.stop
+          >
+            <UIcon name="i-heroicons-wrench-screwdriver" class="w-3.5 h-3.5" />
+          </NuxtLink>
+        </div>
       </template>
 
       <!-- Building name as link -->

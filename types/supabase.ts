@@ -1,3 +1,4 @@
+Initialising login role...
 export type Json =
   | string
   | number
@@ -11,6 +12,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -59,13 +85,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_table_delinquent_residents"
             referencedColumns: ["unit_detail_id"]
-          },
-          {
-            foreignKeyName: "alerts_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "alerts_unit_id_fkey"
@@ -242,13 +261,6 @@ export type Database = {
             foreignKeyName: "applications_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
-          },
-          {
-            foreignKeyName: "applications_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
             referencedRelation: "view_table_residents"
             referencedColumns: ["unit_id"]
           },
@@ -386,6 +398,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "availabilities_future_tenancy_id_fkey"
+            columns: ["future_tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
+          },
+          {
             foreignKeyName: "availabilities_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -398,13 +417,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_table_delinquent_residents"
             referencedColumns: ["unit_detail_id"]
-          },
-          {
-            foreignKeyName: "availabilities_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "availabilities_unit_id_fkey"
@@ -426,6 +438,77 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_unit_pricing_analysis"
             referencedColumns: ["unit_id"]
+          },
+        ]
+      }
+      availability_snapshots: {
+        Row: {
+          applied_count: number
+          available_count: number
+          avg_concession_amount: number | null
+          avg_concession_days: number | null
+          avg_contracted_rent: number | null
+          avg_days_on_market: number | null
+          avg_market_rent: number | null
+          avg_offered_rent: number | null
+          created_at: string | null
+          id: string
+          leased_count: number
+          occupied_count: number
+          price_changes_count: number
+          property_code: string
+          snapshot_date: string
+          solver_run_id: string | null
+          total_active_count: number
+          total_units: number
+        }
+        Insert: {
+          applied_count?: number
+          available_count?: number
+          avg_concession_amount?: number | null
+          avg_concession_days?: number | null
+          avg_contracted_rent?: number | null
+          avg_days_on_market?: number | null
+          avg_market_rent?: number | null
+          avg_offered_rent?: number | null
+          created_at?: string | null
+          id?: string
+          leased_count?: number
+          occupied_count?: number
+          price_changes_count?: number
+          property_code: string
+          snapshot_date: string
+          solver_run_id?: string | null
+          total_active_count?: number
+          total_units?: number
+        }
+        Update: {
+          applied_count?: number
+          available_count?: number
+          avg_concession_amount?: number | null
+          avg_concession_days?: number | null
+          avg_contracted_rent?: number | null
+          avg_days_on_market?: number | null
+          avg_market_rent?: number | null
+          avg_offered_rent?: number | null
+          created_at?: string | null
+          id?: string
+          leased_count?: number
+          occupied_count?: number
+          price_changes_count?: number
+          property_code?: string
+          snapshot_date?: string
+          solver_run_id?: string | null
+          total_active_count?: number
+          total_units?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_snapshots_solver_run_id_fkey"
+            columns: ["solver_run_id"]
+            isOneToOne: false
+            referencedRelation: "solver_runs"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -543,6 +626,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "delinquencies_tenancy_id_fkey"
+            columns: ["tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
+          },
+          {
             foreignKeyName: "delinquencies_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -555,13 +645,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_table_delinquent_residents"
             referencedColumns: ["unit_detail_id"]
-          },
-          {
-            foreignKeyName: "delinquencies_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "delinquencies_unit_id_fkey"
@@ -583,6 +666,355 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_unit_pricing_analysis"
             referencedColumns: ["unit_id"]
+          },
+        ]
+      }
+      distribution_events: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          distribution_date: string
+          entity_level: boolean
+          id: string
+          notes: string | null
+          property_id: string | null
+          rollup_event_ids: string[]
+          source_entity_id: string | null
+          status: string
+          title: string
+          total_amount: number
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          distribution_date?: string
+          entity_level?: boolean
+          id?: string
+          notes?: string | null
+          property_id?: string | null
+          rollup_event_ids?: string[]
+          source_entity_id?: string | null
+          status?: string
+          title: string
+          total_amount: number
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          distribution_date?: string
+          entity_level?: boolean
+          id?: string
+          notes?: string | null
+          property_id?: string | null
+          rollup_event_ids?: string[]
+          source_entity_id?: string | null
+          status?: string
+          title?: string
+          total_amount?: number
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distribution_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribution_events_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribution_events_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "ownership_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      distribution_line_items: {
+        Row: {
+          created_at: string | null
+          distribution_gl: string | null
+          equity_pct: number
+          event_id: string
+          gross_amount: number
+          id: string
+          net_amount: number
+          owner_entity_id: string | null
+          owner_name: string
+          profile_id: string | null
+          sort_order: number
+          transfer_confirmed: boolean
+          transfer_date: string | null
+          transfer_notes: string | null
+          updated_at: string | null
+          withhold_amount: number
+          withhold_pct: number
+        }
+        Insert: {
+          created_at?: string | null
+          distribution_gl?: string | null
+          equity_pct: number
+          event_id: string
+          gross_amount: number
+          id?: string
+          net_amount: number
+          owner_entity_id?: string | null
+          owner_name: string
+          profile_id?: string | null
+          sort_order?: number
+          transfer_confirmed?: boolean
+          transfer_date?: string | null
+          transfer_notes?: string | null
+          updated_at?: string | null
+          withhold_amount?: number
+          withhold_pct?: number
+        }
+        Update: {
+          created_at?: string | null
+          distribution_gl?: string | null
+          equity_pct?: number
+          event_id?: string
+          gross_amount?: number
+          id?: string
+          net_amount?: number
+          owner_entity_id?: string | null
+          owner_name?: string
+          profile_id?: string | null
+          sort_order?: number
+          transfer_confirmed?: boolean
+          transfer_date?: string | null
+          transfer_notes?: string | null
+          updated_at?: string | null
+          withhold_amount?: number
+          withhold_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distribution_line_items_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "distribution_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribution_line_items_owner_entity_id_fkey"
+            columns: ["owner_entity_id"]
+            isOneToOne: false
+            referencedRelation: "ownership_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribution_line_items_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      distributions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          distribution_date: string
+          id: string
+          notes: string | null
+          owner_id: string | null
+          property_id: string | null
+          status: string | null
+          title: string | null
+          type: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          distribution_date?: string
+          id?: string
+          notes?: string | null
+          owner_id?: string | null
+          property_id?: string | null
+          status?: string | null
+          title?: string | null
+          type?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          distribution_date?: string
+          id?: string
+          notes?: string | null
+          owner_id?: string | null
+          property_id?: string | null
+          status?: string | null
+          title?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distributions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "ownership_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distributions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_entity_ownership: {
+        Row: {
+          created_at: string | null
+          equity_pct: number
+          id: string
+          notes: string | null
+          owned_entity_id: string
+          owner_entity_id: string
+          updated_at: string | null
+          withhold_pct: number
+        }
+        Insert: {
+          created_at?: string | null
+          equity_pct?: number
+          id?: string
+          notes?: string | null
+          owned_entity_id: string
+          owner_entity_id: string
+          updated_at?: string | null
+          withhold_pct?: number
+        }
+        Update: {
+          created_at?: string | null
+          equity_pct?: number
+          id?: string
+          notes?: string | null
+          owned_entity_id?: string
+          owner_entity_id?: string
+          updated_at?: string | null
+          withhold_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_entity_ownership_owned_entity_id_fkey"
+            columns: ["owned_entity_id"]
+            isOneToOne: false
+            referencedRelation: "ownership_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_entity_ownership_owner_entity_id_fkey"
+            columns: ["owner_entity_id"]
+            isOneToOne: false
+            referencedRelation: "ownership_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_property_ownership: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          equity_pct: number
+          id: string
+          notes: string | null
+          property_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          equity_pct?: number
+          id?: string
+          notes?: string | null
+          property_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          equity_pct?: number
+          id?: string
+          notes?: string | null
+          property_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_property_ownership_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "ownership_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_property_ownership_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_period_reports: {
+        Row: {
+          created_at: string | null
+          id: string
+          period_end: string
+          period_start: string
+          period_type: string | null
+          property_id: string | null
+          published_at: string | null
+          status: string | null
+          summary_data: Json | null
+          title: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          period_type?: string | null
+          property_id?: string | null
+          published_at?: string | null
+          status?: string | null
+          summary_data?: Json | null
+          title?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          period_type?: string | null
+          property_id?: string | null
+          published_at?: string | null
+          status?: string | null
+          summary_data?: Json | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_period_reports_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -711,6 +1143,94 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_installations: {
+        Row: {
+          asset_tag: string | null
+          condition: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          install_date: string | null
+          is_active: boolean
+          item_definition_id: string
+          location_id: string | null
+          location_type: string | null
+          notes: string | null
+          property_code: string
+          purchase_price: number | null
+          quantity: number
+          serial_number: string | null
+          status: string | null
+          supplier: string | null
+          updated_at: string
+          warranty_expiration: string | null
+        }
+        Insert: {
+          asset_tag?: string | null
+          condition?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          install_date?: string | null
+          is_active?: boolean
+          item_definition_id: string
+          location_id?: string | null
+          location_type?: string | null
+          notes?: string | null
+          property_code: string
+          purchase_price?: number | null
+          quantity?: number
+          serial_number?: string | null
+          status?: string | null
+          supplier?: string | null
+          updated_at?: string
+          warranty_expiration?: string | null
+        }
+        Update: {
+          asset_tag?: string | null
+          condition?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          install_date?: string | null
+          is_active?: boolean
+          item_definition_id?: string
+          location_id?: string | null
+          location_type?: string | null
+          notes?: string | null
+          property_code?: string
+          purchase_price?: number | null
+          quantity?: number
+          serial_number?: string | null
+          status?: string | null
+          supplier?: string | null
+          updated_at?: string
+          warranty_expiration?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_installations_item_definition_id_fkey"
+            columns: ["item_definition_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_item_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_installations_item_definition_id_fkey"
+            columns: ["item_definition_id"]
+            isOneToOne: false
+            referencedRelation: "view_inventory_item_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_installations_property_code_fkey"
+            columns: ["property_code"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       inventory_item_definitions: {
         Row: {
           brand: string | null
@@ -718,6 +1238,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          expected_life_years: number | null
           id: string
           is_active: boolean
           manufacturer_part_number: string | null
@@ -732,6 +1253,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          expected_life_years?: number | null
           id?: string
           is_active?: boolean
           manufacturer_part_number?: string | null
@@ -746,6 +1268,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          expected_life_years?: number | null
           id?: string
           is_active?: boolean
           manufacturer_part_number?: string | null
@@ -755,13 +1278,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_inventory_items_property"
-            columns: ["property_code"]
-            isOneToOne: false
-            referencedRelation: "properties"
-            referencedColumns: ["code"]
-          },
           {
             foreignKeyName: "inventory_item_definitions_category_id_fkey"
             columns: ["category_id"]
@@ -825,67 +1341,14 @@ export type Database = {
             referencedRelation: "tenancies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "leases_tenancy_id_fkey"
+            columns: ["tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
+          },
         ]
-      }
-      note_category_configs: {
-        Row: {
-          categories: Json
-          record_type: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          categories?: Json
-          record_type: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          categories?: Json
-          record_type?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
-      notes: {
-        Row: {
-          category: string
-          cost: number | null
-          created_at: string
-          created_by: string | null
-          id: string
-          note_text: string
-          record_id: string
-          record_type: string
-          updated_at: string
-          vendor: string | null
-        }
-        Insert: {
-          category?: string
-          cost?: number | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          note_text: string
-          record_id: string
-          record_type: string
-          updated_at?: string
-          vendor?: string | null
-        }
-        Update: {
-          category?: string
-          cost?: number | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          note_text?: string
-          record_id?: string
-          record_type?: string
-          updated_at?: string
-          vendor?: string | null
-        }
-        Relationships: []
       }
       locations: {
         Row: {
@@ -1014,6 +1477,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "mtm_offer_history_tenancy_id_fkey"
+            columns: ["tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
+          },
+          {
             foreignKeyName: "mtm_offer_history_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -1026,13 +1496,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_table_delinquent_residents"
             referencedColumns: ["unit_detail_id"]
-          },
-          {
-            foreignKeyName: "mtm_offer_history_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "mtm_offer_history_unit_id_fkey"
@@ -1054,6 +1517,218 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_unit_pricing_analysis"
             referencedColumns: ["unit_id"]
+          },
+        ]
+      }
+      note_category_configs: {
+        Row: {
+          categories: Json
+          record_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          categories?: Json
+          record_type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          categories?: Json
+          record_type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      notes: {
+        Row: {
+          category: string
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          note_text: string
+          record_id: string
+          record_type: string
+          updated_at: string
+          vendor: string | null
+        }
+        Insert: {
+          category?: string
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note_text: string
+          record_id: string
+          record_type: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          category?: string
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note_text?: string
+          record_id?: string
+          record_type?: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: []
+      }
+      owner_profile_mapping: {
+        Row: {
+          contribution_gl: string | null
+          created_at: string | null
+          distribution_gl: string | null
+          equity_pct: number
+          notes: string | null
+          owner_id: string
+          profile_id: string
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contribution_gl?: string | null
+          created_at?: string | null
+          distribution_gl?: string | null
+          equity_pct?: number
+          notes?: string | null
+          owner_id: string
+          profile_id: string
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contribution_gl?: string | null
+          created_at?: string | null
+          distribution_gl?: string | null
+          equity_pct?: number
+          notes?: string | null
+          owner_id?: string
+          profile_id?: string
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_profile_mapping_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "ownership_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_profile_mapping_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ownership_entities: {
+        Row: {
+          address_city: string | null
+          address_line1: string | null
+          address_line2: string | null
+          address_state: string | null
+          address_zip: string | null
+          contribution_gl: string | null
+          created_at: string | null
+          distribution_gl: string | null
+          entity_type: string | null
+          id: string
+          legal_title: string | null
+          name: string
+          tax_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address_city?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
+          address_state?: string | null
+          address_zip?: string | null
+          contribution_gl?: string | null
+          created_at?: string | null
+          distribution_gl?: string | null
+          entity_type?: string | null
+          id?: string
+          legal_title?: string | null
+          name: string
+          tax_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address_city?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
+          address_state?: string | null
+          address_zip?: string | null
+          contribution_gl?: string | null
+          created_at?: string | null
+          distribution_gl?: string | null
+          entity_type?: string | null
+          id?: string
+          legal_title?: string | null
+          name?: string
+          tax_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profile_extensions: {
+        Row: {
+          address_city: string | null
+          address_state: string | null
+          address_street: string | null
+          address_zip: string | null
+          bio: string | null
+          id: string
+          metadata: Json | null
+          phone_mobile: string | null
+          phone_office: string | null
+          preferred_contact_method: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address_city?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
+          bio?: string | null
+          id: string
+          metadata?: Json | null
+          phone_mobile?: string | null
+          phone_office?: string | null
+          preferred_contact_method?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address_city?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
+          bio?: string | null
+          id?: string
+          metadata?: Json | null
+          phone_mobile?: string | null
+          phone_office?: string | null
+          preferred_contact_method?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_extensions_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1117,6 +1792,7 @@ export type Database = {
           code: string
           created_at: string
           description: string | null
+          entity_level_distribution: boolean
           facebook_url: string | null
           id: string
           instagram_url: string | null
@@ -1139,6 +1815,7 @@ export type Database = {
           code: string
           created_at?: string
           description?: string | null
+          entity_level_distribution?: boolean
           facebook_url?: string | null
           id?: string
           instagram_url?: string | null
@@ -1161,6 +1838,7 @@ export type Database = {
           code?: string
           created_at?: string
           description?: string | null
+          entity_level_distribution?: boolean
           facebook_url?: string | null
           id?: string
           instagram_url?: string | null
@@ -1186,6 +1864,7 @@ export type Database = {
           email: string
           id: string
           is_active: boolean
+          notification_types: string[]
           property_code: string
           updated_at: string
         }
@@ -1194,6 +1873,7 @@ export type Database = {
           email: string
           id?: string
           is_active?: boolean
+          notification_types?: string[]
           property_code: string
           updated_at?: string
         }
@@ -1202,6 +1882,7 @@ export type Database = {
           email?: string
           id?: string
           is_active?: boolean
+          notification_types?: string[]
           property_code?: string
           updated_at?: string
         }
@@ -1231,6 +1912,39 @@ export type Database = {
           property_code?: string
           target_count?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      renewal_letter_templates: {
+        Row: {
+          community_name: string
+          created_at: string
+          docx_template_url: string | null
+          letterhead_url: string | null
+          manager_name: string
+          manager_phone: string
+          property_code: string
+          updated_at: string
+        }
+        Insert: {
+          community_name?: string
+          created_at?: string
+          docx_template_url?: string | null
+          letterhead_url?: string | null
+          manager_name?: string
+          manager_phone?: string
+          property_code: string
+          updated_at?: string
+        }
+        Update: {
+          community_name?: string
+          created_at?: string
+          docx_template_url?: string | null
+          letterhead_url?: string | null
+          manager_name?: string
+          manager_phone?: string
+          property_code?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1358,6 +2072,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "renewal_worksheet_items_tenancy_id_fkey"
+            columns: ["tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
+          },
+          {
             foreignKeyName: "renewal_worksheet_items_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -1370,13 +2091,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_table_delinquent_residents"
             referencedColumns: ["unit_detail_id"]
-          },
-          {
-            foreignKeyName: "renewal_worksheet_items_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "renewal_worksheet_items_unit_id_fkey"
@@ -1568,6 +2282,13 @@ export type Database = {
             referencedRelation: "tenancies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "residents_tenancy_id_fkey"
+            columns: ["tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
+          },
         ]
       }
       solver_events: {
@@ -1620,6 +2341,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "solver_events_tenancy_id_fkey"
+            columns: ["tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
+          },
+          {
             foreignKeyName: "solver_events_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -1632,13 +2360,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_table_delinquent_residents"
             referencedColumns: ["unit_detail_id"]
-          },
-          {
-            foreignKeyName: "solver_events_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "solver_events_unit_id_fkey"
@@ -1758,13 +2479,6 @@ export type Database = {
             foreignKeyName: "tenancies_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
-          },
-          {
-            foreignKeyName: "tenancies_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
             referencedRelation: "view_table_residents"
             referencedColumns: ["unit_id"]
           },
@@ -1836,13 +2550,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_table_delinquent_residents"
             referencedColumns: ["unit_detail_id"]
-          },
-          {
-            foreignKeyName: "unit_amenities_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "unit_amenities_unit_id_fkey"
@@ -1921,13 +2628,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_table_delinquent_residents"
             referencedColumns: ["unit_detail_id"]
-          },
-          {
-            foreignKeyName: "unit_flags_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "unit_flags_unit_id_fkey"
@@ -2035,6 +2735,20 @@ export type Database = {
             foreignKeyName: "units_building_id_fkey"
             columns: ["building_id"]
             isOneToOne: false
+            referencedRelation: "view_table_make_ready"
+            referencedColumns: ["building_id"]
+          },
+          {
+            foreignKeyName: "units_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["building_id"]
+          },
+          {
+            foreignKeyName: "units_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
             referencedRelation: "view_table_residents"
             referencedColumns: ["building_id"]
           },
@@ -2051,6 +2765,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "floor_plans"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "units_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "view_floor_plan_pricing_summary"
+            referencedColumns: ["floor_plan_id"]
           },
           {
             foreignKeyName: "units_floor_plan_id_fkey"
@@ -2168,13 +2889,6 @@ export type Database = {
             foreignKeyName: "work_orders_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
-          },
-          {
-            foreignKeyName: "work_orders_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
             referencedRelation: "view_table_residents"
             referencedColumns: ["unit_id"]
           },
@@ -2202,11 +2916,14 @@ export type Database = {
           amenity_concession_monthly: number | null
           available_date: string | null
           b_b: string | null
+          base_rent: number | null
           building_id: string | null
           building_name: string | null
+          calculated_market_rent: number | null
           concession_amenity_pct: number | null
           concession_display_calc: string | null
           concession_total_pct: number | null
+          fixed_amenities_total: number | null
           floor_plan_id: string | null
           floor_plan_image_url: string | null
           floor_plan_name: string | null
@@ -2214,7 +2931,6 @@ export type Database = {
           future_status: Database["public"]["Enums"]["tenancy_status"] | null
           id: string | null
           leasing_agent: string | null
-          market_base_rent: number | null
           move_in_date: string | null
           move_out_date: string | null
           operational_status: string | null
@@ -2248,13 +2964,6 @@ export type Database = {
             foreignKeyName: "availabilities_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
-          },
-          {
-            foreignKeyName: "availabilities_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
             referencedRelation: "view_table_residents"
             referencedColumns: ["unit_id"]
           },
@@ -2283,6 +2992,13 @@ export type Database = {
             foreignKeyName: "units_floor_plan_id_fkey"
             columns: ["floor_plan_id"]
             isOneToOne: false
+            referencedRelation: "view_floor_plan_pricing_summary"
+            referencedColumns: ["floor_plan_id"]
+          },
+          {
+            foreignKeyName: "units_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
             referencedRelation: "view_renewal_pipeline_summary"
             referencedColumns: ["floor_plan_id"]
           },
@@ -2294,6 +3010,89 @@ export type Database = {
             referencedColumns: ["floor_plan_id"]
           },
         ]
+      }
+      view_availability_daily_trend: {
+        Row: {
+          applied_count: number | null
+          available_count: number | null
+          avg_concession_amount: number | null
+          avg_concession_days: number | null
+          avg_contracted_rent: number | null
+          avg_days_on_market: number | null
+          avg_market_rent: number | null
+          avg_offered_rent: number | null
+          leased_count: number | null
+          occupied_count: number | null
+          price_changes_count: number | null
+          property_code: string | null
+          rent_spread_pct: number | null
+          snapshot_date: string | null
+          total_active_count: number | null
+          total_units: number | null
+          vacancy_rate: number | null
+        }
+        Insert: {
+          applied_count?: number | null
+          available_count?: number | null
+          avg_concession_amount?: number | null
+          avg_concession_days?: number | null
+          avg_contracted_rent?: number | null
+          avg_days_on_market?: number | null
+          avg_market_rent?: number | null
+          avg_offered_rent?: number | null
+          leased_count?: number | null
+          occupied_count?: number | null
+          price_changes_count?: number | null
+          property_code?: string | null
+          rent_spread_pct?: never
+          snapshot_date?: string | null
+          total_active_count?: number | null
+          total_units?: number | null
+          vacancy_rate?: never
+        }
+        Update: {
+          applied_count?: number | null
+          available_count?: number | null
+          avg_concession_amount?: number | null
+          avg_concession_days?: number | null
+          avg_contracted_rent?: number | null
+          avg_days_on_market?: number | null
+          avg_market_rent?: number | null
+          avg_offered_rent?: number | null
+          leased_count?: number | null
+          occupied_count?: number | null
+          price_changes_count?: number | null
+          property_code?: string | null
+          rent_spread_pct?: never
+          snapshot_date?: string | null
+          total_active_count?: number | null
+          total_units?: number | null
+          vacancy_rate?: never
+        }
+        Relationships: []
+      }
+      view_availability_weekly_trend: {
+        Row: {
+          avg_applied_count: number | null
+          avg_available_count: number | null
+          avg_concession_amount: number | null
+          avg_concession_days: number | null
+          avg_contracted_rent: number | null
+          avg_days_on_market: number | null
+          avg_leased_count: number | null
+          avg_market_rent: number | null
+          avg_occupied_count: number | null
+          avg_offered_rent: number | null
+          avg_rent_spread_pct: number | null
+          avg_total_active: number | null
+          avg_total_units: number | null
+          avg_vacancy_rate: number | null
+          days_in_week: number | null
+          property_code: string | null
+          total_price_changes: number | null
+          week_start: string | null
+        }
+        Relationships: []
       }
       view_concession_analysis: {
         Row: {
@@ -2324,6 +3123,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "availabilities_future_tenancy_id_fkey"
+            columns: ["future_tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
+          },
+          {
             foreignKeyName: "availabilities_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -2336,13 +3142,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_table_delinquent_residents"
             referencedColumns: ["unit_detail_id"]
-          },
-          {
-            foreignKeyName: "availabilities_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "availabilities_unit_id_fkey"
@@ -2390,12 +3189,92 @@ export type Database = {
         }
         Relationships: []
       }
-      view_inventory_item_definitions: {
+      view_floor_plan_pricing_summary: {
         Row: {
+          available_units: number | null
+          avg_market_rent: number | null
+          avg_offered_rent: number | null
+          base_rent: number | null
+          floor_plan_code: string | null
+          floor_plan_id: string | null
+          floor_plan_name: string | null
+          property_code: string | null
+          rent_discrepancy: number | null
+          total_units: number | null
+        }
+        Relationships: []
+      }
+      view_inventory_installations: {
+        Row: {
+          age_years: number | null
+          asset_tag: string | null
           brand: string | null
           category_id: string | null
           category_name: string | null
+          condition: string | null
+          created_at: string | null
+          created_by: string | null
+          expected_life_years: number | null
+          health_status: string | null
+          id: string | null
+          install_date: string | null
+          is_active: boolean | null
+          item_definition_id: string | null
+          item_description: string | null
+          life_remaining_years: number | null
+          location_id: string | null
+          location_name: string | null
+          location_type: string | null
+          manufacturer_part_number: string | null
+          name: string | null
+          notes: string | null
+          property_code: string | null
+          purchase_price: number | null
+          quantity: number | null
+          serial_number: string | null
+          status: string | null
+          supplier: string | null
+          updated_at: string | null
+          warranty_expiration: string | null
+          warranty_status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_installations_item_definition_id_fkey"
+            columns: ["item_definition_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_item_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_installations_item_definition_id_fkey"
+            columns: ["item_definition_id"]
+            isOneToOne: false
+            referencedRelation: "view_inventory_item_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_installations_property_code_fkey"
+            columns: ["property_code"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "inventory_item_definitions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      view_inventory_item_definitions: {
+        Row: {
+          brand: string | null
           category_expected_life_years: number | null
+          category_id: string | null
+          category_name: string | null
           created_at: string | null
           description: string | null
           document_count: number | null
@@ -2412,18 +3291,33 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_inventory_items_property"
-            columns: ["property_code"]
-            isOneToOne: false
-            referencedRelation: "properties"
-            referencedColumns: ["code"]
-          },
-          {
             foreignKeyName: "inventory_item_definitions_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "inventory_categories"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      view_inventory_summary_by_location: {
+        Row: {
+          avg_age_years: number | null
+          critical_count: number | null
+          expired_count: number | null
+          healthy_count: number | null
+          location_id: string | null
+          location_type: string | null
+          property_code: string | null
+          total_items: number | null
+          warning_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_installations_property_code_fkey"
+            columns: ["property_code"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -2478,6 +3372,13 @@ export type Database = {
             referencedRelation: "tenancies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "leases_tenancy_id_fkey"
+            columns: ["tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
+          },
         ]
       }
       view_leasing_pipeline: {
@@ -2487,10 +3388,13 @@ export type Database = {
           availability_id: string | null
           available_date: string | null
           b_b: string | null
+          base_rent: number | null
           bathroom_count: number | null
           bedroom_count: number | null
           building_id: string | null
           building_name: string | null
+          calculated_market_rent: number | null
+          calculated_offered_rent: number | null
           concession_amenity_monthly: number | null
           concession_amenity_pct: number | null
           concession_display_calc: string | null
@@ -2499,6 +3403,7 @@ export type Database = {
           concession_total_pct: number | null
           concession_upfront_amount: number | null
           concession_upfront_monthly: number | null
+          fixed_amenities_total: number | null
           floor_plan_code: string | null
           floor_plan_id: string | null
           floor_plan_name: string | null
@@ -2508,7 +3413,6 @@ export type Database = {
           lease_rent_amount: number | null
           lease_start_date: string | null
           leasing_agent: string | null
-          market_base_rent: number | null
           move_in_date: string | null
           move_out_date: string | null
           pricing_comment: string | null
@@ -2522,6 +3426,7 @@ export type Database = {
           screening_result: string | null
           sf: number | null
           status: string | null
+          sync_alerts: string[] | null
           temp_amenities_total: number | null
           turnover_days: number | null
           unit_id: string | null
@@ -2636,11 +3541,14 @@ export type Database = {
           amenity_concession_monthly: number | null
           available_date: string | null
           b_b: string | null
+          base_rent: number | null
           building_id: string | null
           building_name: string | null
+          calculated_market_rent: number | null
           concession_amenity_pct: number | null
           concession_display_calc: string | null
           concession_total_pct: number | null
+          fixed_amenities_total: number | null
           floor_plan_id: string | null
           floor_plan_image_url: string | null
           floor_plan_name: string | null
@@ -2648,7 +3556,6 @@ export type Database = {
           future_status: Database["public"]["Enums"]["tenancy_status"] | null
           id: string | null
           leasing_agent: string | null
-          market_base_rent: number | null
           move_in_date: string | null
           move_out_date: string | null
           operational_status: string | null
@@ -2682,13 +3589,6 @@ export type Database = {
             foreignKeyName: "availabilities_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
-          },
-          {
-            foreignKeyName: "availabilities_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
             referencedRelation: "view_table_residents"
             referencedColumns: ["unit_id"]
           },
@@ -2712,6 +3612,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "floor_plans"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "units_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "view_floor_plan_pricing_summary"
+            referencedColumns: ["floor_plan_id"]
           },
           {
             foreignKeyName: "units_floor_plan_id_fkey"
@@ -2765,6 +3672,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "delinquencies_tenancy_id_fkey"
+            columns: ["tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
+          },
+          {
             foreignKeyName: "delinquencies_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -2777,13 +3691,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_table_delinquent_residents"
             referencedColumns: ["unit_detail_id"]
-          },
-          {
-            foreignKeyName: "delinquencies_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "view_table_leases"
-            referencedColumns: ["unit_id"]
           },
           {
             foreignKeyName: "delinquencies_unit_id_fkey"
@@ -2812,6 +3719,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "floor_plans"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "units_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "view_floor_plan_pricing_summary"
+            referencedColumns: ["floor_plan_id"]
           },
           {
             foreignKeyName: "units_floor_plan_id_fkey"
@@ -2860,6 +3774,160 @@ export type Database = {
             referencedRelation: "tenancies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "leases_tenancy_id_fkey"
+            columns: ["tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
+          },
+          {
+            foreignKeyName: "tenancies_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenancies_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_delinquent_residents"
+            referencedColumns: ["unit_detail_id"]
+          },
+          {
+            foreignKeyName: "tenancies_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_residents"
+            referencedColumns: ["unit_id"]
+          },
+          {
+            foreignKeyName: "tenancies_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenancies_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_unit_pricing_analysis"
+            referencedColumns: ["unit_id"]
+          },
+        ]
+      }
+      view_table_make_ready: {
+        Row: {
+          building_id: string | null
+          building_name: string | null
+          created_at: string | null
+          days_overdue: number | null
+          expected_date: string | null
+          id: string | null
+          is_active: boolean | null
+          message: string | null
+          property_code: string | null
+          resolved_at: string | null
+          severity: string | null
+          unit_id: string | null
+          unit_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_flags_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_flags_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_delinquent_residents"
+            referencedColumns: ["unit_detail_id"]
+          },
+          {
+            foreignKeyName: "unit_flags_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_residents"
+            referencedColumns: ["unit_id"]
+          },
+          {
+            foreignKeyName: "unit_flags_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_flags_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_unit_pricing_analysis"
+            referencedColumns: ["unit_id"]
+          },
+        ]
+      }
+      view_table_notices: {
+        Row: {
+          building_id: string | null
+          building_name: string | null
+          days_until_moveout: number | null
+          lease_end_date: string | null
+          lease_start_date: string | null
+          move_in_date: string | null
+          move_out_date: string | null
+          property_code: string | null
+          rent_amount: number | null
+          resident_email: string | null
+          resident_id: string | null
+          resident_name: string | null
+          resident_phone: string | null
+          tenancy_id: string | null
+          tenancy_status: Database["public"]["Enums"]["tenancy_status"] | null
+          unit_id: string | null
+          unit_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenancies_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenancies_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_delinquent_residents"
+            referencedColumns: ["unit_detail_id"]
+          },
+          {
+            foreignKeyName: "tenancies_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_residents"
+            referencedColumns: ["unit_id"]
+          },
+          {
+            foreignKeyName: "tenancies_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenancies_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "view_unit_pricing_analysis"
+            referencedColumns: ["unit_id"]
+          },
         ]
       }
       view_table_residents: {
@@ -2889,6 +3957,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenancies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "residents_tenancy_id_fkey"
+            columns: ["tenancy_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_notices"
+            referencedColumns: ["tenancy_id"]
           },
         ]
       }
@@ -2929,12 +4004,42 @@ export type Database = {
           calculated_market_rent: number | null
           calculated_offered_rent: number | null
           fixed_amenities_total: number | null
+          floor_plan_id: string | null
           property_code: string | null
           temp_amenities_total: number | null
           unit_id: string | null
           unit_name: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "units_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "units_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "view_floor_plan_pricing_summary"
+            referencedColumns: ["floor_plan_id"]
+          },
+          {
+            foreignKeyName: "units_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "view_renewal_pipeline_summary"
+            referencedColumns: ["floor_plan_id"]
+          },
+          {
+            foreignKeyName: "units_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "view_table_units"
+            referencedColumns: ["floor_plan_id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -2942,6 +4047,11 @@ export type Database = {
         Args: { p_unit_id: string }
         Returns: number
       }
+      can_delete_item_definition: {
+        Args: { item_def_id: string }
+        Returns: boolean
+      }
+      delete_user_v1: { Args: { target_user_id: string }; Returns: undefined }
       get_delinquencies_monthly_26th_snapshots: {
         Args: { p_months_count?: number; p_property_code: string }
         Returns: {
@@ -2955,10 +4065,27 @@ export type Database = {
           total_unpaid: number
         }[]
       }
+      get_delinquency_resident_history: {
+        Args: { p_months_count?: number; p_property_code: string }
+        Returns: {
+          months_on_list: number
+          peak_unpaid: number
+          prev_month_unpaid: number
+          tenancy_id: string
+        }[]
+      }
+      get_installation_count: { Args: { item_def_id: string }; Returns: number }
       is_admin: { Args: never; Returns: boolean }
       profiles_full_name: {
         Args: { p: Database["public"]["Tables"]["profiles"]["Row"] }
         Returns: string
+      }
+      run_solver_retention: {
+        Args: never
+        Returns: {
+          events_deleted: number
+          runs_deleted: number
+        }[]
       }
     }
     Enums: {
@@ -3132,6 +4259,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       availability_status: ["Available", "Leased", "Applied", "Occupied"],
@@ -3186,3 +4316,5 @@ export const Constants = {
     },
   },
 } as const
+A new version of Supabase CLI is available: v2.78.1 (currently installed v2.72.8)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

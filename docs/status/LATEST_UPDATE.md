@@ -1,99 +1,97 @@
-# Field Report — H-086: Daily Audit + Vercel Build Skip + Delinquency Fix + Manager Brief
-
-**Date:** 2026-03-13
-**Session:** H-086
-**Branch:** main (cherry-picked `vercel.json` from audit branch)
-**Status:** COMPLETE ✓
+# Field Report — H-090 (cont.): Mobile Field Hub
+**Date:** 2026-03-14
+**Builder:** Tier 2 (Goldfish)
+**Session:** H-090 (continued)
 
 ---
 
 ## Summary
 
-Four deliverables completed in one session:
-
-1. **Daily Solver Audit 2026-03-13** — Full forensic audit for batch `aca24157`.
-2. **Vercel Build Skip** — `vercel.json` `ignoreCommand` prevents production builds from firing on daily audit commits.
-3. **Yardi Delinquency Fix** — Patched `yardi_download.py` for ASP.NET postback race condition.
-4. **Manager Brief Email** — Second draft email sent automatically to audit recipients after each audit.
+Built the mobile Field Hub at `/office/inventory/field` — a fully self-contained, stack-navigated page for field staff using phones or iPads. No sub-routes needed; all navigation is internal state. 834 unit tests green.
 
 ---
 
-## 1. Daily Audit 2026-03-13
+## Phase 5: Mobile Field Hub (`/office/inventory/field`)
 
-**Batch:** `aca24157` | **Properties:** RS, SB, CV, OB, WO | **Result:** 9 warnings, 0 fatals
+### Hub Screen
+Five large tap targets arranged in a 2×2 + full-width grid:
+- **Add** (blue) — opens inline add-installation form
+- **Scan** (purple) — opens rear camera with `BarcodeDetector` API + manual text fallback
+- **Unit** (green) — Unit list → Installation list → Detail
+- **Building** (orange) — Building list → Installation list → Detail
+- **Locations** (teal, full width) — Location category list → Location list → Installation list → Detail
 
-Key findings:
-- **WO 464-E — Day 11 EMERGENCY:** Karina Sanchez Calixto is an internal transfer (458-C → 464-E). She vacates 458-C on 03-15 (Sunday), move-in to 464-E on 03-16 (Monday). Unit still not MakeReady — now Day 11 with a hard deadline.
-- **Work Orders = 0 across all 5 properties:** Anomalous. Was 79+ yesterday. Added as new watch item. Investigate if Yardi alert sync is broken.
-- **4 new signed leases (best single day in audit series):** RS — Burket (2116) + O'Neill (3087); SB — Byjoe (1077) + Manion (2101). Repricing ROI confirmed on both RS and SB campaigns.
-- **OB S054/Sandoval:** Day 2 unresolved — starts 03-15, MakeReady = 03-28 (conflict).
-- **RS + SB consecutive silent drops:** 2nd day each — watch items escalated.
-- **OB S139/Avalos** resolved. **RS Richardson (2034)** converted to Current. W1 stable Day 15.
+### Navigation
+Stack-based (`ref<StackFrame[]>`) — `push()`, `pop()`, `goHub()`.
+- Back chevron in header pops one frame.
+- "Hub" breadcrumb jumps to root and stops camera stream.
+- `viewTitle` computed resolves the current screen's label from the top frame's data.
 
-**ANOMALY_LOG changes:**
-- Added: RS consecutive silent drops (2nd day), SB silent drops (3rd in 4 days), Work Orders 0 anomaly, CV Taub C213 delayed conversion
-- Updated Last Seen: WO 464-E, OB S054, OB S150/S170, SB Hong, W1
-- Resolved: OB S139/Avalos, RS Richardson 2034, RS repricing campaign
+### Scan Branch
+- `navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })` — rear camera
+- `BarcodeDetector` detect loop via `requestAnimationFrame`; gracefully disabled when API unavailable
+- Manual asset-tag text input always visible below camera view (e.g. `SB-000042`)
+- `findByAssetTag(propertyCode, tag)` — looks up matching installation; shows error if not found
+- On match → `fetchInstallationWithDetails(id)` → push `installation-detail`
 
----
+### Location Branch — Category Grouping
+`useLocationSelector.fetchLocations` only returns `{ id, name, type }` — no `location_type`.
+Field hub queries `locations` table directly: `select('id, description, location_type')` to build
+grouped category pills: Electrical, Plumbing, HVAC, Structural, General/Other.
 
-## 2. Vercel Build Skip
+### Installation Detail Screen (shared across all branches)
+Lean summary card: item name, location name, asset tag, install date, health status, notes.
+NuxtLink out to the parent unit/building/location's admin page (explicit break from linear flow).
 
-**File:** `vercel.json` (project root, committed on `main`)
+Fixed bottom bar for all detail screens:
+- **Edit** — slides in the full add/edit form (same form used by Add branch); after save, detail refreshes via `fetchInstallationWithDetails`
+- **Transfer** — bottom sheet (Teleport to body); picks new location type + location via `LocationSelector`; calls `updateInstallation` with only `{ location_type, location_id }` delta
+- **Delete** — bottom sheet (Teleport to body); confirmation required; calls `deleteInstallation` (soft delete, sets `is_active = false`); pops stack after
 
-```json
-{
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ':!docs/status/'"
-}
-```
+### Add Form
+- Category filter pills narrow item options before passing to `LocationSelector`
+- Asset tag field marked **Optional** with helper text (skip for LEDs, bulk items)
+- Location type selector + `LocationSelector` for location
+- Standard fields: serial number, install date, condition, notes
 
-**How it works:** Vercel runs `ignoreCommand` before every build. Exit 0 = skip build, exit 1 = proceed.
-`git diff --quiet` exits 0 (no output) when there are no changes outside `docs/status/`. Daily audit commits only touch `docs/status/` — builds are skipped automatically. Code changes still trigger builds normally.
-
-**Impact:** Eliminates one unnecessary Vercel production rebuild per day once in production.
-
----
-
-## 3. Yardi Delinquency Fix — ASP.NET Postback Race
-
-**File:** `scripts/yardi-automation/yardi_download.py` (function `run_phase_c`)
-
-**Root cause:** Yardi AR Analytics uses ASP.NET `__doPostBack`. When Report Type is changed to "Financial Aged Receivable", ASP.NET fires a full form postback, destroying and rebuilding the entire DOM. The old code set `#cmbGroupby_DropDownList` before the postback completed. The newly rebuilt DOM element reverted to its default "Property" value, causing property-level summary exports instead of resident-level rows.
-
-**Fix — three defensive layers:**
-1. `page.expect_response()` — waits for the POST response before touching any other fields.
-2. DOM re-acquisition — `frame.locator("#cmbGroupby_DropDownList")` called fresh after postback, then `select_option(label="Resident")` with explicit verification.
-3. Column header guard — clicks Display, reads table headers, aborts with `RuntimeError` if "Property Name" column is present.
-
-**Note:** A correct implementation already existed in `scripts/yardi-automation/phases/phase_c_analytics.py` but was never called. The fix was applied directly to `yardi_download.py` which is the actual entry point.
+### Entry Point
+Added **Field Mode** button to the header of `installations.vue` (desktop page), linking to `/office/inventory/field`.
 
 ---
 
-## 4. Manager Brief Email
-
-**File:** `layers/base/server/api/admin/notifications/send-audit.post.ts`
-
-Added `generateManagerBriefHtml(brief, date)` function. After the main audit email is sent, if `managerBrief` is present in the request body, a second email is sent to the same audit recipients with:
-- Subject: `[DRAFT] Manager Brief — YYYY-MM-DD`
-- Amber/brown styling (`#b45309` header)
-- "DRAFT — Review before forwarding" banner
-- Plain-language paragraphs — no jargon, no batch IDs, no solver terms
-
-**File:** `docs/governance/DAILY_UPLOAD_REVIEW_PROMPT.md`
-
-Phase 2 updated:
-- Step 5 (new): Compose Manager Brief — action items only, plain paragraphs, one per property, phrased for property managers
-- Step 6 (updated): `send-audit` POST body now includes `managerBrief` field; response notes two emails sent
-
-**Workflow:** Audit agent composes brief → included in `send-audit` POST → two emails delivered automatically. Reviewer receives `[DRAFT]` email and forwards to managers after review. Zero copy-paste required.
-
-**Option C (production vision — not built):** `solver_findings` Supabase table as a persistent to-do list. Manager-facing page with checkboxes — items carry over day-to-day until resolved. Daily nudge email sent only for new items. Documented for future implementation.
+## NuxtImg Ban — Enforcement
+- `docs/governance/ASSET_PROTOCOLS.md` rewritten to **V2.0** — `<NuxtImg>` and `<NuxtPicture>` explicitly prohibited
+- Reason: iPhone/Safari rendering failures for field staff
+- Memory entry created: `feedback_no_nuxtimg.md`
+- `inventory/index.vue` photo viewer corrected to native `<img loading="lazy" @error="...">`
 
 ---
 
-## MacBook Air Setup (Instructions Provided)
+## Tests
 
-Air was running a standalone `~/Dev/yardi-automation/` folder not tracked by git.
-Long-term fix: clone EE_manager repo on Air → symlink `~/Dev/yardi-automation → ~/Dev/Nuxt/EE_manager/scripts/yardi-automation`.
-After symlink: `cd ~/Dev/yardi-automation && git pull origin main` works identically to Mac Mini.
-Instructions delivered; user to execute independently.
+| File | Tests | Status |
+|------|-------|--------|
+| `tests/unit/ops/inventoryContextFilter.test.ts` | 12 | ✅ |
+| Full suite (`tests/unit`) | 834 | ✅ |
+
+---
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `layers/ops/pages/office/inventory/field.vue` | New — full mobile field hub |
+| `layers/ops/pages/office/inventory/installations.vue` | Field Mode button; context filter; category pills; asset tag UX; Transfer modal |
+| `layers/ops/pages/office/inventory/index.vue` | Photo viewer modal (native img) |
+| `layers/ops/pages/assets/units/index.vue` | Manage Installations wrench icon per row |
+| `layers/ops/pages/assets/buildings/index.vue` | Manage Installations wrench icon per row |
+| `docs/governance/ASSET_PROTOCOLS.md` | V2.0 — NuxtImg ban |
+| `tests/unit/ops/inventoryContextFilter.test.ts` | New (12 tests) |
+
+---
+
+## Outstanding / Not Implemented
+
+- **Locations page** contextual link: `locations/index.vue` uses a non-`GenericDataTable` card layout — deferred to a follow-up when that page's structure is mapped.
+- **QR scan on iOS Safari**: `BarcodeDetector` API not available on iOS Safari — manual entry fallback is the primary path on iPhone until a cross-platform library is chosen.
+- **Quantity field for bulk items**: No `quantity` column on `inventory_installations` — needs migration + form field in a dedicated session.

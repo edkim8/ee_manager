@@ -18,6 +18,7 @@ interface InstallationWithDetails {
   item_description: string | null
   serial_number: string | null
   asset_tag: string | null
+  quantity: number
   install_date: string | null
   warranty_expiration: string | null
   purchase_price: number | null

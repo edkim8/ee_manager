@@ -6,6 +6,8 @@ definePageMeta({
 })
 
 // Composables
+const route = useRoute()
+const router = useRouter()
 const { activeProperty } = usePropertyState()
 const { fetchInstallations, createInstallation, updateInstallation, deleteInstallation } = useInventoryInstallations()
 const { fetchItemDefinitions } = useInventoryItemDefinitions()
@@ -211,6 +213,89 @@ const loadData = async () => {
   }
 }
 
+// ── Context filter from query params (linked from Units / Buildings / Locations pages) ──
+const contextUnitId     = computed(() => route.query.unit_id     as string | undefined)
+const contextBuildingId = computed(() => route.query.building_id as string | undefined)
+const contextLocationId = computed(() => route.query.location_id as string | undefined)
+const hasContextFilter  = computed(() => !!(contextUnitId.value || contextBuildingId.value || contextLocationId.value))
+
+const contextBannerText = computed(() => {
+  const u = contextUnitId.value
+  const b = contextBuildingId.value
+  const l = contextLocationId.value
+  if (u) {
+    const unit = units.value.find((x: any) => x.id === u)
+    return `Unit: ${unit?.name ?? u}`
+  }
+  if (b) {
+    const building = buildings.value.find((x: any) => x.id === b)
+    return `Building: ${building?.name ?? b}`
+  }
+  if (l) {
+    const loc = locations.value.find((x: any) => x.id === l)
+    return `Location: ${loc?.name ?? l}`
+  }
+  return ''
+})
+
+// ── Transfer / Move state ──────────────────────────────────────────────────
+const showTransferModal          = ref(false)
+const transferringInstallation   = ref<any>(null)
+const transferForm               = ref({ location_type: 'unit', location_id: '' })
+
+const transferLocationOptions = computed(() => {
+  if (transferForm.value.location_type === 'unit')        return units.value
+  if (transferForm.value.location_type === 'building')    return buildings.value
+  if (transferForm.value.location_type === 'common_area') return locations.value
+  return []
+})
+
+const openTransferModal = (inst: any, e: Event) => {
+  e.stopPropagation()
+  transferringInstallation.value = inst
+  transferForm.value = {
+    location_type: inst.location_type || 'unit',
+    location_id:   inst.location_id   || '',
+  }
+  showTransferModal.value = true
+}
+
+const saveTransfer = async () => {
+  if (!transferringInstallation.value) return
+  try {
+    loading.value = true
+    await updateInstallation(transferringInstallation.value.id, {
+      location_type: transferForm.value.location_type,
+      location_id:   transferForm.value.location_id,
+    })
+    showTransferModal.value = false
+    allInstallations.value  = await fetchInstallations({ propertyCode: activeProperty.value })
+  } catch (err: any) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+
+// ── Item picker category filter ────────────────────────────────────────────
+const itemPickerCategory = ref('')
+
+const itemCategoryOptions = computed(() => {
+  const set = new Set(itemDefinitions.value.map((i: any) => i.category_name).filter(Boolean))
+  return [...set].sort() as string[]
+})
+
+const filteredItemOptions = computed(() => {
+  const items: any[] = itemDefinitions.value
+  const filtered = itemPickerCategory.value
+    ? items.filter(i => i.category_name === itemPickerCategory.value)
+    : items
+  return filtered.map(item => ({
+    id:   item.id,
+    name: [item.brand, item.name].filter(Boolean).join(' ') || item.category_name || 'Unnamed Item',
+  }))
+})
+
 // ── Sidebar Filter State ───────────────────────────────────────────────────
 const searchText              = ref('')
 const filterCategories        = ref<string[]>([])
@@ -312,6 +397,11 @@ function toggleStringFilter(list: string[], value: string): string[] {
 // ── Client-Side Filtered Results ───────────────────────────────────────────
 const filteredInstallations = computed(() => {
   return allInstallations.value.filter(inst => {
+    // Context filter from query params (unit/building/location deep-link)
+    if (contextUnitId.value     && !(inst.location_type === 'unit'        && inst.location_id === contextUnitId.value))     return false
+    if (contextBuildingId.value && !(inst.location_type === 'building'    && inst.location_id === contextBuildingId.value)) return false
+    if (contextLocationId.value && !(inst.location_type === 'common_area' && inst.location_id === contextLocationId.value)) return false
+
     if (searchText.value) {
       const q = searchText.value.toLowerCase()
       const hit =
@@ -343,6 +433,7 @@ const installationForm = ref({
   item_definition_id: '',
   serial_number: '',
   asset_tag: '',
+  quantity: 1,
   install_date: '',
   warranty_expiration: '',
   purchase_price: null,
@@ -364,6 +455,7 @@ const openInstallationForm = (installation = null) => {
       item_definition_id: installation.item_definition_id,
       serial_number:      installation.serial_number || '',
       asset_tag:          installation.asset_tag || '',
+      quantity:           installation.quantity ?? 1,
       install_date:       installation.install_date || '',
       warranty_expiration:installation.warranty_expiration || '',
       purchase_price:     installation.purchase_price || null,
@@ -387,6 +479,7 @@ const openInstallationForm = (installation = null) => {
       item_definition_id: '',
       serial_number: '',
       asset_tag: '',
+      quantity: 1,
       install_date: new Date().toISOString().split('T')[0],
       warranty_expiration: '',
       purchase_price: null,
@@ -694,6 +787,15 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
         </div>
         <div class="flex items-center gap-2">
           <UButton
+            to="/office/inventory/field"
+            icon="i-heroicons-device-phone-mobile"
+            color="neutral"
+            variant="outline"
+            size="sm"
+          >
+            Field Mode
+          </UButton>
+          <UButton
             to="/office/inventory"
             icon="i-heroicons-archive-box"
             color="neutral"
@@ -712,6 +814,23 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
             Add Installation
           </UButton>
         </div>
+      </div>
+
+      <!-- Context Filter Banner -->
+      <div
+        v-if="hasContextFilter"
+        class="mx-6 mt-4 flex items-center justify-between gap-3 px-4 py-2.5 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg text-sm"
+      >
+        <span class="flex items-center gap-2 text-primary-800 dark:text-primary-300 font-medium">
+          <UIcon name="i-heroicons-funnel" class="w-4 h-4" />
+          Filtered by {{ contextBannerText }}
+        </span>
+        <button
+          class="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+          @click="router.push({ query: {} })"
+        >
+          Clear filter
+        </button>
       </div>
 
       <!-- Error -->
@@ -779,15 +898,26 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
                   <span class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getHealthBadgeClass(inst.health_status)">{{ inst.health_status }}</span>
                   <span class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getWarrantyBadgeClass(inst.warranty_status)">{{ formatLabel(inst.warranty_status) }}</span>
                   <span v-if="inst.condition" class="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 capitalize">{{ inst.condition }}</span>
+                  <span v-if="inst.quantity > 1" class="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">qty {{ inst.quantity }}</span>
                 </div>
               </div>
 
-              <button
-                class="ml-4 p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
-                @click.stop="handleDeleteInstallation(inst.id)"
-              >
-                <UIcon name="i-heroicons-trash" class="w-4 h-4" />
-              </button>
+              <div class="ml-4 flex items-center gap-1 flex-shrink-0">
+                <button
+                  title="Transfer / Move to another location"
+                  class="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  @click="openTransferModal(inst, $event)"
+                >
+                  <UIcon name="i-heroicons-arrow-right-circle" class="w-4 h-4" />
+                </button>
+                <button
+                  title="Delete installation"
+                  class="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  @click.stop="handleDeleteInstallation(inst.id)"
+                >
+                  <UIcon name="i-heroicons-trash" class="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -807,13 +937,42 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
         </h2>
 
         <form @submit.prevent="saveInstallationForm" class="space-y-4">
-          <LocationSelector
-            v-model="installationForm.item_definition_id"
-            :options="itemDefinitions.map(item => ({ id: item.id, name: `${item.category_name} - ${item.brand} ${item.name}` }))"
-            label="Item"
-            placeholder="Select item from catalog..."
-            required
-          />
+          <!-- Item Selection with Category Filter -->
+          <div>
+            <!-- Category pills (filter) -->
+            <p class="block text-sm font-medium mb-1.5">Item <span class="text-red-500">*</span></p>
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              <button
+                type="button"
+                class="px-2.5 py-1 rounded-full text-xs font-medium transition-colors border"
+                :class="itemPickerCategory === ''
+                  ? 'bg-primary-600 text-white border-primary-600'
+                  : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-primary-400'"
+                @click="itemPickerCategory = ''"
+              >
+                All
+              </button>
+              <button
+                v-for="cat in itemCategoryOptions"
+                :key="cat"
+                type="button"
+                class="px-2.5 py-1 rounded-full text-xs font-medium transition-colors border"
+                :class="itemPickerCategory === cat
+                  ? 'bg-primary-600 text-white border-primary-600'
+                  : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-primary-400'"
+                @click="itemPickerCategory = cat; installationForm.item_definition_id = ''"
+              >
+                {{ cat }}
+              </button>
+            </div>
+            <LocationSelector
+              v-model="installationForm.item_definition_id"
+              :options="filteredItemOptions"
+              label=""
+              placeholder="Select item from catalog..."
+              required
+            />
+          </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -821,8 +980,15 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
               <input v-model="installationForm.serial_number" type="text" placeholder="e.g. RF28R720123456" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700" />
             </div>
             <div>
-              <label class="block text-sm font-medium mb-1">Asset Tag</label>
-              <input v-model="installationForm.asset_tag" type="text" placeholder="e.g. WO-REF-0101" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700" />
+              <label class="block text-sm font-medium mb-1">
+                Asset Tag
+                <span class="ml-1 text-xs font-normal text-gray-400">(Optional)</span>
+              </label>
+              <input v-model="installationForm.asset_tag" type="text" placeholder="e.g. SB-000042" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700" />
+              <p class="mt-1 text-xs text-gray-400 leading-snug">
+                Scanning a tag instantly pulls up this item's history &amp; warranty.
+                <br><strong class="text-gray-500">Skip for LEDs, bulk items, or inaccessible fixtures.</strong>
+              </p>
             </div>
           </div>
 
@@ -837,7 +1003,11 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-1">Quantity</label>
+              <input v-model.number="installationForm.quantity" type="number" min="1" step="1" placeholder="1" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700" />
+            </div>
             <div>
               <label class="block text-sm font-medium mb-1">Purchase Price</label>
               <input v-model="installationForm.purchase_price" type="number" step="0.01" placeholder="0.00" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700" />
@@ -1094,6 +1264,75 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- ── Transfer / Move Modal ────────────────────────────────────────── -->
+    <div
+      v-if="showTransferModal"
+      class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+      @click.self="showTransferModal = false"
+    >
+      <div class="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl p-6 w-full sm:max-w-md">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white">Transfer Installation</h3>
+          <button type="button" @click="showTransferModal = false" class="text-gray-400 hover:text-gray-600 p-1">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Moving <strong class="text-gray-700 dark:text-gray-200">{{ transferringInstallation?.brand }} {{ transferringInstallation?.name }}</strong>
+          to a new location. Asset tag, notes, and photos are preserved.
+        </p>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">New Location Type *</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                v-for="type in ['unit', 'building', 'common_area']"
+                :key="type"
+                type="button"
+                class="px-3 py-2 border-2 rounded-lg text-sm font-medium transition-colors capitalize"
+                :class="transferForm.location_type === type
+                  ? 'bg-primary-600 text-white border-primary-600'
+                  : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 hover:border-primary-500'"
+                @click="transferForm.location_type = type; transferForm.location_id = ''"
+              >
+                {{ type === 'common_area' ? 'Common' : type }}
+              </button>
+            </div>
+          </div>
+
+          <LocationSelector
+            v-model="transferForm.location_id"
+            :options="transferLocationOptions"
+            :label="transferForm.location_type === 'unit' ? 'Unit' : transferForm.location_type === 'building' ? 'Building' : 'Common Area'"
+            :placeholder="`Select ${transferForm.location_type === 'common_area' ? 'common area' : transferForm.location_type}...`"
+            required
+          />
+
+          <div class="flex gap-2 pt-2">
+            <button
+              type="button"
+              @click="showTransferModal = false"
+              class="flex-1 px-4 py-2.5 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              :disabled="loading || !transferForm.location_id"
+              class="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm font-medium"
+              @click="saveTransfer"
+            >
+              {{ loading ? 'Moving…' : 'Confirm Transfer' }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 

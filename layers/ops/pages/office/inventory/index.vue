@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useSupabaseClient } from '#imports'
+import SimpleModal from '../../../../base/components/SimpleModal.vue'
 
 definePageMeta({
   layout: 'dashboard'
@@ -73,6 +74,15 @@ const itemForm = ref<{
 const itemPhotos = ref([])
 const itemDocuments = ref([])
 const itemThumbnails = ref(new Map()) // Map<itemId, photoUrl>
+
+// Photo viewer modal
+const showPhotoModal = ref(false)
+const photoModalUrl  = ref('')
+const openPhotoModal = (url: string, e: Event) => {
+  e.stopPropagation()
+  photoModalUrl.value  = url
+  showPhotoModal.value = true
+}
 
 // Load data
 onMounted(async () => {
@@ -475,14 +485,16 @@ const selectedCategoryLifeYears = computed<number | null>(() => {
             </div>
           </div>
 
-          <!-- Right: Photo -->
+          <!-- Right: Photo (click to enlarge) -->
           <div class="w-28 flex-shrink-0 bg-gray-100 dark:bg-gray-900">
             <img
-              v-if="item.photo_count > 0"
+              v-if="item.photo_count > 0 && getItemThumbnail(item.id)"
               :src="getItemThumbnail(item.id)"
-              :alt="item.brand"
-              class="w-full h-full object-contain"
-              @error="$event.target.style.display='none'"
+              :alt="item.brand ?? 'Item photo'"
+              loading="lazy"
+              class="w-full h-full object-contain cursor-zoom-in"
+              @click.stop="openPhotoModal(getItemThumbnail(item.id), $event)"
+              @error="($event.target as HTMLImageElement).style.display='none'"
             />
             <div v-else class="w-full h-full flex items-center justify-center">
               <span class="text-gray-300 dark:text-gray-600 text-3xl">📦</span>
@@ -828,5 +840,18 @@ const selectedCategoryLifeYears = computed<number | null>(() => {
         </form>
       </div>
     </div>
+
+    <!-- Photo Viewer Modal (full-screen on mobile) -->
+    <SimpleModal v-model="showPhotoModal" title="Photo" width="sm:max-w-2xl" :no-padding="true">
+      <div class="relative w-full">
+        <img
+          v-if="photoModalUrl"
+          :src="photoModalUrl"
+          loading="lazy"
+          class="w-full h-auto max-h-[80vh] object-contain"
+          alt="Item photo"
+        />
+      </div>
+    </SimpleModal>
   </div>
 </template>

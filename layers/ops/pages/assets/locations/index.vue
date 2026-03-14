@@ -381,7 +381,17 @@ const categorySummary = computed(() => {
                                 {{ new Date(loc.created_at).toLocaleDateString() }}
                             </p>
                         </div>
-                        <UIcon name="i-heroicons-chevron-right" class="w-5 h-5 text-gray-400" />
+                        <div class="flex items-center gap-1">
+                            <NuxtLink
+                                :to="`/office/inventory/installations?location_id=${loc.id}`"
+                                class="p-1 rounded-lg text-gray-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
+                                title="Manage Installations"
+                                @click.stop
+                            >
+                                <UIcon name="i-heroicons-wrench-screwdriver" class="w-4 h-4" />
+                            </NuxtLink>
+                            <UIcon name="i-heroicons-chevron-right" class="w-5 h-5 text-gray-400" />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -506,6 +516,18 @@ const categorySummary = computed(() => {
 
             <!-- Actions -->
             <div class="space-y-4">
+                <UButton
+                    color="teal"
+                    variant="solid"
+                    block
+                    size="xl"
+                    :to="`/office/inventory/installations?location_id=${selectedLocation.id}`"
+                    class="rounded-2xl border-2 border-teal-600 dark:border-teal-400 font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 active:scale-95 transition-all h-14"
+                >
+                    <UIcon name="i-heroicons-wrench-screwdriver" class="w-5 h-5 mr-3" />
+                    Manage Installations
+                </UButton>
+
                 <UButton
                     color="primary"
                     variant="solid"

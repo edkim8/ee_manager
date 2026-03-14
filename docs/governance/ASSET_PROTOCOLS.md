@@ -1,43 +1,39 @@
-# Asset Optimization Protocols: EE_manager (Unified V1.0)
+# Asset Optimization Protocols: EE_manager (Unified V2.0)
 
-## 1. THE GOLDEN RULE
-**Every** non-vector image asset (JPG, PNG) MUST be served via `<NuxtImg>` or `<NuxtPicture>` with high-efficiency formatting enabled.
+## ⚠️ CRITICAL RULING — NuxtImg / NuxtPicture BANNED
 
-## 2. FORMAT MANDATE
-- **Default**: Use `format="webp"` for all standard images.
-- **Aggressive**: Use `<NuxtPicture> format="avif,webp"` for large hero sections or detail images to ensure maximum compression.
-- **Fallback**: Native browser fallback to JPG/PNG is handled automatically by Nuxt Image—do not manually specify fallbacks unless for critical legacy reasons.
+**`<NuxtImg>` and `<NuxtPicture>` are PROHIBITED in this project.**
 
-## 3. KEY ATTRIBUTES CHECKLIST
-| Attribute | Requirement | Rationale |
-|-----------|-------------|-----------|
-| `placeholder` | **Mandatory** | Prevents Layout Shift (CLS) and improves perceived performance. |
-| `sizes` | **Highly Recommended** | Generates responsive `srcset` to prevent loading 4K images on mobile. |
-| `loading` | `lazy` (Default) | Improves initial page load by deferring off-screen images. |
-| `quality` | `80` (Default) | Best balance between file size and visual fidelity. |
+**Reason:** Caused rendering failures on iPhone (Safari/iOS WebKit). The Nuxt Image module's
+on-the-fly transformation pipeline produced broken or missing images on mobile Safari,
+causing visible regressions for field staff using iPhones.
 
-## 4. CODE STANDARDS
+**Date confirmed by user:** 2026-03-14
 
-### Standard Component
+### Correct Pattern — Native `<img>` tag
+
 ```vue
-<NuxtImg 
-  src="/path/to/image.jpg" 
-  format="webp"
-  sizes="sm:100vw md:50vw lg:400px"
-  placeholder
+<img
+  :src="imageUrl"
+  :alt="description"
+  loading="lazy"
+  class="..."
+  @error="($event.target as HTMLImageElement).style.display='none'"
 />
 ```
 
-### High Fidelity (Hero/Detail)
-```vue
-<NuxtPicture 
-  src="/path/to/hero.png" 
-  format="avif,webp"
-  placeholder
-/>
-```
+### For AI Agents (Builders)
 
-## 5. FOR AI AGENTS (BUILDERS)
-- **Do NOT** use native `<img>` tags.
-- **Always** add `format="webp"` to `<NuxtImg>` calls.
-- **Verification**: Check the browser network tab to ensure images are being served as `.webp` or `.avif`.
+- **Do NOT use `<NuxtImg>`** — it is banned.
+- **Do NOT use `<NuxtPicture>`** — it is banned.
+- **Always use native `<img>` tags** with `loading="lazy"`.
+- Add an `@error` handler to gracefully hide broken images.
+- Do NOT add `format="webp"` — the native `<img>` tag does not support format conversion; images are served as-is from Supabase Storage.
+
+---
+
+## Previous Guidance (SUPERSEDED — DO NOT FOLLOW)
+
+The original V1.0 of this document mandated `<NuxtImg format="webp">` for all images.
+That guidance is now void. Any existing `<NuxtImg>` instances found in the codebase
+should be replaced with native `<img>` tags on the next touch of that file.
