@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useHead } from '#imports'
 import type { Attachment } from '../../composables/useAttachments'
+import { useTourState } from '../../composables/useTourState'
 
 interface UnitData {
   unit_id?: string | null
@@ -50,6 +51,45 @@ const PAGE_DEFS = [
   { icon: 'i-heroicons-document-text',  label: 'Specs'        },
   { icon: 'i-heroicons-map',            label: 'Floor Plan'   },
   { icon: 'i-heroicons-globe-alt',      label: 'Neighborhood' },
+]
+
+// ── Gesture guide data (rendered in the help overlay) ────────────────────
+const GESTURE_GUIDE = [
+  {
+    fingers: 1, arrow: '← →', color: 'bg-gray-300 dark:bg-gray-600',
+    label: 'Previous / Next Photo',
+    description: 'Swipe left or right on the Photo gallery to browse photos.',
+  },
+  {
+    fingers: 2, arrow: '← →', color: 'bg-sky-400',
+    label: 'Previous / Next Unit',
+    description: 'Swipe left or right to cycle through the 4 shortlisted units.',
+  },
+  {
+    fingers: 3, arrow: '← →', color: 'bg-primary-500',
+    label: 'Previous / Next Page',
+    description: 'Swipe left or right to navigate between Photos, Specs, Floor Plan, and Neighborhood.',
+  },
+  {
+    fingers: 3, arrow: '↓', color: 'bg-primary-500',
+    label: 'Reveal Tab Bar',
+    description: 'Swipe down to show the tab bar and page controls. On the Neighborhood page, also reveals quick-access sub-tabs.',
+  },
+  {
+    fingers: 3, arrow: '↑', color: 'bg-primary-500',
+    label: 'Hide Tab Bar',
+    description: 'Swipe up to dismiss the tab bar and return to the full canvas.',
+  },
+  {
+    fingers: 4, arrow: '↑', color: 'bg-amber-500',
+    label: 'Exit Presentation Mode',
+    description: 'Swipe up with four fingers to restore the sidebar and navigation header.',
+  },
+  {
+    fingers: 4, arrow: '↓', color: 'bg-amber-500',
+    label: 'Enter Presentation Mode',
+    description: 'Swipe down with four fingers to hide all chrome for a full-screen customer view.',
+  },
 ]
 
 const scrollRef = ref<HTMLElement | null>(null)
@@ -105,12 +145,117 @@ const useDragScroll = (el: import('vue').Ref<HTMLElement | null>) => {
 useDragScroll(scrollRef)
 useDragScroll(stripRef)
 
+const { isPresenting, togglePresenting, shortlist, activeUnitId, setActive } = useTourState()
+
+// ── Chrome visibility (Presentation Mode chrome reveal) ─────────────────
+// In Presentation Mode the tab bar is hidden. A 3-finger swipe ↓ temporarily
+// reveals it (plus a Neighborhood submenu on the last page). 3-finger ↑ hides it.
+const tabBarVisible = ref(false)
+const showGestureHelp = ref(false)
+
+// Reset when leaving Presentation Mode so the next session starts clean
+watch(isPresenting, (val) => { if (!val) tabBarVisible.value = false })
+
+// ── Touch Gesture System ─────────────────────────────────────────────────
+//
+//  Finger  │ Direction     │ Action
+//  ────────┼───────────────┼─────────────────────────────────────────────
+//  1       │ ← →           │ Previous / Next photo (gallery page only)
+//  2       │ ← →           │ Previous / Next unit in shortlist (wraps)
+//  3       │ ← →           │ Previous / Next dossier page
+//  3       │ ↓             │ Reveal tab bar (+ Neighborhood submenu on pg 4)
+//  3       │ ↑             │ Hide tab bar — return to full canvas
+//  4       │ ↑             │ Exit Presentation Mode
+//  4       │ ↓             │ Enter Presentation Mode
+//
+// NOTE: touchmove registered { passive: false } so preventDefault() is allowed.
+
+let _touchCount = 0
+let _touchStartX = 0
+let _touchStartY = 0
+let _touchOnStrip = false  // true when touch started on the thumbnail strip
+
+const onDossierTouchStart = (e: TouchEvent) => {
+  _touchCount = e.touches.length
+  _touchStartX = e.touches[0].clientX
+  _touchStartY = e.touches[0].clientY
+  // Track whether the touch originated inside the thumbnail strip so we can
+  // let native horizontal scroll handle it (strip scrolls, hero doesn't).
+  _touchOnStrip = !!(stripRef.value?.contains(e.target as Node))
+}
+
+const onDossierTouchMove = (e: TouchEvent) => {
+  const dx = Math.abs(e.touches[0].clientX - _touchStartX)
+  const dy = Math.abs(e.touches[0].clientY - _touchStartY)
+  // 4-finger vertical → always prevent (Enter/Exit Presentation Mode)
+  if (_touchCount >= 4 && dy > dx && dy > 8) { e.preventDefault(); return }
+  // Multi-finger horizontal → always prevent (page nav / unit nav)
+  if (_touchCount >= 2 && dx > dy && dx > 8) { e.preventDefault(); return }
+  // 1-finger horizontal on the HERO → prevent (photo navigation).
+  // Skip if touch started on the thumbnail strip — let the strip scroll natively.
+  if (_touchCount === 1 && dx > dy && dx > 8 && !_touchOnStrip) e.preventDefault()
+}
+
+const onDossierTouchEnd = (e: TouchEvent) => {
+  const dx = e.changedTouches[0].clientX - _touchStartX
+  const dy = e.changedTouches[0].clientY - _touchStartY
+  const absDx = Math.abs(dx)
+  const absDy = Math.abs(dy)
+
+  // ── 4-finger vertical → Enter / Exit Presentation Mode ──────────────
+  if (_touchCount === 4 && absDy > 80 && absDy > absDx * 1.5) {
+    if (dy < 0 && isPresenting.value)  togglePresenting()  // ↑ = Exit
+    if (dy > 0 && !isPresenting.value) togglePresenting()  // ↓ = Enter
+    return
+  }
+
+  // ── 3-finger ────────────────────────────────────────────────────────
+  if (_touchCount === 3) {
+    if (absDx > 60 && absDx > absDy * 1.2) {
+      // ← → Page navigation
+      if (dx < 0) scrollToPage(Math.min(PAGE_DEFS.length - 1, currentPage.value + 1))
+      else        scrollToPage(Math.max(0, currentPage.value - 1))
+    } else if (absDy > 60 && absDy > absDx * 1.2) {
+      // ↓ Reveal chrome  ↑ Hide chrome
+      tabBarVisible.value = dy > 0
+    }
+    return
+  }
+
+  // ── 2-finger horizontal → prev/next unit in shortlist (wraps) ───────
+  if (_touchCount === 2 && absDx > 60 && absDx > absDy * 1.5) {
+    const list = shortlist.value
+    if (!list.length) return
+    const idx = list.indexOf(activeUnitId.value ?? '')
+    if (idx === -1) return
+    const next = dx < 0
+      ? (idx + 1) % list.length
+      : (idx - 1 + list.length) % list.length
+    setActive(list[next])
+    return
+  }
+
+  // ── 1-finger horizontal on gallery → photo navigation ───────────────
+  if (_touchCount === 1 && currentPage.value === 0 && absDx > 40 && absDx > absDy) {
+    if (photos.value.length > 1) {
+      if (dx < 0) heroIndex.value = Math.min(photos.value.length - 1, heroIndex.value + 1)
+      else        heroIndex.value = Math.max(0, heroIndex.value - 1)
+    }
+  }
+}
+
 onMounted(() => {
   scrollRef.value?.addEventListener('scroll', onScroll, { passive: true })
+  scrollRef.value?.addEventListener('touchstart', onDossierTouchStart, { passive: true })
+  scrollRef.value?.addEventListener('touchmove', onDossierTouchMove, { passive: false })
+  scrollRef.value?.addEventListener('touchend', onDossierTouchEnd, { passive: true })
 })
 
 onUnmounted(() => {
   scrollRef.value?.removeEventListener('scroll', onScroll)
+  scrollRef.value?.removeEventListener('touchstart', onDossierTouchStart)
+  scrollRef.value?.removeEventListener('touchmove', onDossierTouchMove)
+  scrollRef.value?.removeEventListener('touchend', onDossierTouchEnd)
 })
 
 // ── Formatting ──────────────────────────────────────────────────────────
@@ -225,30 +370,81 @@ if (import.meta.client && props.walkScoreId && props.propertyAddress) {
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
+  <div class="relative flex flex-col h-full">
 
-    <!-- Page Tab Bar -->
-    <div class="flex-shrink-0 flex items-center justify-around border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-2">
-      <button
-        v-for="(page, i) in PAGE_DEFS"
-        :key="i"
-        type="button"
-        class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 min-h-[52px] transition-all rounded-lg mx-0.5 my-1"
-        :class="currentPage === i
-          ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/30'
-          : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'"
-        @click="scrollToPage(i)"
+    <!-- Page Tab Bar — always visible in normal mode;
+         in Presentation Mode, revealed by 3-finger ↓ (hidden by 3-finger ↑) -->
+    <Transition
+      enter-active-class="transition-all duration-200 ease-out overflow-hidden"
+      enter-from-class="max-h-0 opacity-0"
+      enter-to-class="max-h-20 opacity-100"
+      leave-active-class="transition-all duration-150 ease-in overflow-hidden"
+      leave-from-class="max-h-20 opacity-100"
+      leave-to-class="max-h-0 opacity-0"
+    >
+      <div v-if="!isPresenting || tabBarVisible" class="flex-shrink-0 flex items-center justify-around border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-2">
+        <button
+          v-for="(page, i) in PAGE_DEFS"
+          :key="i"
+          type="button"
+          class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 min-h-[52px] transition-all rounded-lg mx-0.5 my-1"
+          :class="currentPage === i
+            ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/30'
+            : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'"
+          @click="scrollToPage(i)"
+        >
+          <UIcon :name="page.icon" class="w-4 h-4" />
+          <span class="text-[9px] font-black uppercase tracking-wider">{{ page.label }}</span>
+        </button>
+
+        <!-- Gesture help button — lives in the tab bar so it's always reachable -->
+        <button
+          type="button"
+          class="flex flex-col items-center justify-center gap-0.5 py-2.5 min-h-[52px] min-w-[44px] transition-all rounded-lg mx-0.5 my-1 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400"
+          title="Gesture guide"
+          @click="showGestureHelp = true"
+        >
+          <UIcon name="i-heroicons-question-mark-circle" class="w-4 h-4" />
+          <span class="text-[9px] font-black uppercase tracking-wider">Help</span>
+        </button>
+      </div>
+    </Transition>
+
+    <!-- Neighborhood Quick-Access Submenu
+         Slides in below the tab bar when chrome is revealed via gesture on the Neighborhood page -->
+    <Transition
+      enter-active-class="transition-all duration-200 ease-out overflow-hidden"
+      enter-from-class="max-h-0 opacity-0"
+      enter-to-class="max-h-20 opacity-100"
+      leave-active-class="transition-all duration-150 ease-in overflow-hidden"
+      leave-from-class="max-h-20 opacity-100"
+      leave-to-class="max-h-0 opacity-0"
+    >
+      <div
+        v-if="tabBarVisible && currentPage === 3"
+        class="flex-shrink-0 flex bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700"
       >
-        <UIcon :name="page.icon" class="w-4 h-4" />
-        <span class="text-[9px] font-black uppercase tracking-wider">{{ page.label }}</span>
-      </button>
-    </div>
+        <button
+          v-for="tab in NEIGHBORHOOD_TABS"
+          :key="tab.id"
+          type="button"
+          class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-all"
+          :class="activeNeighborhoodTab === tab.id
+            ? 'text-primary-600 dark:text-primary-400 bg-primary-50/60 dark:bg-primary-950/20'
+            : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'"
+          @click="activeNeighborhoodTab = tab.id; scrollToPage(3)"
+        >
+          <UIcon :name="tab.icon" class="w-4 h-4" />
+          <span class="text-[8px] font-black uppercase tracking-wide">{{ tab.label }}</span>
+        </button>
+      </div>
+    </Transition>
 
     <!-- Horizontal Scroll Snap Container -->
     <div
       ref="scrollRef"
       class="dossier-scroll flex flex-1 min-h-0 cursor-grab active:cursor-grabbing"
-      style="overflow-x: scroll; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none;"
+      style="overflow-x: scroll; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none;"
     >
 
       <!-- ── Page 1: Photo Gallery ──────────────────────────────────── -->
@@ -274,7 +470,7 @@ if (import.meta.client && props.walkScoreId && props.propertyAddress) {
               :key="heroIndex"
               :src="photos[heroIndex]?.file_url"
               :alt="`${unit.unit_name} — photo ${heroIndex + 1} of ${photos.length}`"
-              class="absolute inset-0 w-full h-full object-cover"
+              class="absolute inset-0 w-full h-full object-contain"
             />
 
             <!-- No photos state -->
@@ -585,6 +781,83 @@ if (import.meta.client && props.walkScoreId && props.propertyAddress) {
 
     </div>
     <!-- end scroll container -->
+
+    <!-- ── Gesture Help Overlay ─────────────────────────────────────────
+         Triggered by the "?" button in the tab bar. Shows the full gesture map.
+         Dismisses on backdrop tap or the close button. -->
+    <Transition
+      enter-active-class="transition-all duration-200 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition-all duration-150 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="showGestureHelp"
+        class="absolute inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm"
+        @click.self="showGestureHelp = false"
+      >
+        <!-- Bottom sheet panel -->
+        <div class="bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl max-h-[80%] flex flex-col">
+
+          <!-- Handle + header -->
+          <div class="flex-shrink-0 flex items-center justify-between px-6 pt-5 pb-3">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-hand-raised" class="w-5 h-5 text-primary-500" />
+              <h3 class="font-black text-lg text-gray-900 dark:text-white tracking-tight">Touch Gestures</h3>
+            </div>
+            <button
+              type="button"
+              class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              @click="showGestureHelp = false"
+            >
+              <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+            </button>
+          </div>
+
+          <!-- Gesture table -->
+          <div class="overflow-y-auto px-6 pb-8 space-y-1">
+
+            <!-- Section header helper -->
+            <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 pt-2 pb-1">Navigation</p>
+
+            <div v-for="row in GESTURE_GUIDE" :key="row.label" class="flex items-center gap-4 py-2.5 border-b border-gray-50 dark:border-gray-800 last:border-0">
+              <!-- Finger count badge -->
+              <div class="flex-shrink-0 w-14 flex flex-col items-center gap-0.5">
+                <div class="flex gap-0.5">
+                  <span
+                    v-for="n in row.fingers"
+                    :key="n"
+                    class="w-2 h-5 rounded-full"
+                    :class="row.color"
+                  />
+                </div>
+                <span class="text-[9px] font-bold text-gray-400 mt-0.5">{{ row.fingers }}-finger</span>
+              </div>
+
+              <!-- Direction + description -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg leading-none">{{ row.arrow }}</span>
+                  <span class="font-bold text-sm text-gray-900 dark:text-white">{{ row.label }}</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-0.5">{{ row.description }}</p>
+              </div>
+            </div>
+
+            <!-- Tip -->
+            <div class="mt-4 p-4 rounded-2xl bg-primary-50 dark:bg-primary-950/30 flex gap-3">
+              <UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
+              <p class="text-xs text-primary-700 dark:text-primary-300 leading-relaxed">
+                In Presentation Mode all chrome is hidden. Use <strong>3-finger ↓</strong> to reveal the tab bar,
+                or <strong>4-finger ↑</strong> to exit Presentation Mode entirely.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
   </div>
 </template>

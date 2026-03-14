@@ -182,7 +182,7 @@ const triggerFileInput = () => {
         </div>
         
         <div v-else class="relative inline-block">
-            <img :src="previewUrl" class="h-32 rounded-lg object-cover shadow-md" alt="Location photo preview" />
+            <img :src="previewUrl" class="h-32 rounded-lg object-contain shadow-md" alt="Location photo preview" />
             <div 
                 v-if="isExtracting"
                 class="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg"

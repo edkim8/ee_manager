@@ -481,7 +481,7 @@ const selectedCategoryLifeYears = computed<number | null>(() => {
               v-if="item.photo_count > 0"
               :src="getItemThumbnail(item.id)"
               :alt="item.brand"
-              class="w-full h-full object-cover"
+              class="w-full h-full object-contain"
               @error="$event.target.style.display='none'"
             />
             <div v-else class="w-full h-full flex items-center justify-center">

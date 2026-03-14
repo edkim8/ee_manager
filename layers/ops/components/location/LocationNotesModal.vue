@@ -248,7 +248,7 @@ const getCategoryLabel = (category: string) =>
             <div class="grid grid-cols-4 gap-2">
               <div v-for="att in note.attachments" :key="att.id" class="relative">
                 <a v-if="att.file_type === 'image'" :href="att.file_url" target="_blank" class="block">
-                  <img :src="att.file_url" :alt="att.file_name" class="w-full h-20 object-cover rounded border border-gray-200">
+                  <img :src="att.file_url" :alt="att.file_name" class="w-full h-20 object-contain rounded border border-gray-200">
                 </a>
                 <a v-else :href="att.file_url" target="_blank" class="flex items-center gap-2 p-2 border border-gray-200 rounded hover:bg-gray-50">
                   <UIcon name="i-heroicons-document" class="w-4 h-4" />

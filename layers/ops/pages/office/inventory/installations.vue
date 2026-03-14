@@ -912,7 +912,7 @@ const formatLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.
                 <img
                   :src="installationPhotos[0].file_url"
                   :alt="installationPhotos[0].file_name"
-                  class="w-full h-full object-cover"
+                  class="w-full h-full object-contain"
                 />
                 <button
                   type="button"
