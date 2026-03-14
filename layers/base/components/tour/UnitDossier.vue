@@ -54,16 +54,14 @@ const PAGE_DEFS = [
 ]
 
 // ── Gesture guide data (rendered in the help overlay) ────────────────────
+// NOTE: 2-finger is intentionally reserved for native iPadOS pinch-to-zoom.
+//       4-finger is reserved for iPadOS system functions (app switcher, home).
+//       Enter/Exit Presentation Mode uses the ↙/↗ button (top-right corner).
 const GESTURE_GUIDE = [
   {
     fingers: 1, arrow: '← →', color: 'bg-gray-300 dark:bg-gray-600',
     label: 'Previous / Next Photo',
-    description: 'Swipe left or right on the Photo gallery to browse photos.',
-  },
-  {
-    fingers: 2, arrow: '← →', color: 'bg-sky-400',
-    label: 'Previous / Next Unit',
-    description: 'Swipe left or right to cycle through the 4 shortlisted units.',
+    description: 'Swipe left or right on the Photo gallery to browse all unit photos.',
   },
   {
     fingers: 3, arrow: '← →', color: 'bg-primary-500',
@@ -72,23 +70,8 @@ const GESTURE_GUIDE = [
   },
   {
     fingers: 3, arrow: '↓', color: 'bg-primary-500',
-    label: 'Reveal Tab Bar',
-    description: 'Swipe down to show the tab bar and page controls. On the Neighborhood page, also reveals quick-access sub-tabs.',
-  },
-  {
-    fingers: 3, arrow: '↑', color: 'bg-primary-500',
-    label: 'Hide Tab Bar',
-    description: 'Swipe up to dismiss the tab bar and return to the full canvas.',
-  },
-  {
-    fingers: 4, arrow: '↑', color: 'bg-amber-500',
-    label: 'Exit Presentation Mode',
-    description: 'Swipe up with four fingers to restore the sidebar and navigation header.',
-  },
-  {
-    fingers: 4, arrow: '↓', color: 'bg-amber-500',
-    label: 'Enter Presentation Mode',
-    description: 'Swipe down with four fingers to hide all chrome for a full-screen customer view.',
+    label: 'Toggle Tab Bar',
+    description: 'Swipe down to show or hide the page tab bar. Swipe again to toggle.',
   },
 ]
 
@@ -145,7 +128,7 @@ const useDragScroll = (el: import('vue').Ref<HTMLElement | null>) => {
 useDragScroll(scrollRef)
 useDragScroll(stripRef)
 
-const { isPresenting, togglePresenting, shortlist, activeUnitId, setActive } = useTourState()
+const { isPresenting } = useTourState()
 
 // ── Chrome visibility (Presentation Mode chrome reveal) ─────────────────
 // In Presentation Mode the tab bar is hidden. A 3-finger swipe ↓ temporarily
@@ -156,17 +139,22 @@ const showGestureHelp = ref(false)
 // Reset when leaving Presentation Mode so the next session starts clean
 watch(isPresenting, (val) => { if (!val) tabBarVisible.value = false })
 
+// Auto-reveal tab bar when navigating to the Neighborhood page (pg 3).
+// Google Maps iframe captures all touch events — 3-finger gestures cannot
+// fire from inside it, so the user needs the tab buttons to navigate away.
+watch(currentPage, (val) => { if (val === 3 && isPresenting.value) tabBarVisible.value = true })
+
 // ── Touch Gesture System ─────────────────────────────────────────────────
 //
-//  Finger  │ Direction     │ Action
-//  ────────┼───────────────┼─────────────────────────────────────────────
-//  1       │ ← →           │ Previous / Next photo (gallery page only)
-//  2       │ ← →           │ Previous / Next unit in shortlist (wraps)
-//  3       │ ← →           │ Previous / Next dossier page
-//  3       │ ↓             │ Reveal tab bar (+ Neighborhood submenu on pg 4)
-//  3       │ ↑             │ Hide tab bar — return to full canvas
-//  4       │ ↑             │ Exit Presentation Mode
-//  4       │ ↓             │ Enter Presentation Mode
+//  Finger  │ Direction  │ Action
+//  ────────┼────────────┼───────────────────────────────────────────────
+//  1       │ ← →        │ Previous / Next photo (gallery page only)
+//  3       │ ← →        │ Previous / Next dossier page
+//  3       │ ↓          │ Toggle tab bar visibility
+//
+//  2-finger intentionally unhandled — reserved for native pinch-to-zoom.
+//  4-finger intentionally unhandled — reserved for iPadOS system gestures.
+//  Enter/Exit Presentation Mode uses the ↙/↗ button (top-right corner).
 //
 // NOTE: touchmove registered { passive: false } so preventDefault() is allowed.
 
@@ -180,18 +168,18 @@ const onDossierTouchStart = (e: TouchEvent) => {
   _touchStartX = e.touches[0].clientX
   _touchStartY = e.touches[0].clientY
   // Track whether the touch originated inside the thumbnail strip so we can
-  // let native horizontal scroll handle it (strip scrolls, hero doesn't).
+  // let the strip scroll natively while the hero handles photo swipes.
   _touchOnStrip = !!(stripRef.value?.contains(e.target as Node))
 }
 
 const onDossierTouchMove = (e: TouchEvent) => {
   const dx = Math.abs(e.touches[0].clientX - _touchStartX)
   const dy = Math.abs(e.touches[0].clientY - _touchStartY)
-  // 4-finger vertical → always prevent (Enter/Exit Presentation Mode)
-  if (_touchCount >= 4 && dy > dx && dy > 8) { e.preventDefault(); return }
-  // Multi-finger horizontal → always prevent (page nav / unit nav)
-  if (_touchCount >= 2 && dx > dy && dx > 8) { e.preventDefault(); return }
-  // 1-finger horizontal on the HERO → prevent (photo navigation).
+  // 3-finger horizontal → prevent native scroll (we handle page navigation)
+  if (_touchCount === 3 && dx > dy && dx > 8) { e.preventDefault(); return }
+  // 3-finger vertical → prevent native scroll (we handle tab bar toggle)
+  if (_touchCount === 3 && dy > dx && dy > 8) { e.preventDefault(); return }
+  // 1-finger horizontal on the hero → prevent native page scroll (photo nav).
   // Skip if touch started on the thumbnail strip — let the strip scroll natively.
   if (_touchCount === 1 && dx > dy && dx > 8 && !_touchOnStrip) e.preventDefault()
 }
@@ -202,13 +190,6 @@ const onDossierTouchEnd = (e: TouchEvent) => {
   const absDx = Math.abs(dx)
   const absDy = Math.abs(dy)
 
-  // ── 4-finger vertical → Enter / Exit Presentation Mode ──────────────
-  if (_touchCount === 4 && absDy > 80 && absDy > absDx * 1.5) {
-    if (dy < 0 && isPresenting.value)  togglePresenting()  // ↑ = Exit
-    if (dy > 0 && !isPresenting.value) togglePresenting()  // ↓ = Enter
-    return
-  }
-
   // ── 3-finger ────────────────────────────────────────────────────────
   if (_touchCount === 3) {
     if (absDx > 60 && absDx > absDy * 1.2) {
@@ -216,22 +197,9 @@ const onDossierTouchEnd = (e: TouchEvent) => {
       if (dx < 0) scrollToPage(Math.min(PAGE_DEFS.length - 1, currentPage.value + 1))
       else        scrollToPage(Math.max(0, currentPage.value - 1))
     } else if (absDy > 60 && absDy > absDx * 1.2) {
-      // ↓ Reveal chrome  ↑ Hide chrome
-      tabBarVisible.value = dy > 0
+      // ↓ Toggle tab bar (swipe direction doesn't matter — one gesture, one toggle)
+      tabBarVisible.value = !tabBarVisible.value
     }
-    return
-  }
-
-  // ── 2-finger horizontal → prev/next unit in shortlist (wraps) ───────
-  if (_touchCount === 2 && absDx > 60 && absDx > absDy * 1.5) {
-    const list = shortlist.value
-    if (!list.length) return
-    const idx = list.indexOf(activeUnitId.value ?? '')
-    if (idx === -1) return
-    const next = dx < 0
-      ? (idx + 1) % list.length
-      : (idx - 1 + list.length) % list.length
-    setActive(list[next])
     return
   }
 
@@ -846,13 +814,22 @@ if (import.meta.client && props.walkScoreId && props.propertyAddress) {
               </div>
             </div>
 
-            <!-- Tip -->
-            <div class="mt-4 p-4 rounded-2xl bg-primary-50 dark:bg-primary-950/30 flex gap-3">
-              <UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
-              <p class="text-xs text-primary-700 dark:text-primary-300 leading-relaxed">
-                In Presentation Mode all chrome is hidden. Use <strong>3-finger ↓</strong> to reveal the tab bar,
-                or <strong>4-finger ↑</strong> to exit Presentation Mode entirely.
-              </p>
+            <!-- Tips -->
+            <div class="mt-4 space-y-2">
+              <div class="p-4 rounded-2xl bg-primary-50 dark:bg-primary-950/30 flex gap-3">
+                <UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
+                <p class="text-xs text-primary-700 dark:text-primary-300 leading-relaxed">
+                  In Presentation Mode the tab bar is hidden. Use <strong>3-finger ↓</strong> to toggle it on or off.
+                  On the Neighborhood (Map) page it appears automatically — touch gestures don't work inside the map.
+                </p>
+              </div>
+              <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 flex gap-3">
+                <UIcon name="i-heroicons-arrows-pointing-in" class="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
+                <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Use the <strong>↙ button</strong> (top-right corner) to exit Presentation Mode and switch units via the shortlist bar.
+                  2-finger and 4-finger gestures are reserved for standard iPad functions (zoom, app switcher).
+                </p>
+              </div>
             </div>
           </div>
         </div>
