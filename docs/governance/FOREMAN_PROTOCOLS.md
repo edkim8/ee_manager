@@ -144,19 +144,19 @@ These are confirmed gaps discovered during production audits. Dispatch as dedica
    - Residents Status file has no `Status` column → wrong export
    - Any file where > 20% of rows are blank → likely a header-only or partial export
 
-3. **Silent drop Eviction gap** — In `classifyMissingTenancies` (`layers/admin/utils/solverUtils.ts:169`) and the tracking call in `useSolverEngine.ts:692`, add `'Eviction'` to the `→ Past` condition. Currently Eviction falls through both buckets — no DB update occurs and it's tracked as Canceled (wrong). Fix is 2 lines.
+3. ~~**Silent drop Eviction gap**~~ ✅ **DONE (2026-03-14, H-089)** — `'Eviction'` added to Past condition in `classifyMissingTenancies` and `useSolverEngine` inferredStatus.
 
-4. **Unit names in silent drop tracking** — In `useSolverEngine.ts:693`, the `trackSilentDrop` call has `unit_id` but no `unit_name`. The unit name is resolvable from the already-loaded unit map. Adding it to the tracking event eliminates the manual DB identity query every time a RECURRING silent drop pattern is escalated.
+4. ~~**Unit names in silent drop tracking**~~ ✅ **DONE (2026-03-14, H-089)** — `unit_name` added to `trackSilentDrop` signature; resolved via `units(unit_name)` join on activeTenancies query.
 
 5. **Applicant status + past start date warning** — In the Applications phase, flag any tenancy with `status === 'Applicant'` AND `lease_start_date` more than 7 days in the past. This surfaced as Hong (SB-2025) on 03-11 with a 20-day backdated start — processed silently.
 
-6. **Applicant names in `application_saved` tracking** — `trackApplicationSaved` currently emits `Applicant: ?` because no resident name is passed. The name is available in the tenancy record at that point.
+6. ~~**Applicant names in `application_saved` tracking**~~ ✅ **DONE (2026-03-14, H-089)** — `fmtEvent` fixed to read `d.applicant_name` (was `d.resident_name`).
 
 7. **Network health section in audit payload** — The audit-export route (`layers/admin/server/api/solver/audit-export.get.ts`) has no section for connection/retry events. Add `=== NETWORK HEALTH ===` that surfaces any retry counts from the staging upload phase. The retry counter already exists in `useGenericParser.ts` — just needs to write to solver_events or a summary field.
 
-8. **Payload SILENT DROPS rendering bug** — The `=== SILENT DROPS ===` section in the audit payload hardcodes `→ Canceled` for all entries. It should read `inferred_to_status` from the stored tracking event (correct value is already in the DB). Pure rendering fix in the audit-export route.
+8. ~~**Payload SILENT DROPS rendering bug**~~ ✅ **DONE (2026-03-14, H-089)** — `fmtEvent` and `=== SILENT DROPS ===` section fixed to read `d.from_status`/`d.inferred_to_status`. `lease_signed` fmtEvent case added. New `=== NEW LEASES CREATED ===` and `=== MAKEREADY ACTIVE FLAGS ===` sections added.
 
-**Dispatch recommendation:** Assign as a single scoped task `feat/solver-input-validation`. High-complexity (Claude Tier 2). Items 1–3 are the critical path; items 4–8 are incremental improvements that can ship in the same task or a follow-up.
+**Dispatch recommendation:** Assign remaining open items as `feat/solver-input-validation`. High-complexity (Claude Tier 2). Items 1–2 are the critical path; items 5 and 7 are incremental improvements.
 
 ---
 
