@@ -115,8 +115,61 @@ When dispatching a task, you must first decide: **Is this High Complexity (Gold)
 
 > When the User asks for the "Daily Solver Upload prompt" or similar, you MUST generate the complete, comprehensive prompt exactly as documented in `docs/governance/DAILY_UPLOAD_REVIEW_PROMPT.md`. DO NOT ask the User to provide the specific details of the prompt; retrieve the full prompt template from that file yourself and provide it to the User ready to copy-paste.
 
-## 6. GIT & GITHUB PROTOCOLS (The "Shift" Loop)
+## 6. ENGINEERING BACKLOG — KNOWN GAPS (Prioritized)
+
+These are confirmed gaps discovered during production audits. Dispatch as dedicated tasks; do NOT fold into unrelated feature shifts.
+
+---
+
+### 🔴 PRIORITY: Excel File Parsing & Solver Input Validation
+
+**Status:** Open — no implementation yet (as of 2026-03-14)
+**Why urgent:** The Solver is the operational backbone. Garbage-in = garbage-out silently. Several incidents have already caused data corruption or missed updates that were only caught forensically the next day. This is a high-leverage, bounded task.
+
+**Known incidents that expose the gap:**
+| Date | Incident | Root Cause |
+|---|---|---|
+| 2026-03-06 | RS false silent drops | `Code` column had trailing spaces in Excel — normalized with `normalize_id` fix |
+| 2026-03-09 | RS delinquency full re-sync next day | `5p_Delinquencies` exported in summary (property-level) format instead of resident-level rows — processed silently |
+| 2026-03-08 | 5p_MakeReady missing from batch | File not included in auto-ingestion — solver ran without MakeReady data, no warning |
+| 2026-03-13/14 | 5p_Work_Orders showing 0 | File likely excluded from batch — no console output for WO processing phase, no alert |
+| 2026-03-14 | 5× ERR_CONNECTION_CLOSED pre-batch | Supabase staging upload retries — all succeeded on attempt 2 but indicates connection fragility during ingestion |
+
+**What needs to be built — in priority order:**
+
+1. **Batch completeness check** — Before the solver runs, validate that all expected files are present in the batch. Expected files per batch: `5p_Residents_Status`, `5p_Leases` (or equivalent), `5p_Notices`, `5p_MakeReady`, `5p_Work_Orders`, `5p_Delinquencies`, `5p_Alerts` (per property). If any are absent, emit a `[Solver] WARN: Missing file — [filename] — [phase] will be skipped` event AND surface it in the audit payload under a new `=== MISSING FILES ===` section.
+
+2. **Row-level schema validation** — For each file type, validate that key columns exist and are non-empty on at least 80% of rows before committing any sync. Patterns to detect:
+   - Delinquency file has no `tenancy_id` or `balance` column → summary format, skip + warn (already partially implemented via `isDelinquencySummaryFormat`)
+   - Residents Status file has no `Status` column → wrong export
+   - Any file where > 20% of rows are blank → likely a header-only or partial export
+
+3. **Silent drop Eviction gap** — In `classifyMissingTenancies` (`layers/admin/utils/solverUtils.ts:169`) and the tracking call in `useSolverEngine.ts:692`, add `'Eviction'` to the `→ Past` condition. Currently Eviction falls through both buckets — no DB update occurs and it's tracked as Canceled (wrong). Fix is 2 lines.
+
+4. **Unit names in silent drop tracking** — In `useSolverEngine.ts:693`, the `trackSilentDrop` call has `unit_id` but no `unit_name`. The unit name is resolvable from the already-loaded unit map. Adding it to the tracking event eliminates the manual DB identity query every time a RECURRING silent drop pattern is escalated.
+
+5. **Applicant status + past start date warning** — In the Applications phase, flag any tenancy with `status === 'Applicant'` AND `lease_start_date` more than 7 days in the past. This surfaced as Hong (SB-2025) on 03-11 with a 20-day backdated start — processed silently.
+
+6. **Applicant names in `application_saved` tracking** — `trackApplicationSaved` currently emits `Applicant: ?` because no resident name is passed. The name is available in the tenancy record at that point.
+
+7. **Network health section in audit payload** — The audit-export route (`layers/admin/server/api/solver/audit-export.get.ts`) has no section for connection/retry events. Add `=== NETWORK HEALTH ===` that surfaces any retry counts from the staging upload phase. The retry counter already exists in `useGenericParser.ts` — just needs to write to solver_events or a summary field.
+
+8. **Payload SILENT DROPS rendering bug** — The `=== SILENT DROPS ===` section in the audit payload hardcodes `→ Canceled` for all entries. It should read `inferred_to_status` from the stored tracking event (correct value is already in the DB). Pure rendering fix in the audit-export route.
+
+**Dispatch recommendation:** Assign as a single scoped task `feat/solver-input-validation`. High-complexity (Claude Tier 2). Items 1–3 are the critical path; items 4–8 are incremental improvements that can ship in the same task or a follow-up.
+
+---
+
+### ⚠️ WATCH: Supabase Connection Stability (import_staging)
+
+**Status:** Monitoring — first observed 2026-03-14 (5 retries pre-batch, all succeeded)
+**Action if recurs:** If 5+ ERR_CONNECTION_CLOSED errors appear in 2+ consecutive runs, raise with infrastructure team. The retry logic in `useGenericParser.ts` handles it, but repeated failures could indicate Supabase plan limits or cold-start latency under Saturday morning load patterns.
+
+---
+
+## 7. GIT & GITHUB PROTOCOLS (The "Shift" Loop)
 *Policy: One Foreman = One Active Branch.*
+
 
 ### Phase 1: Shift Start (Foreman-Driven)
 1.  **Foreman**: Asks User for the "Task Title/Branch Name".

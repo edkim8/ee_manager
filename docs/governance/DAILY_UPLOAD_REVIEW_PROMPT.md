@@ -126,20 +126,30 @@ If the user provides feedback, incorporate it. When the user explicitly says "Do
    - `gh pr create --title "Daily Solver Audit YYYY-MM-DD" --body "Automated daily solver forensic report"`
    - `gh pr merge --merge --auto`
 
-5. Compose the Manager Brief — a short, plain-language draft email for property managers.
+5. Compose the Manager Brief — a structured, plain-language action list for property managers.
    Rules for the brief:
+   - PROPERTY NAMES: Always use full names — NEVER property codes.
+     RS = Residences | SB = Stonebridge | OB = Ocean Breeze | CV = City View | WO = Whispering Oaks
    - Include ONLY items that require a manager to take action (⚠️ WARNING or 🔴 FATAL).
-   - No solver jargon, no batch IDs, no technical terms. Write as if emailing a property manager.
-   - Each item: property name in full (not code), unit number, resident name, what the issue is,
-     and what action is needed. One short paragraph per item.
+   - No solver jargon, no batch IDs, no technical terms. Write as if texting a property manager.
+   - Each item is ONE bullet/checkbox. Include: property name, unit number, resident name,
+     what the issue is, and the specific action needed. Keep each item to 1-2 sentences max.
+   - Group items under subtitles by category (use only categories that have items):
+       ### Unit Readiness
+       ### Move-In / Move-Out Alerts
+       ### Confirmation Requested
+       ### Lease & Applicant Actions
    - Do NOT include ✅ CLEAN items, 7-day trends, architectural notes, or audit metadata.
    - If there are zero action items today, state: "No manager action required today."
-   - Format as plain paragraphs with bold headers per property, ready to forward as-is.
-   Example item format:
-     **Woodbury Oaks — Unit 464-E (Karina Sanchez)**
-     Karina's unit was not confirmed ready as of this morning. Her move-in is scheduled for
-     today (Monday). Please confirm the unit is complete and update the status in Yardi
-     immediately. If there is a delay, please contact Karina directly to arrange alternatives.
+   - Format example:
+       ### Unit Readiness
+       - [ ] **Whispering Oaks — Unit 464-E (Karina Sanchez):** Unit was not confirmed ready
+             as of this morning and Karina's move-in is today. Please confirm the unit is
+             complete in Yardi immediately, or contact Karina to arrange alternatives.
+
+       ### Confirmation Requested
+       - [ ] **Stonebridge — Unit 2025 (Jonathan Hong):** Rent was changed from $1,578 to
+             $1,478 on 03-12. Please confirm this is the agreed rate.
 
 6. Send the audit email AND manager brief via the API endpoint:
    POST to `/api/admin/notifications/send-audit`
