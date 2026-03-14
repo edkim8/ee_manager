@@ -193,6 +193,7 @@ export function createSolverTrackingState() {
     details: {
       tenancy_id: string
       unit_id: string
+      unit_name?: string
       from_status: string
       inferred_to_status: string
     },

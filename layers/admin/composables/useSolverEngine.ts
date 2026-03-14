@@ -636,9 +636,9 @@ export const useSolverEngine = () => {
                     // Fetch all currently active tenancies for this property from the DB
                     const { data: activeTenancies } = await supabase
                         .from('tenancies')
-                        .select('id, unit_id, status')
+                        .select('id, unit_id, status, units(unit_name)')
                         .eq('property_code', pCode)
-                        .in('status', ['Current', 'Notice', 'Future', 'Applicant'])
+                        .in('status', ['Current', 'Notice', 'Future', 'Applicant', 'Eviction'])
 
                     if (activeTenancies && activeTenancies.length > 0) {
                         const { missing, toPastIds, toCanceledIds, availabilityResetUnitIds } =
@@ -689,10 +689,11 @@ export const useSolverEngine = () => {
 
                             // Track individual silent drops as solver_events rows for audit trail
                             for (const t of missing) {
-                                const inferredStatus = (t.status === 'Current' || t.status === 'Notice') ? 'Past' : 'Canceled'
+                                const inferredStatus = (t.status === 'Current' || t.status === 'Notice' || t.status === 'Eviction') ? 'Past' : 'Canceled'
                                 tracker.trackSilentDrop(pCode, {
                                     tenancy_id: t.id,
                                     unit_id: t.unit_id,
+                                    unit_name: (t as any).units?.unit_name,
                                     from_status: t.status,
                                     inferred_to_status: inferredStatus,
                                 })
