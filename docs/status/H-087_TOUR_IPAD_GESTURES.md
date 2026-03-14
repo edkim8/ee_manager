@@ -1,9 +1,38 @@
 # H-087: Tour Companion — iPad Gesture System & Presentation Polish
 
 **Date:** 2026-03-13
-**Commit:** `ecb3b55`
+**Commits:** `ecb3b55` (initial build) · `cbad319` (gesture simplification)
 **Branch:** main → production (Vercel auto-deploy)
 **Files changed:** 5 (`UnitDossier.vue`, `installations.vue`, `inventory/index.vue`, `LocationNotesModal.vue`, `LocationPicker.vue`)
+
+---
+
+## Revision — Gesture Simplification (`cbad319`)
+
+After real-device review, the gesture system was simplified to avoid conflicts with native iPadOS functions:
+
+**Removed:**
+- **2-finger swipe ← →** (unit navigation) — reserved for native pinch-to-zoom; letting the OS handle it is always safer
+- **4-finger swipe ↑/↓** (enter/exit Presentation Mode) — intercepted by iPadOS app-switcher before reaching the web layer; use the existing ↙/↗ button instead
+- **3-finger ↑** (hide tab bar) — merged into a single toggle gesture
+
+**Changed:**
+- **3-finger ↓** is now a **toggle** — one gesture shows or hides the tab bar, same direction both ways
+
+**Added:**
+- **Auto-reveal tab bar** when navigating to the Neighborhood page in Presentation Mode: the Google Maps iframe captures all touch events, making 3-finger gestures impossible from inside it. The tab bar now appears automatically so the user always has the button-based navigation available.
+
+**Final gesture map:**
+
+| Fingers | Direction | Action |
+|---|---|---|
+| **1** | ← → | Prev / Next photo (gallery only) |
+| **3** | ← → | Prev / Next dossier page |
+| **3** | ↓ | Toggle tab bar on / off |
+| 2 | — | Reserved — native pinch-to-zoom |
+| 4 | — | Reserved — iPadOS system (app switcher, home) |
+
+**Google Maps iframe limitation (by design):** Cross-origin iframes never dispatch touch events to the parent page — this is a browser security rule, not a bug. No workaround exists that preserves map interactivity. Auto-reveal is the correct solution.
 
 ---
 
