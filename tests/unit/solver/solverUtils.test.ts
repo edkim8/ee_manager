@@ -215,7 +215,7 @@ describe('classifyMissingTenancies', () => {
     expect(result.missing).toHaveLength(0)
   })
 
-  describe('Current/Notice → Past', () => {
+  describe('Current/Notice/Eviction → Past', () => {
     it('sends Current tenancy to toPastIds when missing from report', () => {
       const reported = new Set<string>()
       const active = [t('t1', 'u1', 'Current')]
@@ -229,6 +229,14 @@ describe('classifyMissingTenancies', () => {
       const active = [t('t1', 'u1', 'Notice')]
       const { toPastIds } = classifyMissingTenancies(reported, active)
       expect(toPastIds).toContain('t1')
+    })
+
+    it('sends Eviction tenancy to toPastIds when missing from report', () => {
+      const reported = new Set<string>()
+      const active = [t('t1', 'u1', 'Eviction')]
+      const { toPastIds, toCanceledIds } = classifyMissingTenancies(reported, active)
+      expect(toPastIds).toContain('t1')
+      expect(toCanceledIds).toHaveLength(0)
     })
   })
 

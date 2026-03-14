@@ -31,6 +31,7 @@ export interface MissingTenancy {
   id: string
   unit_id: string
   status: string
+  unit_name?: string
 }
 
 export interface MissingTenancyClassification {
@@ -167,7 +168,7 @@ export function classifyMissingTenancies(
   const missing = activeTenancies.filter((t) => !reportedTenancyIds.has(String(t.id).trim().toLowerCase()))
 
   const toPastIds = missing
-    .filter((t) => t.status === 'Current' || t.status === 'Notice')
+    .filter((t) => t.status === 'Current' || t.status === 'Notice' || t.status === 'Eviction')
     .map((t) => t.id)
 
   const toCanceledIds = missing

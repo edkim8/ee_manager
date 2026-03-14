@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
       .in('property_code', propertiesProcessed),
 
     client.from('unit_flags')
-      .select('property_code, severity, resolved_at, flag_type')
+      .select('property_code, severity, resolved_at, flag_type, metadata, message, created_at, units(unit_name)')
       .in('property_code', propertiesProcessed)
       .ilike('flag_type', 'makeready%'),
 
@@ -119,6 +119,7 @@ export default defineEventHandler(async (event) => {
   const discrepancies = allEvents.filter(e => e.event_type === 'discrepancy')
   const priceChanges  = allEvents.filter(e => e.event_type === 'price_change')
   const statusFixes   = allEvents.filter(e => e.event_type === 'status_auto_fix')
+  const leasesSigned  = allEvents.filter(e => e.event_type === 'lease_signed')
 
   // Data quality: events with missing critical date fields (soft check — not a crash)
   const missingDateEvents = allEvents.filter(e =>
@@ -156,13 +157,15 @@ export default defineEventHandler(async (event) => {
       case 'lease_renewal':
         return `[lease_renewal]   ${prop}${unit} | Tenant: ${d.resident_name || '?'} | New End: ${d.new_lease_end || '?'} | Rent: $${d.new_rent || '?'}`
       case 'silent_drop':
-        return `[silent_drop]     ${prop}${unit} | Tenancy: ${e.tenancy_id || '?'} | Was: ${d.old_status || '?'} → Inferred: ${d.new_status || 'Canceled'}`
+        return `[silent_drop]     ${prop}${unit} | Tenancy: ${e.tenancy_id || '?'} | Was: ${d.from_status || '?'} → Inferred: ${d.inferred_to_status || '?'}`
       case 'discrepancy':
         return `[discrepancy] ⚠️  ${prop}${unit} | ${d.message || JSON.stringify(d)}`
       case 'status_auto_fix':
         return `[status_auto_fix] ${prop}${unit} | ${d.old_status || '?'} → ${d.new_status || '?'} | Reason: ${d.reason || '?'}`
       case 'application_saved':
-        return `[application_saved] ${prop}${unit} | Applicant: ${d.resident_name || '?'}`
+        return `[application_saved] ${prop}${unit} | Applicant: ${d.applicant_name || '?'}`
+      case 'lease_signed':
+        return `[lease_signed]    ${prop}${unit} | Resident: ${d.resident_name || '?'} | Move-in: ${d.move_in_date || '?'}${d.rent_amount ? ` | $${d.rent_amount}/mo` : ''}${d.previous_status ? ` | Was: ${d.previous_status}` : ''}`
       default:
         return `[${e.event_type}] ${prop}${unit} | ${JSON.stringify(d)}`
     }
@@ -258,13 +261,21 @@ export default defineEventHandler(async (event) => {
           return `  ${e.property_code} | Unit ${d.unit_name || '?'} | ${d.resident_name || '?'} | Was: ${d.previous_status || '?'} | Move-in: ${d.move_in_date || '?'} | Move-out: ${d.move_out_date || 'today'}${d.early_moveout ? ' ⚡ EARLY' : ''}`
         })),
     ``,
+    `=== NEW LEASES CREATED (${leasesSigned.length}) ===`,
+    ...(leasesSigned.length === 0
+      ? ['  None']
+      : leasesSigned.map(e => {
+          const d = e.details || {}
+          return `  ${e.property_code} | Unit ${d.unit_name || '?'} | ${d.resident_name || '?'} | Move-in: ${d.move_in_date || '?'}${d.rent_amount ? ` | $${d.rent_amount}/mo` : ''}${d.previous_status ? ` | Was: ${d.previous_status}` : ''}`
+        })),
+    ``,
     `=== SILENT DROPS (${silentDrops.length}) ===`,
     ...(silentDrops.length === 0
       ? ['  None']
       : silentDrops.map(e => {
           const d = e.details || {}
           const unit = d.unit_name ? `Unit ${d.unit_name}` : `Tenancy ${e.tenancy_id || '?'}`
-          return `  - ${e.property_code} | ${unit} | ${d.old_status || '?'} → ${d.new_status || 'Canceled'}`
+          return `  - ${e.property_code} | ${unit} | ${d.from_status || '?'} → ${d.inferred_to_status || '?'}`
         })),
     ``,
     `=== DISCREPANCIES (${discrepancies.length}) ===`,
@@ -311,6 +322,20 @@ export default defineEventHandler(async (event) => {
           ].filter(Boolean).join(', ')
           return `  ⚠️ [${e.event_type}] ${e.property_code} | Unit ${d.unit_name || '?'} | ${d.resident_name || '?'} | ${flags}`
         })),
+    ``,
+    `=== MAKEREADY ACTIVE FLAGS ===`,
+    ...(() => {
+      const activeFlags = (makeReadyData || []).filter(f => !f.resolved_at)
+      if (activeFlags.length === 0) return ['  None']
+      return activeFlags.map(f => {
+        const meta = (f.metadata || {}) as Record<string, any>
+        const unitName = meta.unit_name || (f as any).units?.unit_name || '?'
+        const daysOverdue = meta.days_overdue != null ? ` | ${meta.days_overdue}d overdue` : ''
+        const readyDate = meta.expected_date ? ` | Due: ${meta.expected_date}` : ''
+        const sev = f.severity === 'error' ? '🔴' : '⚠️'
+        return `  ${sev} ${f.property_code} | Unit ${unitName}${readyDate}${daysOverdue}`
+      })
+    })(),
     ``,
     `=== OPERATIONAL HEALTH ===`,
     `Alerts:         ${alertsData?.filter(a => a.is_active).length ?? 0} active | ${newAlertsToday} new today`,
