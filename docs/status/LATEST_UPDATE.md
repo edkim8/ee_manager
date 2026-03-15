@@ -1,31 +1,27 @@
-# Field Report — H-091: Color Constants Refactor + UI Upgrades
+# Field Report — H-092: Mobile Nav Fix + Version Bump
 **Date:** 2026-03-14
 **Shift:** Tier 2 Builder (Goldfish)
-**Status:** ✅ COMPLETE — 845/845 tests passing — pushed to production
+**Status:** COMPLETE — 845/845 tests passing
 
 ---
 
 ## Summary
 
-Four-phase refactor eliminating the client-side color anti-pattern, upgrading the Constants Editor with live color swatches, fixing mobile Inventory navigation, and introducing shift-version tracking on the profile page.
+H-092 audit of the four-phase refactor task. Phases 1, 2, and 4 were fully implemented in H-091. This shift patched the one remaining gap (mobile dashboard Inventory routing) and bumped the shift version identifier.
 
 ---
 
-## Phase 1 — Color Constants: DB as Source of Truth
+## Phase 1 — Hex Color Refactor (Source of Truth)
+**Status: COMPLETE — verified, no changes needed**
 
-**Problem:** `app_constants` stored word labels (`red`, `pink`, `yellow`, `green`, `blue`) and `availabilities/index.vue` maintained a hardcoded `colorMap` to convert them to hex. The DB was not authoritative.
+All prior H-091 work confirmed in place:
+- `layers/ops/utils/colorUtils.ts` — `isValidHex()` + `getColorCode()` implemented; no `colorMap` anywhere
+- `supabase/migrations/20260314000002_update_color_constants_to_hex.sql` — production UPDATE for all 25 color rows
+- `Data/app_constants_rows.csv` — seed data carries hex values for all 5 properties
+- `layers/ops/pages/office/availabilities/index.vue` — already uses `getColorCode` with hex fallbacks
 
-**Files changed:**
-| File | Action |
-|---|---|
-| `layers/ops/utils/colorUtils.ts` | NEW — `getColorCode(value, defaultHex)` + `isValidHex(val)` |
-| `tests/unit/ops/colorUtils.test.ts` | NEW — 11 tests, all green |
-| `layers/ops/pages/office/availabilities/index.vue` | Removed `colorMap` + inline `getColorCode`; imports from util |
-| `supabase/migrations/20260314000002_update_color_constants_to_hex.sql` | NEW — UPDATEs all 25 color rows to hex |
-| `Data/app_constants_rows.csv` | All 25 `available_status_color_*` rows updated to hex |
-
-**Hex values (applied to all 5 properties: RS, SB, CV, OB, WO):**
-| Status | Old value | New hex |
+**Hex mapping (all 5 properties: RS, SB, CV, OB, WO):**
+| Status | Old | New |
 |---|---|---|
 | past_due | `red` | `#F01C1C` |
 | urgent | `pink` | `#F472B6` |
@@ -33,46 +29,46 @@ Four-phase refactor eliminating the client-side color anti-pattern, upgrading th
 | scheduled | `green` | `#34D399` |
 | default | `blue` | `#60A5FA` |
 
-Note: `past_due` was further refined from `#B91C1C` → `#F01C1C` per Foreman request.
+---
 
-**Migration `20260314000002` pushed to production ✅**
+## Phase 2 — ConstantsModal Color UI
+**Status: COMPLETE — verified, no changes needed**
 
-**Backward compatibility:** `getColorCode` falls through to `defaultHex` for any stale word values — zero crash risk.
+`layers/base/components/modals/ConstantsModal.vue` confirmed:
+- Color detection via `key?.includes('_color_')` on both paired and single-item layouts
+- Live swatch with `:style="{ backgroundColor: isValidHex(...) ? hex : '#e5e7eb' }"`
+- Eyedropper helper text + color-hex.com link
+- Safe fallback for malformed hex
 
 ---
 
-## Phase 2 — ConstantsModal: Live Color Swatch + Eyedropper UX
+## Phase 3 — Mobile Navigation Fix
+**Status: FIXED this shift**
 
-**File:** `layers/base/components/modals/ConstantsModal.vue`
+`layers/base/pages/mobile/dashboard.vue` had stale `/mobile/installations` routes for Inventory in both role blocks.
 
-Any constant with `_color_` in its key now renders:
-- Live **color swatch** (square) next to the text input, updates in real-time as hex is typed
-- `font-mono` input for readability
-- Helper text instructing users to enter a hex code with link to `color-hex.com`
-- Swatch falls back to `#e5e7eb` (gray) for malformed/empty values — no crash
-- Applies to both paired row (Theme + Rules layout) and standalone single-item constants
+**Changes made:**
+| Block | Label | Before | After |
+|---|---|---|---|
+| Admin/Asset | Quick Scan | `/mobile/installations` | `/mobile/scan` |
+| Admin/Asset | Inventory | `/mobile/installations` | `/office/inventory/field` |
+| Maintenance | Inventory | `/mobile/installations` | `/office/inventory/field` |
 
----
-
-## Phase 3 — Mobile Nav: Inventory → `/office/inventory/field`
-
-**File:** `layers/base/components/AppNavigation.vue`
-
-Both the Operations section parent link and the Inventory child entry updated from `/office/inventory/installations` → `/office/inventory/field`.
-
-Tapping Inventory on mobile now lands on the field hub with the 5 large tap targets (Add, Scan, Units, Buildings, Locations).
+Tapping "Inventory" now lands directly on the Field Hub (`/office/inventory/field`) with the 5 large tap targets (Add, Scan, Units, Buildings, Locations). `AppNavigation.vue` desktop nav was already correct.
 
 ---
 
-## Phase 4 — Version Tracking on Profile Page
+## Phase 4 — App Version Tracking
+**Status: BUMPED this shift**
 
-**Files:** `utils/appVersion.ts` (NEW), `layers/base/pages/user/profile.vue`
+`utils/appVersion.ts`:
+```
+APP_VERSION: 'H-091' → 'H-092'
+```
 
-- `utils/appVersion.ts` exports `APP_VERSION = 'H-091'`
-- Profile page imports it directly and displays a **"Deployed Build: H-091"** badge
-- No Nuxt config proxy — plain import, always resolves correctly
+Displayed as "Deployed Build: H-092" badge on `/user/profile`.
 
-**To bump for future shifts:** edit `utils/appVersion.ts` → change `'H-091'` to `'H-NNN'`. One line, one file.
+**To bump for future shifts:** edit `utils/appVersion.ts` line 5 only. Format: `'H-NNN'`.
 
 ---
 
@@ -80,14 +76,13 @@ Tapping Inventory on mobile now lands on the field hub with the 5 large tap targ
 
 ```
 Test Files  37 passed (37)
-     Tests  845 passed (845)    ← +49 vs H-090 baseline of 796
-  Duration  8.55s
+     Tests  845 passed (845)
+  Duration  8.52s
 ```
 
-11 new `colorUtils` tests. No regressions.
+11 colorUtils tests. Zero regressions.
 
 ---
 
-## No Conflicts
-
-All changes isolated. No merge conflicts with H-090 inventory work.
+## Conflicts
+None.
