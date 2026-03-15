@@ -326,7 +326,7 @@ const applicantFutureColumns = computed(() => {
 // ===== VACANCY COLOR CODING (mirrors availabilities index defaults) =====
 const getVacancyColor = (days: number | null): string => {
   const d = days ?? 0
-  if (d <= 0)  return '#B91C1C'  // red   — ready now / overdue
+  if (d <= 0)  return '#F01C1C'  // red   — ready now / overdue
   if (d <= 25) return '#F472B6'  // pink  — ready within 25 days
   if (d <= 50) return '#FBBF24'  // yellow — ready within 50 days
   if (d <= 75) return '#34D399'  // green — ready within 75 days

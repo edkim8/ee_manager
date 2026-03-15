@@ -6,7 +6,7 @@ This document defines the color-coded intensity scale for units based on their v
 
 | Range (Days) | Color Name | Hex Code | Criticality |
 | :--- | :--- | :--- | :--- |
-| **0 or greater** | Red | `#B91C1C` | **Immediate Action** (Currently Vacant) |
+| **0 or greater** | Red | `#F01C1C` | **Immediate Action** (Currently Vacant) |
 | **-1 to -25** | Pink | `#F472B6` | Vacating in <25 days |
 | **-26 to -50** | Yellow | `#FBBF24` | Vacating in 26-50 days |
 | **-51 to -75** | Green | `#34D399` | Vacating in 51-75 days |

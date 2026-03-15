@@ -146,29 +146,13 @@ const getConstantValue = (key: string, defaultValue: any) => {
   return val
 }
 
-// Map text colors (red, pink, etc.) to hex codes
-const colorMap: Record<string, string> = {
-  'red': '#B91C1C',
-  'pink': '#F472B6',
-  'yellow': '#FBBF24',
-  'green': '#34D399',
-  'blue': '#60A5FA',
-  'gray': '#9CA3AF',
-  'neutral': '#6B7280'
-}
-
-const getColorCode = (value: any, defaultHex: string) => {
-  if (value === undefined || value === null || value === '') return defaultHex
-  const str = String(value).trim().toLowerCase()
-  if (str.startsWith('#')) return str
-  return colorMap[str] || str // Return as-is if it's already a valid CSS color name
-}
+import { getColorCode } from '../../../utils/colorUtils'
 
 const availabilityConfig = computed(() => {
   const config = {
     pastDue: {
       threshold: Number(getConstantValue('available_status_threshold_past_due', 0)),
-      color: getColorCode(getConstantValue('available_status_color_past_due', null), '#B91C1C')
+      color: getColorCode(getConstantValue('available_status_color_past_due', null), '#F01C1C')
     },
     urgent: {
       threshold: Number(getConstantValue('available_status_threshold_urgent', 25)),

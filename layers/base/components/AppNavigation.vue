@@ -283,12 +283,12 @@ const navigationItems = computed(() => {
     items.push({
       label: 'Operations',
       icon: 'i-heroicons-wrench-screwdriver',
-      to: '/office/inventory/installations',
+      to: '/office/inventory/field',
       children: [
         { label: 'Alerts', icon: 'i-heroicons-bell-alert', to: '/office/alerts' },
         { label: 'Work Orders', icon: 'i-heroicons-clipboard-document-check', to: '/maintenance/work-orders' },
         { label: 'Make Ready', icon: 'i-heroicons-home-modern', to: '/office/make-ready' },
-        { label: 'Inventory', icon: 'i-heroicons-archive-box', to: '/office/inventory/installations' },
+        { label: 'Inventory', icon: 'i-heroicons-archive-box', to: '/office/inventory/field' },
       ],
     })
   }

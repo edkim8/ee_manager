@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useSupabaseClient, useSupabaseUser, useToast, useHead } from '#imports'
 import { usePropertyState } from '../../composables/usePropertyState'
+import { APP_VERSION } from '../../../../utils/appVersion'
 
 definePageMeta({
   layout: 'dashboard'
@@ -15,6 +16,7 @@ const user = useSupabaseUser()
 const supabase = useSupabaseClient()
 const toast = useToast()
 const { userContext } = usePropertyState()
+const appVersion = APP_VERSION
 
 // Password update state
 const newPassword = ref('')
@@ -124,6 +126,15 @@ async function handlePasswordUpdate() {
           <span class="text-gray-500 dark:text-gray-400">{{ user?.email }}</span>
         </div>
       </div>
+    </div>
+
+    <!-- Version Banner -->
+    <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+      <div class="flex items-center gap-2">
+        <UIcon name="i-heroicons-cpu-chip" class="text-primary-500" />
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Deployed Build</span>
+      </div>
+      <UBadge color="primary" variant="soft" class="font-mono text-sm">{{ appVersion }}</UBadge>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">

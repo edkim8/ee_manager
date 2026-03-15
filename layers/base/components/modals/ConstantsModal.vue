@@ -55,6 +55,11 @@ onMounted(async () => {
   }
 })
 
+const isValidHex = (val: unknown): boolean => {
+  if (!val) return false
+  return /^#[0-9A-Fa-f]{3,8}$/.test(String(val).trim())
+}
+
 const parseValue = (value: string, type: string) => {
   if (type === 'boolean') return value === 'true'
   if (type === 'number' || type === 'percent') return parseFloat(value) || 0
@@ -293,9 +298,22 @@ const groupedConstants = computed(() => {
                       <div class="grid grid-cols-2 gap-8 items-start">
                         <!-- Theme Column -->
                         <div class="flex items-end gap-2">
-                           <UFormField :label="row.theme.label" :help="row.theme.help_text" class="flex-1">
-                             <UInput v-model="row.theme.displayValue" variant="outline" />
-                           </UFormField>
+                          <UFormField :label="row.theme.label" class="flex-1">
+                            <div class="flex items-center gap-2">
+                              <UInput v-model="row.theme.displayValue" variant="outline" class="flex-1 font-mono" />
+                              <span
+                                v-if="row.theme.key?.includes('_color_')"
+                                class="w-8 h-8 rounded border border-gray-300 dark:border-gray-600 flex-shrink-0 transition-colors"
+                                :style="{ backgroundColor: isValidHex(row.theme.displayValue) ? row.theme.displayValue : '#e5e7eb' }"
+                                :title="row.theme.displayValue"
+                              />
+                            </div>
+                            <p v-if="row.theme.key?.includes('_color_')" class="text-xs text-gray-400 mt-1.5">
+                              Enter a hex code (e.g., <code class="font-mono">{{ row.theme.displayValue || '#F01C1C' }}</code>).
+                              Use Chrome/macOS Eyedropper or <a href="https://www.color-hex.com" target="_blank" class="underline hover:text-primary-500">color-hex.com</a>.
+                            </p>
+                            <p v-else class="text-xs text-gray-400 mt-1.5">{{ row.theme.help_text }}</p>
+                          </UFormField>
                         </div>
                         <!-- Rule Column -->
                         <div class="flex items-end gap-2">
@@ -308,10 +326,23 @@ const groupedConstants = computed(() => {
 
                     <!-- Single Item Layout -->
                     <div v-else class="flex items-end gap-2">
-                      <UFormField :label="row.item.label" :help="row.item.help_text" class="flex-1">
+                      <UFormField :label="row.item.label" class="flex-1">
                         <USwitch v-if="row.item.data_type === 'boolean'" v-model="row.item.displayValue" />
                         <UInput v-else-if="row.item.data_type === 'number'" v-model.number="row.item.displayValue" type="number" :min="row.item.min_value" :max="row.item.max_value" />
+                        <div v-else-if="row.item.key?.includes('_color_')" class="flex items-center gap-2">
+                          <UInput v-model="row.item.displayValue" variant="outline" class="flex-1 font-mono" />
+                          <span
+                            class="w-8 h-8 rounded border border-gray-300 dark:border-gray-600 flex-shrink-0 transition-colors"
+                            :style="{ backgroundColor: isValidHex(row.item.displayValue) ? row.item.displayValue : '#e5e7eb' }"
+                            :title="row.item.displayValue"
+                          />
+                        </div>
                         <UInput v-else v-model="row.item.displayValue" />
+                        <p v-if="row.item.key?.includes('_color_')" class="text-xs text-gray-400 mt-1.5">
+                          Enter a hex code (e.g., <code class="font-mono">#F01C1C</code>).
+                          Use Chrome/macOS Eyedropper or <a href="https://www.color-hex.com" target="_blank" class="underline hover:text-primary-500">color-hex.com</a>.
+                        </p>
+                        <p v-else-if="row.item.help_text" class="text-xs text-gray-400 mt-1.5">{{ row.item.help_text }}</p>
                       </UFormField>
                     </div>
                   </div>
